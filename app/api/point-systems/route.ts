@@ -131,13 +131,33 @@ export async function GET(request: NextRequest) {
         id: true,
         name: true,
         description: true,
+        tournamentType: true,
+        numberOfTeams: true,
         pointsPerWin: true,
         pointsPerDraw: true,
         pointsPerLoss: true,
         pointsPerGoalScored: true,
         pointsPerGoalConceded: true,
+        pointsForWalkoverWin: true,
+        pointsForWalkoverLoss: true,
         createdAt: true,
         updatedAt: true,
+        stagePoints: {
+          select: {
+            id: true,
+            stageId: true,
+            stageName: true,
+            stageOrder: true,
+            pointsPerWin: true,
+            pointsPerDraw: true,
+            pointsPerLoss: true,
+            pointsPerGoalScored: true,
+            pointsPerGoalConceded: true,
+          },
+          orderBy: {
+            stageOrder: 'asc',
+          },
+        },
         _count: {
           select: {
             conditionalRules: true,

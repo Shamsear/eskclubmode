@@ -16,6 +16,8 @@ export const matchCreateSchema = z.object({
   matchDate: z.string().refine((date) => !isNaN(Date.parse(date)), {
     message: "Invalid match date format",
   }),
+  stageId: z.number().int().positive("Stage ID must be a positive integer").optional(),
+  stageName: z.string().optional(),
   results: z.array(matchResultSchema).min(1, "At least one match result is required"),
 }).refine((data) => {
   // Check for duplicate player IDs
@@ -32,6 +34,8 @@ export const matchUpdateSchema = z.object({
   matchDate: z.string().refine((date) => !isNaN(Date.parse(date)), {
     message: "Invalid match date format",
   }).optional(),
+  stageId: z.number().int().positive("Stage ID must be a positive integer").optional(),
+  stageName: z.string().optional(),
   results: z.array(matchResultSchema).min(1, "At least one match result is required").optional(),
 }).refine((data) => {
   // Check for duplicate player IDs if results are provided

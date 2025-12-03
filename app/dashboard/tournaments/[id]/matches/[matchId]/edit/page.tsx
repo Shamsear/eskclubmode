@@ -19,7 +19,11 @@ async function getMatchWithTournament(matchId: string, tournamentId: string) {
     // Fetch match with results
     const match = await prisma.match.findUnique({
       where: { id: matchIdNum },
-      include: {
+      select: {
+        id: true,
+        matchDate: true,
+        stageId: true,
+        stageName: true,
         tournament: {
           select: {
             id: true,
@@ -114,6 +118,8 @@ export default async function EditMatchResultPage({
   const initialData = {
     id: match.id,
     matchDate: match.matchDate.toISOString().split("T")[0],
+    stageId: match.stageId,
+    stageName: match.stageName,
     results: match.results.map((result) => ({
       id: result.id,
       playerId: result.playerId,

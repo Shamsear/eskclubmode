@@ -101,7 +101,7 @@ export async function POST(
       throw validationResult.error;
     }
 
-    const { matchDate, results } = validationResult.data;
+    const { matchDate, stageId, stageName, results } = validationResult.data;
 
     // Check if tournament exists and get its point system
     const tournament = await prisma.tournament.findUnique({
@@ -121,10 +121,59 @@ export async function POST(
       throw new NotFoundError("Tournament");
     }
 
-    // Fetch point system configuration (template or inline)
+    // Fetch point system configuration (stage-specific, template, or inline)
     let pointSystemConfig: PointSystemConfig;
     
-    if (tournament.pointSystemTemplateId) {
+    // If a stage is selected, try to use stage-specific points
+    if (stageId && tournament.pointSystemTemplateId) {
+      const stagePoint = await prisma.stagePoint.findUnique({
+        where: {
+          templateId_stageId: {
+            templateId: tournament.pointSystemTemplateId,
+            stageId: stageId,
+          },
+        },
+      });
+
+      if (stagePoint) {
+        // Use stage-specific points
+        pointSystemConfig = {
+          pointsPerWin: stagePoint.pointsPerWin,
+          pointsPerDraw: stagePoint.pointsPerDraw,
+          pointsPerLoss: stagePoint.pointsPerLoss,
+          pointsPerGoalScored: stagePoint.pointsPerGoalScored,
+          pointsPerGoalConceded: stagePoint.pointsPerGoalConceded,
+        };
+      } else {
+        // Stage not found, fall back to template defaults
+        const template = await prisma.pointSystemTemplate.findUnique({
+          where: { id: tournament.pointSystemTemplateId },
+          include: {
+            conditionalRules: true,
+          },
+        });
+
+        if (template) {
+          pointSystemConfig = {
+            pointsPerWin: template.pointsPerWin,
+            pointsPerDraw: template.pointsPerDraw,
+            pointsPerLoss: template.pointsPerLoss,
+            pointsPerGoalScored: template.pointsPerGoalScored,
+            pointsPerGoalConceded: template.pointsPerGoalConceded,
+            conditionalRules: template.conditionalRules,
+          };
+        } else {
+          // Fallback to inline configuration if template not found
+          pointSystemConfig = {
+            pointsPerWin: tournament.pointsPerWin,
+            pointsPerDraw: tournament.pointsPerDraw,
+            pointsPerLoss: tournament.pointsPerLoss,
+            pointsPerGoalScored: tournament.pointsPerGoalScored,
+            pointsPerGoalConceded: tournament.pointsPerGoalConceded,
+          };
+        }
+      }
+    } else if (tournament.pointSystemTemplateId) {
       // Use point system template with conditional rules
       const template = await prisma.pointSystemTemplate.findUnique({
         where: { id: tournament.pointSystemTemplateId },
@@ -214,6 +263,8 @@ export async function POST(
         data: {
           tournamentId,
           matchDate: new Date(matchDate),
+          ...(stageId && { stageId }),
+          ...(stageName && { stageName }),
         },
       });
 

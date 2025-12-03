@@ -65,6 +65,8 @@ interface MatchResultFormProps {
   initialData?: {
     id?: number;
     matchDate: string;
+    stageId?: number | null;
+    stageName?: string | null;
     results: Array<{
       id?: number;
       playerId: number;
@@ -112,6 +114,11 @@ export function MatchResultForm({
   const [isFetchingParticipants, setIsFetchingParticipants] = useState(!participantsProp);
   const [participants, setParticipants] = useState<Participant[]>(participantsProp || []);
   const [errors, setErrors] = useState<FormErrors>({});
+  
+  // Stage selection state
+  const [stages, setStages] = useState<Array<{id: number; name: string; order: number}>>([]);
+  const [selectedStageId, setSelectedStageId] = useState<number | null>(initialData?.stageId || null);
+  const [isFetchingStages, setIsFetchingStages] = useState(true);
   
   // Determine mode from props or initial data
   const mode = modeProp || (initialData || matchId ? 'edit' : 'create');
@@ -164,6 +171,24 @@ export function MatchResultForm({
       fetchParticipants();
     }
   }, [participantsProp, tournamentId, showToast]);
+
+  // Fetch tournament stages
+  useEffect(() => {
+    const fetchStages = async () => {
+      try {
+        const response = await fetch(`/api/tournaments/${tournamentId}/stages`);
+        if (response.ok) {
+          const data = await response.json();
+          setStages(data.stages || []);
+        }
+      } catch (error) {
+        console.error('Failed to fetch stages:', error);
+      } finally {
+        setIsFetchingStages(false);
+      }
+    };
+    fetchStages();
+  }, [tournamentId]);
 
   // Add a new player result entry
   const addPlayerResult = () => {
@@ -275,6 +300,8 @@ export function MatchResultForm({
         },
         body: JSON.stringify({
           matchDate: new Date(matchDate).toISOString(),
+          stageId: selectedStageId,
+          stageName: selectedStageId ? stages.find(s => s.id === selectedStageId)?.name : null,
           results: playerResults.map(r => ({
             playerId: r.playerId,
             outcome: r.outcome,
@@ -429,6 +456,31 @@ export function MatchResultForm({
           <p className="mt-1 text-sm text-red-600">{errors.matchDate}</p>
         )}
       </div>
+
+      {/* Tournament Stage Selection */}
+      {stages.length > 0 && (
+        <div>
+          <label htmlFor="stage-select" className="block text-sm font-medium text-gray-700 mb-2">
+            Tournament Stage <span className="text-gray-400">(Optional)</span>
+          </label>
+          <select
+            id="stage-select"
+            value={selectedStageId || ''}
+            onChange={(e) => setSelectedStageId(e.target.value ? parseInt(e.target.value) : null)}
+            className="block w-full px-3 py-2.5 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-colors bg-white"
+          >
+            <option value="">No specific stage (use default points)</option>
+            {stages.map((stage) => (
+              <option key={stage.id} value={stage.id}>
+                {stage.name}
+              </option>
+            ))}
+          </select>
+          <p className="mt-1 text-sm text-gray-500">
+            Select a stage to use stage-specific point calculations
+          </p>
+        </div>
+      )}
 
       <div className="border-t-2 border-gray-200 pt-8">
         <div className="flex items-center gap-3 mb-6">

@@ -21,6 +21,11 @@ const pointSystemSchema = z.object({
   pointsPerLoss: z.number().int("Must be an integer"),
   pointsPerGoalScored: z.number().int("Must be an integer"),
   pointsPerGoalConceded: z.number().int("Must be an integer"),
+  pointsForWalkoverWin: z.number().int("Must be an integer"),
+  pointsForWalkoverLoss: z.number().int("Must be an integer"),
+  pointsPerStageWin: z.number().int("Must be an integer"),
+  pointsPerStageDraw: z.number().int("Must be an integer"),
+  pointsPerCleanSheet: z.number().int("Must be an integer"),
 });
 
 interface PointSystemFormProps {
@@ -33,6 +38,11 @@ interface PointSystemFormProps {
     pointsPerLoss: number;
     pointsPerGoalScored: number;
     pointsPerGoalConceded: number;
+    pointsForWalkoverWin?: number;
+    pointsForWalkoverLoss?: number;
+    pointsPerStageWin?: number;
+    pointsPerStageDraw?: number;
+    pointsPerCleanSheet?: number;
     conditionalRules?: ConditionalRule[];
   };
   mode: 'create' | 'edit';
@@ -46,6 +56,11 @@ interface FormErrors {
   pointsPerLoss?: string;
   pointsPerGoalScored?: string;
   pointsPerGoalConceded?: string;
+  pointsForWalkoverWin?: string;
+  pointsForWalkoverLoss?: string;
+  pointsPerStageWin?: string;
+  pointsPerStageDraw?: string;
+  pointsPerCleanSheet?: string;
   submit?: string;
 }
 
@@ -63,6 +78,11 @@ export function PointSystemForm({ initialData, mode }: PointSystemFormProps) {
     pointsPerLoss: initialData?.pointsPerLoss ?? 0,
     pointsPerGoalScored: initialData?.pointsPerGoalScored ?? 0,
     pointsPerGoalConceded: initialData?.pointsPerGoalConceded ?? 0,
+    pointsForWalkoverWin: initialData?.pointsForWalkoverWin ?? 3,
+    pointsForWalkoverLoss: initialData?.pointsForWalkoverLoss ?? -3,
+    pointsPerStageWin: initialData?.pointsPerStageWin ?? 0,
+    pointsPerStageDraw: initialData?.pointsPerStageDraw ?? 0,
+    pointsPerCleanSheet: initialData?.pointsPerCleanSheet ?? 0,
   });
 
   // Conditional rules state
@@ -349,6 +369,64 @@ export function PointSystemForm({ initialData, mode }: PointSystemFormProps) {
             onChange={(e) => handleNumberChange('pointsPerGoalConceded', e.target.value)}
             error={errors.pointsPerGoalConceded}
             helperText="Points per goal conceded (often negative)"
+            required
+          />
+        </div>
+      </fieldset>
+
+      <fieldset className="border-t pt-6">
+        <legend className="text-lg font-medium text-gray-900 mb-2">Additional Point Configurations</legend>
+        <p className="text-sm text-gray-600 mb-4">
+          Configure special point awards for walkovers, boots, stages, and clean sheets
+        </p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <Input
+            label="Points for Walkover Win"
+            type="number"
+            value={formData.pointsForWalkoverWin.toString()}
+            onChange={(e) => handleNumberChange('pointsForWalkoverWin', e.target.value)}
+            error={errors.pointsForWalkoverWin}
+            helperText="Points for team that receives walkover"
+            required
+          />
+
+          <Input
+            label="Points for Walkover Loss"
+            type="number"
+            value={formData.pointsForWalkoverLoss.toString()}
+            onChange={(e) => handleNumberChange('pointsForWalkoverLoss', e.target.value)}
+            error={errors.pointsForWalkoverLoss}
+            helperText="Penalty for team that gives walkover (usually negative)"
+            required
+          />
+
+          <Input
+            label="Points Per Stage Win"
+            type="number"
+            value={formData.pointsPerStageWin.toString()}
+            onChange={(e) => handleNumberChange('pointsPerStageWin', e.target.value)}
+            error={errors.pointsPerStageWin}
+            helperText="Points for winning a stage/round"
+            required
+          />
+
+          <Input
+            label="Points Per Stage Draw"
+            type="number"
+            value={formData.pointsPerStageDraw.toString()}
+            onChange={(e) => handleNumberChange('pointsPerStageDraw', e.target.value)}
+            error={errors.pointsPerStageDraw}
+            helperText="Points for drawing a stage/round"
+            required
+          />
+
+          <Input
+            label="Points Per Clean Sheet"
+            type="number"
+            value={formData.pointsPerCleanSheet.toString()}
+            onChange={(e) => handleNumberChange('pointsPerCleanSheet', e.target.value)}
+            error={errors.pointsPerCleanSheet}
+            helperText="Points for not conceding goals"
             required
           />
         </div>

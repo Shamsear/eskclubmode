@@ -8,15 +8,31 @@ import { Button } from './ui/Button';
 import { ErrorMessage } from './FormError';
 import { useToast } from './ui/Toast';
 
-interface PointSystemTemplate {
+interface StagePoint {
   id: number;
-  name: string;
-  description: string | null;
+  stageName: string;
+  stageOrder: number;
   pointsPerWin: number;
   pointsPerDraw: number;
   pointsPerLoss: number;
   pointsPerGoalScored: number;
   pointsPerGoalConceded: number;
+}
+
+interface PointSystemTemplate {
+  id: number;
+  name: string;
+  description: string | null;
+  tournamentType: string;
+  numberOfTeams: number;
+  pointsPerWin: number;
+  pointsPerDraw: number;
+  pointsPerLoss: number;
+  pointsPerGoalScored: number;
+  pointsPerGoalConceded: number;
+  pointsForWalkoverWin: number;
+  pointsForWalkoverLoss: number;
+  stagePoints?: StagePoint[];
 }
 
 // Validation schema
@@ -415,9 +431,128 @@ export function TournamentForm({ clubId, initialData, mode }: TournamentFormProp
           )}
         </div>
         
-        {/* Point Configuration Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          <div className="relative">
+        {/* Point System Preview */}
+        {!useCustomConfig && formData.pointSystemTemplateId && (() => {
+          const selectedTemplate = templates.find(t => t.id === formData.pointSystemTemplateId);
+          if (!selectedTemplate) return null;
+          
+          return (
+            <div className="bg-white rounded-xl border-2 border-gray-200 p-6 space-y-6">
+              {/* Header */}
+              <div className="flex items-start justify-between">
+                <div className="flex items-center gap-2">
+                  <svg className="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                  </svg>
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900">{selectedTemplate.name}</h3>
+                    {selectedTemplate.description && (
+                      <p className="text-sm text-gray-600 mt-0.5">{selectedTemplate.description}</p>
+                    )}
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                    {selectedTemplate.tournamentType?.replace(/_/g, ' ')}
+                  </span>
+                  {selectedTemplate.numberOfTeams > 0 && (
+                    <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                      {selectedTemplate.numberOfTeams} Teams
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* Base Points */}
+              <div>
+                <h4 className="text-sm font-semibold text-gray-700 mb-3">Base Points</h4>
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+                  <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-lg p-3 border border-green-200">
+                    <div className="text-xs font-medium text-gray-600 mb-1">Win</div>
+                    <div className="text-xl font-bold text-green-700">{selectedTemplate.pointsPerWin}</div>
+                  </div>
+                  <div className="bg-gradient-to-br from-yellow-50 to-amber-50 rounded-lg p-3 border border-yellow-200">
+                    <div className="text-xs font-medium text-gray-600 mb-1">Draw</div>
+                    <div className="text-xl font-bold text-yellow-700">{selectedTemplate.pointsPerDraw}</div>
+                  </div>
+                  <div className="bg-gradient-to-br from-red-50 to-rose-50 rounded-lg p-3 border border-red-200">
+                    <div className="text-xs font-medium text-gray-600 mb-1">Loss</div>
+                    <div className="text-xl font-bold text-red-700">{selectedTemplate.pointsPerLoss}</div>
+                  </div>
+                  <div className="bg-gradient-to-br from-blue-50 to-cyan-50 rounded-lg p-3 border border-blue-200">
+                    <div className="text-xs font-medium text-gray-600 mb-1">Goal Scored</div>
+                    <div className="text-xl font-bold text-blue-700">{selectedTemplate.pointsPerGoalScored}</div>
+                  </div>
+                  <div className="bg-gradient-to-br from-purple-50 to-violet-50 rounded-lg p-3 border border-purple-200">
+                    <div className="text-xs font-medium text-gray-600 mb-1">Goal Conceded</div>
+                    <div className="text-xl font-bold text-purple-700">{selectedTemplate.pointsPerGoalConceded}</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Walkover Points */}
+              <div>
+                <h4 className="text-sm font-semibold text-gray-700 mb-3">Walkover Points</h4>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="bg-gradient-to-br from-emerald-50 to-teal-50 rounded-lg p-3 border border-emerald-200">
+                    <div className="text-xs font-medium text-gray-600 mb-1">Walkover Win</div>
+                    <div className="text-xl font-bold text-emerald-700">{selectedTemplate.pointsForWalkoverWin}</div>
+                  </div>
+                  <div className="bg-gradient-to-br from-orange-50 to-red-50 rounded-lg p-3 border border-orange-200">
+                    <div className="text-xs font-medium text-gray-600 mb-1">Walkover Loss</div>
+                    <div className="text-xl font-bold text-orange-700">{selectedTemplate.pointsForWalkoverLoss}</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Stage-Specific Points */}
+              {selectedTemplate.stagePoints && selectedTemplate.stagePoints.length > 0 && (
+                <div>
+                  <h4 className="text-sm font-semibold text-gray-700 mb-3">Stage-Specific Points</h4>
+                  <div className="space-y-3">
+                    {selectedTemplate.stagePoints.map((stage) => (
+                      <div key={stage.id} className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                        <div className="flex items-center gap-2 mb-3">
+                          <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-purple-600 text-white text-xs font-bold">
+                            {stage.stageOrder}
+                          </span>
+                          <h5 className="font-semibold text-gray-900">{stage.stageName}</h5>
+                        </div>
+                        <div className="grid grid-cols-5 gap-2">
+                          <div className="text-center">
+                            <div className="text-xs text-gray-600 mb-1">Win</div>
+                            <div className="text-sm font-bold text-green-700">{stage.pointsPerWin}</div>
+                          </div>
+                          <div className="text-center">
+                            <div className="text-xs text-gray-600 mb-1">Draw</div>
+                            <div className="text-sm font-bold text-yellow-700">{stage.pointsPerDraw}</div>
+                          </div>
+                          <div className="text-center">
+                            <div className="text-xs text-gray-600 mb-1">Loss</div>
+                            <div className="text-sm font-bold text-red-700">{stage.pointsPerLoss}</div>
+                          </div>
+                          <div className="text-center">
+                            <div className="text-xs text-gray-600 mb-1">Goal+</div>
+                            <div className="text-sm font-bold text-blue-700">{stage.pointsPerGoalScored}</div>
+                          </div>
+                          <div className="text-center">
+                            <div className="text-xs text-gray-600 mb-1">Goal-</div>
+                            <div className="text-sm font-bold text-purple-700">{stage.pointsPerGoalConceded}</div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })()}
+        
+        {/* Custom Point Configuration (only shown when custom is selected) */}
+        {useCustomConfig && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             <Input
               label="Points Per Win"
               type="number"
@@ -425,19 +560,8 @@ export function TournamentForm({ clubId, initialData, mode }: TournamentFormProp
               value={formData.pointsPerWin.toString()}
               onChange={(e) => handleNumberChange('pointsPerWin', e.target.value)}
               error={errors.pointsPerWin}
-              disabled={!useCustomConfig}
               required
             />
-            {!useCustomConfig && (
-              <div className="absolute top-0 right-0 mt-1 mr-1">
-                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-600">
-                  Template
-                </span>
-              </div>
-            )}
-          </div>
-
-          <div className="relative">
             <Input
               label="Points Per Draw"
               type="number"
@@ -445,19 +569,8 @@ export function TournamentForm({ clubId, initialData, mode }: TournamentFormProp
               value={formData.pointsPerDraw.toString()}
               onChange={(e) => handleNumberChange('pointsPerDraw', e.target.value)}
               error={errors.pointsPerDraw}
-              disabled={!useCustomConfig}
               required
             />
-            {!useCustomConfig && (
-              <div className="absolute top-0 right-0 mt-1 mr-1">
-                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-600">
-                  Template
-                </span>
-              </div>
-            )}
-          </div>
-
-          <div className="relative">
             <Input
               label="Points Per Loss"
               type="number"
@@ -465,19 +578,8 @@ export function TournamentForm({ clubId, initialData, mode }: TournamentFormProp
               value={formData.pointsPerLoss.toString()}
               onChange={(e) => handleNumberChange('pointsPerLoss', e.target.value)}
               error={errors.pointsPerLoss}
-              disabled={!useCustomConfig}
               required
             />
-            {!useCustomConfig && (
-              <div className="absolute top-0 right-0 mt-1 mr-1">
-                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-600">
-                  Template
-                </span>
-              </div>
-            )}
-          </div>
-
-          <div className="relative">
             <Input
               label="Points Per Goal Scored"
               type="number"
@@ -485,19 +587,8 @@ export function TournamentForm({ clubId, initialData, mode }: TournamentFormProp
               value={formData.pointsPerGoalScored.toString()}
               onChange={(e) => handleNumberChange('pointsPerGoalScored', e.target.value)}
               error={errors.pointsPerGoalScored}
-              disabled={!useCustomConfig}
               required
             />
-            {!useCustomConfig && (
-              <div className="absolute top-0 right-0 mt-1 mr-1">
-                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-600">
-                  Template
-                </span>
-              </div>
-            )}
-          </div>
-
-          <div className="relative">
             <Input
               label="Points Per Goal Conceded"
               type="number"
@@ -505,18 +596,10 @@ export function TournamentForm({ clubId, initialData, mode }: TournamentFormProp
               value={formData.pointsPerGoalConceded.toString()}
               onChange={(e) => handleNumberChange('pointsPerGoalConceded', e.target.value)}
               error={errors.pointsPerGoalConceded}
-              disabled={!useCustomConfig}
               required
             />
-            {!useCustomConfig && (
-              <div className="absolute top-0 right-0 mt-1 mr-1">
-                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-600">
-                  Template
-                </span>
-              </div>
-            )}
           </div>
-        </div>
+        )}
       </div>
 
       {errors.submit && (
