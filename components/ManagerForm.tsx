@@ -16,10 +16,13 @@ import { COUNTRIES } from '@/lib/data/countries';
 // Validation schema
 const managerSchema = z.object({
   name: z.string().min(1, "Name is required").max(100, "Name must be 100 characters or less"),
-  email: z.string().max(100, "Email must be 100 characters or less").refine(
-    (val) => !val || val === '' || z.string().email().safeParse(val).success,
+  email: z.string().optional().refine(
+    (val) => {
+      if (!val || val.trim() === '') return true;
+      return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val);
+    },
     { message: "Invalid email format" }
-  ).optional(),
+  ),
   phone: z.string().max(20, "Phone must be 20 characters or less").optional(),
   country: z.string().optional(),
   state: z.string().optional(),
