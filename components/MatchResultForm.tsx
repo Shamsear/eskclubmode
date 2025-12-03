@@ -584,7 +584,7 @@ export function MatchResultForm({
                       <div className="px-3 py-2.5 min-h-[44px] border border-gray-200 rounded-md bg-gray-50 text-gray-600 flex items-center">
                         {result.goalsConceded}
                       </div>
-                      <p className="mt-1 text-xs text-gray-500">Auto-calculated from opponent's goals</p>
+                      <p className="mt-1 text-xs text-gray-500">Auto-calculated from opponent&apos;s goals</p>
                     </div>
                   </div>
                 </div>

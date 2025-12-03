@@ -451,6 +451,7 @@ ${participants.map(p => p.name).join(', ')}`;
                           className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-violet-500 focus:border-transparent bg-white text-gray-900"
                         />
                         <button
+                          type="button"
                           onClick={() => updateFormMatch(match.id, 'matchDate', today)}
                           className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
                         >
@@ -553,7 +554,7 @@ ${participants.map(p => p.name).join(', ')}`;
               <li>Goals must be non-negative integers</li>
               <li>Date format: YYYY-MM-DD</li>
               <li>Upload the CSV file and review the preview</li>
-              <li>Click "Upload Matches" to add them to the tournament</li>
+              <li>Click &quot;Upload Matches&quot; to add them to the tournament</li>
             </ol>
             <div className="mt-4">
               <button

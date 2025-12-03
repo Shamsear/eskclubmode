@@ -63,7 +63,7 @@ export default async function NewClubPage() {
             </div>
             <div>
               <h3 className="font-semibold text-gray-900 text-sm">Join Tournaments</h3>
-              <p className="text-xs text-gray-600 mt-1">Participate in tournaments and track your club's performance</p>
+              <p className="text-xs text-gray-600 mt-1">Participate in tournaments and track your club&apos;s performance</p>
             </div>
           </div>
         </div>

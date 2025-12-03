@@ -2,6 +2,7 @@ import { requireAuth } from "@/lib/auth-utils";
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
 import { Breadcrumb } from "@/components/Breadcrumb";
+import { ClubLeaderboardClient } from "@/components/ClubLeaderboardClient";
 
 async function getClubLeaderboard() {
   try {
@@ -10,7 +11,7 @@ async function getClubLeaderboard() {
       include: {
         players: {
           include: {
-            playerStats: {
+            tournamentStats: {
               include: {
                 tournament: {
                   select: {
@@ -33,7 +34,7 @@ async function getClubLeaderboard() {
 
     // Calculate club statistics
     const clubStats = clubs.map((club) => {
-      const allStats = club.players.flatMap((player) => player.playerStats);
+      const allStats = club.players.flatMap((player) => player.tournamentStats);
       
       const totalPoints = allStats.reduce((sum, stat) => sum + stat.totalPoints, 0);
       const totalMatches = allStats.reduce((sum, stat) => sum + stat.matchesPlayed, 0);
@@ -80,6 +81,17 @@ async function getClubLeaderboard() {
 export default async function ClubLeaderboardPage() {
   await requireAuth();
   const clubStats = await getClubLeaderboard();
+  
+  // Get all tournaments for filtering
+  const tournaments = await prisma.tournament.findMany({
+    select: {
+      id: true,
+      name: true,
+    },
+    orderBy: {
+      startDate: 'desc',
+    },
+  });
 
   return (
     <div className="max-w-7xl mx-auto space-y-6">
@@ -159,106 +171,7 @@ export default async function ClubLeaderboardPage() {
         </div>
       </div>
 
-      {/* Leaderboard Table */}
-      <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gradient-to-r from-gray-50 to-white">
-              <tr>
-                <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Rank</th>
-                <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Club</th>
-                <th className="px-6 py-4 text-center text-xs font-bold text-gray-700 uppercase tracking-wider">Players</th>
-                <th className="px-6 py-4 text-center text-xs font-bold text-gray-700 uppercase tracking-wider">Matches</th>
-                <th className="px-6 py-4 text-center text-xs font-bold text-gray-700 uppercase tracking-wider">W/D/L</th>
-                <th className="px-6 py-4 text-center text-xs font-bold text-gray-700 uppercase tracking-wider">Goals</th>
-                <th className="px-6 py-4 text-center text-xs font-bold text-gray-700 uppercase tracking-wider">GD</th>
-                <th className="px-6 py-4 text-center text-xs font-bold text-gray-700 uppercase tracking-wider">Avg Pts</th>
-                <th className="px-6 py-4 text-center text-xs font-bold text-gray-700 uppercase tracking-wider">Total Pts</th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {clubStats.map((club, index) => (
-                <tr key={club.id} className="hover:bg-gray-50 transition-colors group">
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center justify-center">
-                      {index === 0 && (
-                        <div className="w-8 h-8 bg-gradient-to-br from-yellow-400 to-yellow-600 rounded-full flex items-center justify-center shadow-lg">
-                          <span className="text-white font-bold text-sm">🥇</span>
-                        </div>
-                      )}
-                      {index === 1 && (
-                        <div className="w-8 h-8 bg-gradient-to-br from-gray-300 to-gray-500 rounded-full flex items-center justify-center shadow-lg">
-                          <span className="text-white font-bold text-sm">🥈</span>
-                        </div>
-                      )}
-                      {index === 2 && (
-                        <div className="w-8 h-8 bg-gradient-to-br from-orange-400 to-orange-600 rounded-full flex items-center justify-center shadow-lg">
-                          <span className="text-white font-bold text-sm">🥉</span>
-                        </div>
-                      )}
-                      {index > 2 && (
-                        <span className="text-lg font-bold text-gray-600">#{index + 1}</span>
-                      )}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <Link href={`/dashboard/clubs/${club.id}`} className="flex items-center gap-3 group-hover:text-emerald-600 transition-colors">
-                      {club.logo ? (
-                        <img src={club.logo} alt={club.name} className="w-10 h-10 rounded-lg object-cover" />
-                      ) : (
-                        <div className="w-10 h-10 bg-gradient-to-br from-emerald-100 to-teal-100 rounded-lg flex items-center justify-center">
-                          <span className="text-lg font-bold text-emerald-700">{club.name.charAt(0)}</span>
-                        </div>
-                      )}
-                      <span className="font-semibold text-gray-900">{club.name}</span>
-                    </Link>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-center text-sm text-gray-600">{club.playerCount}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-center text-sm text-gray-600">{club.totalMatches}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-center text-sm">
-                    <span className="text-green-600 font-semibold">{club.totalWins}</span>
-                    <span className="text-gray-400 mx-1">/</span>
-                    <span className="text-yellow-600 font-semibold">{club.totalDraws}</span>
-                    <span className="text-gray-400 mx-1">/</span>
-                    <span className="text-red-600 font-semibold">{club.totalLosses}</span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-center text-sm text-gray-600">
-                    {club.totalGoalsScored} - {club.totalGoalsConceded}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-center">
-                    <span className={`font-semibold ${
-                      club.goalDifference > 0 ? 'text-green-600' : 
-                      club.goalDifference < 0 ? 'text-red-600' : 'text-gray-600'
-                    }`}>
-                      {club.goalDifference > 0 ? '+' : ''}{club.goalDifference}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-center text-sm font-medium text-gray-900">
-                    {club.avgPointsPerMatch}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-center">
-                    <span className="px-3 py-1 bg-gradient-to-r from-emerald-500 to-teal-600 text-white rounded-full text-sm font-bold shadow-md">
-                      {club.totalPoints}
-                    </span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {clubStats.length === 0 && (
-        <div className="text-center py-16 bg-gradient-to-br from-gray-50 to-white rounded-xl border-2 border-dashed border-gray-300">
-          <div className="w-16 h-16 bg-gradient-to-br from-emerald-100 to-teal-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
-            <svg className="w-8 h-8 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
-            </svg>
-          </div>
-          <h3 className="text-xl font-bold text-gray-900 mb-2">No club data available</h3>
-          <p className="text-gray-600 mb-6">Create clubs and add tournament results to see the leaderboard.</p>
-        </div>
-      )}
+      <ClubLeaderboardClient clubs={clubStats} tournaments={tournaments} />
     </div>
   );
 }

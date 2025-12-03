@@ -413,7 +413,7 @@ export function PointSystemForm({ initialData, mode }: PointSystemFormProps) {
                 onChange={(e) => {
                   const val = e.target.value === '' ? 0 : parseInt(e.target.value, 10);
                   setRuleFormData({ ...ruleFormData, threshold: isNaN(val) ? 0 : val });
-                  if (ruleErrors.threshold) setRuleErrors({ ...ruleErrors, threshold: undefined });
+                  if (ruleErrors.threshold) setRuleErrors({ ...ruleErrors, threshold: '' });
                 }}
                 error={ruleErrors.threshold}
                 disabled={ruleFormData.conditionType === RuleConditionType.CLEAN_SHEET}

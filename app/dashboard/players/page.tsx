@@ -2,6 +2,7 @@ import { requireAuth } from "@/lib/auth-utils";
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
 import { Breadcrumb } from "@/components/Breadcrumb";
+import { PlayerStatsClient } from "@/components/PlayerStatsClient";
 
 async function getPlayerOverallStats() {
   try {
@@ -14,7 +15,7 @@ async function getPlayerOverallStats() {
             logo: true,
           },
         },
-        playerStats: {
+        tournamentStats: {
           include: {
             tournament: {
               select: {
@@ -29,7 +30,7 @@ async function getPlayerOverallStats() {
 
     // Calculate overall stats for each player
     const playerStats = players.map((player) => {
-      const stats = player.playerStats;
+      const stats = player.tournamentStats;
       
       const totalPoints = stats.reduce((sum, stat) => sum + stat.totalPoints, 0);
       const totalMatches = stats.reduce((sum, stat) => sum + stat.matchesPlayed, 0);
@@ -81,6 +82,17 @@ async function getPlayerOverallStats() {
 export default async function PlayerStatsPage() {
   await requireAuth();
   const playerStats = await getPlayerOverallStats();
+  
+  // Get all tournaments for filtering
+  const tournaments = await prisma.tournament.findMany({
+    select: {
+      id: true,
+      name: true,
+    },
+    orderBy: {
+      startDate: 'desc',
+    },
+  });
 
   return (
     <div className="max-w-7xl mx-auto space-y-6">
@@ -160,137 +172,7 @@ export default async function PlayerStatsPage() {
         </div>
       </div>
 
-      {/* Player Stats Table */}
-      <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gradient-to-r from-gray-50 to-white">
-              <tr>
-                <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Rank</th>
-                <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Player</th>
-                <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Club</th>
-                <th className="px-6 py-4 text-center text-xs font-bold text-gray-700 uppercase tracking-wider">Tournaments</th>
-                <th className="px-6 py-4 text-center text-xs font-bold text-gray-700 uppercase tracking-wider">Matches</th>
-                <th className="px-6 py-4 text-center text-xs font-bold text-gray-700 uppercase tracking-wider">W/D/L</th>
-                <th className="px-6 py-4 text-center text-xs font-bold text-gray-700 uppercase tracking-wider">Win %</th>
-                <th className="px-6 py-4 text-center text-xs font-bold text-gray-700 uppercase tracking-wider">Goals</th>
-                <th className="px-6 py-4 text-center text-xs font-bold text-gray-700 uppercase tracking-wider">GD</th>
-                <th className="px-6 py-4 text-center text-xs font-bold text-gray-700 uppercase tracking-wider">Avg G/M</th>
-                <th className="px-6 py-4 text-center text-xs font-bold text-gray-700 uppercase tracking-wider">Avg Pts</th>
-                <th className="px-6 py-4 text-center text-xs font-bold text-gray-700 uppercase tracking-wider">Total Pts</th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {playerStats.map((player, index) => (
-                <tr key={player.id} className="hover:bg-gray-50 transition-colors group">
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center justify-center">
-                      {index === 0 && (
-                        <div className="w-8 h-8 bg-gradient-to-br from-yellow-400 to-yellow-600 rounded-full flex items-center justify-center shadow-lg">
-                          <span className="text-white font-bold text-sm">🥇</span>
-                        </div>
-                      )}
-                      {index === 1 && (
-                        <div className="w-8 h-8 bg-gradient-to-br from-gray-300 to-gray-500 rounded-full flex items-center justify-center shadow-lg">
-                          <span className="text-white font-bold text-sm">🥈</span>
-                        </div>
-                      )}
-                      {index === 2 && (
-                        <div className="w-8 h-8 bg-gradient-to-br from-orange-400 to-orange-600 rounded-full flex items-center justify-center shadow-lg">
-                          <span className="text-white font-bold text-sm">🥉</span>
-                        </div>
-                      )}
-                      {index > 2 && (
-                        <span className="text-lg font-bold text-gray-600">#{index + 1}</span>
-                      )}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center gap-3">
-                      {player.photo ? (
-                        <img src={player.photo} alt={player.name} className="w-10 h-10 rounded-xl object-cover ring-2 ring-gray-100" />
-                      ) : (
-                        <div className="w-10 h-10 bg-gradient-to-br from-purple-100 to-pink-100 rounded-xl flex items-center justify-center ring-2 ring-gray-100">
-                          <span className="text-lg font-bold text-purple-700">{player.name.charAt(0).toUpperCase()}</span>
-                        </div>
-                      )}
-                      <div>
-                        <div className="font-semibold text-gray-900">{player.name}</div>
-                        <div className="text-xs text-gray-500">{player.email}</div>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <Link href={`/dashboard/clubs/${player.club.id}`} className="flex items-center gap-2 group-hover:text-purple-600 transition-colors">
-                      {player.club.logo ? (
-                        <img src={player.club.logo} alt={player.club.name} className="w-6 h-6 rounded object-cover" />
-                      ) : (
-                        <div className="w-6 h-6 bg-gradient-to-br from-purple-100 to-pink-100 rounded flex items-center justify-center">
-                          <span className="text-xs font-bold text-purple-700">{player.club.name.charAt(0)}</span>
-                        </div>
-                      )}
-                      <span className="text-sm font-medium text-gray-700">{player.club.name}</span>
-                    </Link>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-center text-sm text-gray-600">{player.tournamentsPlayed}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-center text-sm text-gray-600">{player.totalMatches}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-center text-sm">
-                    <span className="text-green-600 font-semibold">{player.totalWins}</span>
-                    <span className="text-gray-400 mx-1">/</span>
-                    <span className="text-yellow-600 font-semibold">{player.totalDraws}</span>
-                    <span className="text-gray-400 mx-1">/</span>
-                    <span className="text-red-600 font-semibold">{player.totalLosses}</span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-center">
-                    <span className={`px-2 py-1 rounded-full text-xs font-bold ${
-                      player.winRate >= 70 ? 'bg-green-100 text-green-800' :
-                      player.winRate >= 50 ? 'bg-blue-100 text-blue-800' :
-                      player.winRate >= 30 ? 'bg-yellow-100 text-yellow-800' :
-                      'bg-red-100 text-red-800'
-                    }`}>
-                      {player.winRate}%
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-center text-sm text-gray-600">
-                    {player.totalGoalsScored} - {player.totalGoalsConceded}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-center">
-                    <span className={`font-semibold ${
-                      player.goalDifference > 0 ? 'text-green-600' : 
-                      player.goalDifference < 0 ? 'text-red-600' : 'text-gray-600'
-                    }`}>
-                      {player.goalDifference > 0 ? '+' : ''}{player.goalDifference}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-center text-sm font-medium text-gray-900">
-                    {player.avgGoalsPerMatch}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-center text-sm font-medium text-gray-900">
-                    {player.avgPointsPerMatch}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-center">
-                    <span className="px-3 py-1 bg-gradient-to-r from-purple-500 to-pink-600 text-white rounded-full text-sm font-bold shadow-md">
-                      {player.totalPoints}
-                    </span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {playerStats.length === 0 && (
-        <div className="text-center py-16 bg-gradient-to-br from-gray-50 to-white rounded-xl border-2 border-dashed border-gray-300">
-          <div className="w-16 h-16 bg-gradient-to-br from-purple-100 to-pink-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
-            <svg className="w-8 h-8 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-            </svg>
-          </div>
-          <h3 className="text-xl font-bold text-gray-900 mb-2">No player data available</h3>
-          <p className="text-gray-600 mb-6">Add players to clubs and record tournament results to see statistics.</p>
-        </div>
-      )}
+      <PlayerStatsClient players={playerStats} tournaments={tournaments} />
     </div>
   );
 }
