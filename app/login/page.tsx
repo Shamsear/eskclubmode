@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import LoginForm from "@/components/LoginForm";
+import { Suspense } from "react";
 
 export default async function LoginPage() {
   const session = await getServerSession(authOptions);
@@ -11,9 +12,17 @@ export default async function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col lg:flex-row">
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
+    }>
+      <div className="min-h-screen flex flex-col lg:flex-row bg-gray-50">
       {/* Left Side - Branding & Info */}
-      <div className="lg:w-1/2 bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-800 p-8 lg:p-12 flex flex-col justify-between relative overflow-hidden">
+      <div className="lg:w-1/2 bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-800 p-8 lg:p-12 flex flex-col justify-between relative overflow-hidden min-h-[50vh] lg:min-h-screen">
         {/* Decorative elements */}
         <div className="absolute top-0 right-0 w-64 h-64 bg-white opacity-5 rounded-full -mr-32 -mt-32"></div>
         <div className="absolute bottom-0 left-0 w-96 h-96 bg-white opacity-5 rounded-full -ml-48 -mb-48"></div>
@@ -65,7 +74,7 @@ export default async function LoginPage() {
       </div>
 
       {/* Right Side - Login Form */}
-      <div className="lg:w-1/2 flex items-center justify-center p-6 sm:p-8 lg:p-12 bg-gray-50">
+      <div className="lg:w-1/2 flex items-center justify-center p-6 sm:p-8 lg:p-12 bg-gray-50 min-h-[50vh] lg:min-h-screen">
         <div className="w-full max-w-md">
           <div className="bg-white rounded-2xl shadow-xl p-8 sm:p-10">
             <div className="mb-8">
@@ -94,6 +103,7 @@ export default async function LoginPage() {
           </div>
         </div>
       </div>
-    </div>
+      </div>
+    </Suspense>
   );
 }

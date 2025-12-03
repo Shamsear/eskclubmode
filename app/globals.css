@@ -13,6 +13,16 @@ body {
   font-family: Arial, Helvetica, sans-serif;
 }
 
+/* Fix for mobile viewport height issues */
+html {
+  height: -webkit-fill-available;
+}
+
+body {
+  min-height: 100vh;
+  min-height: -webkit-fill-available;
+}
+
 @layer base {
   /* Enhanced focus indicators for accessibility */
   *:focus-visible {
