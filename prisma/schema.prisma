@@ -88,21 +88,59 @@ model PointSystemTemplate {
   name        String  @unique @db.VarChar(100)
   description String? @db.Text
 
+  // Tournament configuration
+  tournamentType   TournamentType @default(LEAGUE)
+  numberOfTeams    Int            @default(0)
+
   // Base point configuration
   pointsPerWin          Int
   pointsPerDraw         Int
   pointsPerLoss         Int
   pointsPerGoalScored   Int
   pointsPerGoalConceded Int
+  
+  // Additional point configurations
+  pointsForWalkoverWin  Int @default(3)   // Points for receiving walkover (opponent doesn't show)
+  pointsForWalkoverLoss Int @default(-3)  // Points penalty for giving walkover (not showing up)
+  pointsPerStageWin     Int @default(0)   // Points for winning a stage/round
+  pointsPerStageDraw    Int @default(0)   // Points for drawing a stage/round
+  pointsPerCleanSheet   Int @default(0)   // Points for clean sheet (no goals conceded)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   conditionalRules ConditionalRule[]
+  stagePoints      StagePoint[]
   tournaments      Tournament[]
 
   @@index([name])
   @@map("point_system_templates")
+}
+
+model StagePoint {
+  id                    Int                  @id @default(autoincrement())
+  pointSystemTemplateId Int
+  stageName             String               @db.VarChar(100)
+  stageOrder            Int                  // Order of the stage (1, 2, 3, etc.)
+  pointsForWin          Int
+  pointsForDraw         Int
+  pointsForLoss         Int
+  pointsForAdvancing    Int                  @default(0) // Bonus for advancing to next stage
+  
+  pointSystemTemplate   PointSystemTemplate  @relation(fields: [pointSystemTemplateId], references: [id], onDelete: Cascade)
+  matches               Match[]
+
+  @@index([pointSystemTemplateId])
+  @@map("stage_points")
+}
+
+enum TournamentType {
+  LEAGUE           // Round-robin league format
+  KNOCKOUT         // Single/double elimination
+  GROUP_STAGE      // Group stage only
+  GROUP_KNOCKOUT   // Group stage + knockout
+  LEAGUE_KNOCKOUT  // League + knockout playoffs
+  MIXED            // Custom mixed format
 }
 
 enum RuleConditionType {
@@ -153,6 +191,13 @@ model Tournament {
   pointsPerLoss         Int @default(0)
   pointsPerGoalScored   Int @default(0)
   pointsPerGoalConceded Int @default(0)
+  
+  // Additional point configurations
+  pointsForWalkoverWin  Int @default(3)
+  pointsForWalkoverLoss Int @default(-3)
+  pointsPerStageWin     Int @default(0)
+  pointsPerStageDraw    Int @default(0)
+  pointsPerCleanSheet   Int @default(0)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -187,14 +232,18 @@ model TournamentParticipant {
 model Match {
   id           Int      @id @default(autoincrement())
   tournamentId Int
+  stageId      Int?     // Optional reference to tournament stage
+  stageName    String?  @db.VarChar(100) // Stage name for display
   matchDate    DateTime @db.Date
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
   tournament Tournament    @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  stage      StagePoint?   @relation(fields: [stageId], references: [id], onDelete: SetNull)
   results    MatchResult[]
 
   @@index([tournamentId])
+  @@index([stageId])
   @@index([matchDate])
   @@map("matches")
 }
