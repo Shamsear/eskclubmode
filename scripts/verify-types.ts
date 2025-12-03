@@ -23,9 +23,9 @@ const template: PointSystemTemplate = {
   pointsPerGoalConceded: 0,
   pointsForWalkoverWin: 3,
   pointsForWalkoverLoss: -3,
-  pointsPerStageWin: null,
-  pointsPerStageDraw: null,
-  pointsPerStageLoss: null,
+  pointsPerStageWin: 0,
+  pointsPerStageDraw: 0,
+  pointsPerCleanSheet: 0,
   createdAt: new Date(),
   updatedAt: new Date(),
 };
