@@ -30,10 +30,12 @@ export default async function LoginPage() {
         <div className="relative z-10">
           {/* Logo/Brand */}
           <div className="flex items-center space-x-3 mb-8 lg:mb-12">
-            <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center shadow-lg">
-              <svg className="w-7 h-7 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 10V3L4 14h7v7l9-11h-7z" />
-              </svg>
+            <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center shadow-lg overflow-hidden p-1.5">
+              <img
+                src="/logo.png"
+                alt="Eskimos Logo"
+                className="w-full h-full object-contain"
+              />
             </div>
             <span className="text-2xl font-bold text-white">Eskimos</span>
           </div>

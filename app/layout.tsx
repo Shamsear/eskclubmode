@@ -3,8 +3,18 @@ import "./globals.css";
 import Providers from "@/components/Providers";
 
 export const metadata: Metadata = {
-  title: "Club Management System",
-  description: "Manage sports clubs, members, and hierarchies",
+  title: {
+    default: "Eskimos - Club Mode",
+    template: "%s | Eskimos"
+  },
+  description: "Manage sports clubs, members, tournaments, and hierarchies with Eskimos Club Mode",
+  icons: {
+    icon: [
+      { url: '/favicon.ico' },
+      { url: '/icon.png', type: 'image/png' },
+    ],
+    apple: '/apple-icon.png',
+  },
 };
 
 export default function RootLayout({
