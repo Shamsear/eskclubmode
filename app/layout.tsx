@@ -8,17 +8,6 @@ export const metadata: Metadata = {
     template: "%s | Eskimos"
   },
   description: "Manage sports clubs, members, tournaments, and hierarchies with Eskimos Club Mode",
-  icons: {
-    icon: [
-      { url: '/favicon.ico', sizes: 'any' },
-      { url: '/icon.png', type: 'image/png', sizes: '32x32' },
-    ],
-    apple: [
-      { url: '/apple-icon.png', sizes: '180x180', type: 'image/png' },
-    ],
-    shortcut: '/favicon.ico',
-  },
-  manifest: '/manifest.json',
 };
 
 export default function RootLayout({
@@ -28,6 +17,11 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="h-full">
+      <head>
+        <link rel="icon" href="/favicon.ico" sizes="any" />
+        <link rel="icon" href="/icon.png" type="image/png" />
+        <link rel="apple-touch-icon" href="/apple-icon.png" />
+      </head>
       <body className="h-full antialiased">
         <Providers>{children}</Providers>
       </body>
