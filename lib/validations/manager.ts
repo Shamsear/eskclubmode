@@ -3,7 +3,10 @@ import { RoleType } from "@prisma/client";
 
 export const playerSchema = z.object({
   name: z.string().min(1, "Name is required").max(100, "Name must be 100 characters or less"),
-  email: z.string().email("Invalid email format").max(100, "Email must be 100 characters or less"),
+  email: z.preprocess(
+    (val) => (val === '' || val === null || val === undefined ? undefined : val),
+    z.string().email("Invalid email format").max(100, "Email must be 100 characters or less").optional()
+  ),
   phone: z.string().max(20, "Phone must be 20 characters or less").optional().nullable(),
   place: z.string().max(100, "Place must be 100 characters or less").optional().nullable(),
   dateOfBirth: z.string().datetime().optional().nullable(),
