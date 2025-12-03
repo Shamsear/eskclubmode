@@ -189,7 +189,7 @@ export default async function DashboardPage() {
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                   </svg>
-                  <span className="hidden sm:inline">New Club</span>
+                  <span>Club</span>
                 </button>
               </Link>
               <Link href="/dashboard/tournaments/new">
@@ -197,7 +197,7 @@ export default async function DashboardPage() {
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                   </svg>
-                  <span className="hidden sm:inline">New Tournament</span>
+                  <span>Tournament</span>
                 </button>
               </Link>
             </div>
@@ -293,11 +293,21 @@ export default async function DashboardPage() {
               <Link key={club.id} href={`/dashboard/clubs/${club.id}`}>
                 <div className="bg-white rounded-2xl shadow-sm border border-gray-200 hover:shadow-lg transition-all p-5 group">
                   <div className="flex items-start gap-4">
-                    <div className="w-14 h-14 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg">
-                      <span className="text-white font-bold text-xl">
-                        {club.name.charAt(0).toUpperCase()}
-                      </span>
-                    </div>
+                    {club.logo ? (
+                      <div className="w-14 h-14 rounded-xl overflow-hidden bg-gradient-to-br from-blue-50 to-indigo-50 flex items-center justify-center p-2 flex-shrink-0 shadow-lg">
+                        <img
+                          src={club.logo}
+                          alt={`${club.name} logo`}
+                          className="object-contain w-full h-full"
+                        />
+                      </div>
+                    ) : (
+                      <div className="w-14 h-14 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg">
+                        <span className="text-white font-bold text-xl">
+                          {club.name.charAt(0).toUpperCase()}
+                        </span>
+                      </div>
+                    )}
                     <div className="flex-1 min-w-0">
                       <h3 className="text-lg font-bold text-gray-900 truncate group-hover:text-blue-600 transition-colors">
                         {club.name}

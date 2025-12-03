@@ -47,6 +47,19 @@ export default async function TournamentsPage() {
         </div>
 
         <TournamentsList initialTournaments={tournaments} />
+
+        {/* Mobile FAB */}
+        <Link href="/dashboard/tournaments/new" className="lg:hidden">
+          <button 
+            className="fixed bottom-20 right-6 z-40 px-5 py-3 bg-gradient-to-r from-violet-600 to-purple-600 text-white rounded-full shadow-2xl hover:shadow-3xl transition-all flex items-center gap-2 font-medium text-sm hover:scale-105 active:scale-95"
+            aria-label="Create new tournament"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+            </svg>
+            <span>New Tournament</span>
+          </button>
+        </Link>
       </div>
     );
   } catch (error) {

@@ -236,7 +236,7 @@ export default function Sidebar() {
               </svg>
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-bold text-gray-900 truncate">ClubHub</p>
+              <p className="text-sm font-bold text-gray-900 truncate">Eskimos</p>
               <p className="text-xs text-gray-500">v1.0.0</p>
             </div>
           </div>

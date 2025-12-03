@@ -51,9 +51,9 @@ export default function Navigation({ user }: NavigationProps) {
               </div>
               <div className="hidden sm:block">
                 <span className="text-lg sm:text-xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
-                  ClubHub
+                  Eskimos
                 </span>
-                <p className="text-[10px] text-gray-500 -mt-1">Sports Management</p>
+                <p className="text-[10px] text-gray-500 -mt-1">Club Mode</p>
               </div>
             </Link>
           </div>

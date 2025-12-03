@@ -285,148 +285,239 @@ export function TournamentForm({ clubId, initialData, mode }: TournamentFormProp
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6" aria-label={`${mode === 'create' ? 'Create' : 'Edit'} tournament form`}>
-      <Input
-        label="Tournament Name"
-        type="text"
-        value={formData.name}
-        onChange={(e) => handleFieldChange('name', e.target.value)}
-        error={errors.name}
-        placeholder="Enter tournament name"
-        required
-      />
+    <form onSubmit={handleSubmit} className="space-y-8" aria-label={`${mode === 'create' ? 'Create' : 'Edit'} tournament form`}>
+      {/* Basic Information Section */}
+      <div className="space-y-6">
+        <div className="flex items-center gap-3 pb-3 border-b border-gray-200">
+          <div className="w-10 h-10 bg-violet-100 rounded-lg flex items-center justify-center">
+            <svg className="w-5 h-5 text-violet-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <div>
+            <h2 className="text-lg font-semibold text-gray-900">Basic Information</h2>
+            <p className="text-sm text-gray-500">Tournament name, description, and schedule</p>
+          </div>
+        </div>
 
-      <div>
-        <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1">
-          Description
-        </label>
-        <textarea
-          id="description"
-          value={formData.description}
-          onChange={(e) => handleFieldChange('description', e.target.value)}
-          className="block w-full px-3 py-2.5 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors text-base"
-          rows={4}
-          placeholder="Enter tournament description (optional)"
-          aria-describedby={errors.description ? "description-error" : undefined}
-          aria-invalid={errors.description ? "true" : "false"}
-        />
-        {errors.description && (
-          <p id="description-error" className="mt-1 text-sm text-red-600" role="alert">{errors.description}</p>
-        )}
-      </div>
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <Input
-          label="Start Date"
-          type="date"
-          value={formData.startDate}
-          onChange={(e) => handleFieldChange('startDate', e.target.value)}
-          error={errors.startDate}
+          label="Tournament Name"
+          type="text"
+          value={formData.name}
+          onChange={(e) => handleFieldChange('name', e.target.value)}
+          error={errors.name}
+          placeholder="e.g., Summer Championship 2024"
           required
         />
 
-        <Input
-          label="End Date"
-          type="date"
-          value={formData.endDate}
-          onChange={(e) => handleFieldChange('endDate', e.target.value)}
-          error={errors.endDate}
-          helperText="Optional"
-        />
+        <div>
+          <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-2">
+            Description <span className="text-gray-400 font-normal">(Optional)</span>
+          </label>
+          <textarea
+            id="description"
+            value={formData.description}
+            onChange={(e) => handleFieldChange('description', e.target.value)}
+            className="block w-full px-4 py-3 border border-gray-300 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-violet-500 transition-colors text-base resize-none"
+            rows={4}
+            placeholder="Describe the tournament, its format, and any special rules..."
+            aria-describedby={errors.description ? "description-error" : undefined}
+            aria-invalid={errors.description ? "true" : "false"}
+          />
+          {errors.description && (
+            <p id="description-error" className="mt-2 text-sm text-red-600 flex items-center gap-1" role="alert">
+              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+              </svg>
+              {errors.description}
+            </p>
+          )}
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <Input
+              label="Start Date"
+              type="date"
+              value={formData.startDate}
+              onChange={(e) => handleFieldChange('startDate', e.target.value)}
+              error={errors.startDate}
+              required
+            />
+          </div>
+
+          <div>
+            <Input
+              label="End Date"
+              type="date"
+              value={formData.endDate}
+              onChange={(e) => handleFieldChange('endDate', e.target.value)}
+              error={errors.endDate}
+              helperText="Leave empty for ongoing tournaments"
+            />
+          </div>
+        </div>
       </div>
 
-      <fieldset className="border-t pt-6">
-        <legend className="text-lg font-medium text-gray-900 mb-4">Point System Configuration</legend>
-        <p className="text-sm text-gray-600 mb-4">
-          Configure how points are awarded for match outcomes and goals
-        </p>
+      {/* Point System Section */}
+      <div className="space-y-6">
+        <div className="flex items-center gap-3 pb-3 border-b border-gray-200">
+          <div className="w-10 h-10 bg-amber-100 rounded-lg flex items-center justify-center">
+            <svg className="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+            </svg>
+          </div>
+          <div>
+            <h2 className="text-lg font-semibold text-gray-900">Point System</h2>
+            <p className="text-sm text-gray-500">Configure scoring rules for matches and goals</p>
+          </div>
+        </div>
 
         {/* Template Selection */}
-        <div className="mb-6">
-          <label htmlFor="template-select" className="block text-sm font-medium text-gray-700 mb-2">
-            Point System Template
+        <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-5 border border-blue-100">
+          <label htmlFor="template-select" className="block text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
+            <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z" />
+            </svg>
+            Choose a Template
           </label>
           {loadingTemplates ? (
-            <div className="text-sm text-gray-500">Loading templates...</div>
+            <div className="flex items-center gap-2 text-sm text-gray-600">
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+              Loading templates...
+            </div>
           ) : (
-            <select
-              id="template-select"
-              value={useCustomConfig ? 'custom' : (formData.pointSystemTemplateId?.toString() || 'custom')}
-              onChange={(e) => handleTemplateChange(e.target.value)}
-              className="block w-full px-3 py-2.5 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors text-base"
-            >
-              <option value="custom">Use custom configuration</option>
-              {templates.map((template) => (
-                <option key={template.id} value={template.id}>
-                  {template.name}
-                </option>
-              ))}
-            </select>
+            <>
+              <select
+                id="template-select"
+                value={useCustomConfig ? 'custom' : (formData.pointSystemTemplateId?.toString() || 'custom')}
+                onChange={(e) => handleTemplateChange(e.target.value)}
+                className="block w-full px-4 py-3 border border-blue-200 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors text-base bg-white"
+              >
+                <option value="custom">✨ Custom Configuration</option>
+                {templates.map((template) => (
+                  <option key={template.id} value={template.id}>
+                    📋 {template.name}
+                  </option>
+                ))}
+              </select>
+              <p className="mt-2 text-sm text-blue-700 flex items-start gap-2">
+                <svg className="w-4 h-4 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                </svg>
+                <span>
+                  {useCustomConfig 
+                    ? 'You can manually configure point values below' 
+                    : 'Template values are applied automatically. Switch to custom to modify.'}
+                </span>
+              </p>
+            </>
           )}
-          <p className="mt-1 text-sm text-gray-500">
-            {useCustomConfig 
-              ? 'Configure point values manually below' 
-              : 'Using a template will automatically set the point values'}
-          </p>
         </div>
         
+        {/* Point Configuration Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          <Input
-            label="Points Per Win"
-            type="number"
-            min="0"
-            value={formData.pointsPerWin.toString()}
-            onChange={(e) => handleNumberChange('pointsPerWin', e.target.value)}
-            error={errors.pointsPerWin}
-            disabled={!useCustomConfig}
-            required
-          />
+          <div className="relative">
+            <Input
+              label="Points Per Win"
+              type="number"
+              min="0"
+              value={formData.pointsPerWin.toString()}
+              onChange={(e) => handleNumberChange('pointsPerWin', e.target.value)}
+              error={errors.pointsPerWin}
+              disabled={!useCustomConfig}
+              required
+            />
+            {!useCustomConfig && (
+              <div className="absolute top-0 right-0 mt-1 mr-1">
+                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-600">
+                  Template
+                </span>
+              </div>
+            )}
+          </div>
 
-          <Input
-            label="Points Per Draw"
-            type="number"
-            min="0"
-            value={formData.pointsPerDraw.toString()}
-            onChange={(e) => handleNumberChange('pointsPerDraw', e.target.value)}
-            error={errors.pointsPerDraw}
-            disabled={!useCustomConfig}
-            required
-          />
+          <div className="relative">
+            <Input
+              label="Points Per Draw"
+              type="number"
+              min="0"
+              value={formData.pointsPerDraw.toString()}
+              onChange={(e) => handleNumberChange('pointsPerDraw', e.target.value)}
+              error={errors.pointsPerDraw}
+              disabled={!useCustomConfig}
+              required
+            />
+            {!useCustomConfig && (
+              <div className="absolute top-0 right-0 mt-1 mr-1">
+                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-600">
+                  Template
+                </span>
+              </div>
+            )}
+          </div>
 
-          <Input
-            label="Points Per Loss"
-            type="number"
-            min="0"
-            value={formData.pointsPerLoss.toString()}
-            onChange={(e) => handleNumberChange('pointsPerLoss', e.target.value)}
-            error={errors.pointsPerLoss}
-            disabled={!useCustomConfig}
-            required
-          />
+          <div className="relative">
+            <Input
+              label="Points Per Loss"
+              type="number"
+              min="0"
+              value={formData.pointsPerLoss.toString()}
+              onChange={(e) => handleNumberChange('pointsPerLoss', e.target.value)}
+              error={errors.pointsPerLoss}
+              disabled={!useCustomConfig}
+              required
+            />
+            {!useCustomConfig && (
+              <div className="absolute top-0 right-0 mt-1 mr-1">
+                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-600">
+                  Template
+                </span>
+              </div>
+            )}
+          </div>
 
-          <Input
-            label="Points Per Goal Scored"
-            type="number"
-            min="0"
-            value={formData.pointsPerGoalScored.toString()}
-            onChange={(e) => handleNumberChange('pointsPerGoalScored', e.target.value)}
-            error={errors.pointsPerGoalScored}
-            disabled={!useCustomConfig}
-            required
-          />
+          <div className="relative">
+            <Input
+              label="Points Per Goal Scored"
+              type="number"
+              min="0"
+              value={formData.pointsPerGoalScored.toString()}
+              onChange={(e) => handleNumberChange('pointsPerGoalScored', e.target.value)}
+              error={errors.pointsPerGoalScored}
+              disabled={!useCustomConfig}
+              required
+            />
+            {!useCustomConfig && (
+              <div className="absolute top-0 right-0 mt-1 mr-1">
+                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-600">
+                  Template
+                </span>
+              </div>
+            )}
+          </div>
 
-          <Input
-            label="Points Per Goal Conceded"
-            type="number"
-            min="0"
-            value={formData.pointsPerGoalConceded.toString()}
-            onChange={(e) => handleNumberChange('pointsPerGoalConceded', e.target.value)}
-            error={errors.pointsPerGoalConceded}
-            disabled={!useCustomConfig}
-            required
-          />
+          <div className="relative">
+            <Input
+              label="Points Per Goal Conceded"
+              type="number"
+              min="0"
+              value={formData.pointsPerGoalConceded.toString()}
+              onChange={(e) => handleNumberChange('pointsPerGoalConceded', e.target.value)}
+              error={errors.pointsPerGoalConceded}
+              disabled={!useCustomConfig}
+              required
+            />
+            {!useCustomConfig && (
+              <div className="absolute top-0 right-0 mt-1 mr-1">
+                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-600">
+                  Template
+                </span>
+              </div>
+            )}
+          </div>
         </div>
-      </fieldset>
+      </div>
 
       {errors.submit && (
         <ErrorMessage
@@ -436,7 +527,8 @@ export function TournamentForm({ clubId, initialData, mode }: TournamentFormProp
         />
       )}
 
-      <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-3">
+      {/* Action Buttons */}
+      <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-3 pt-6 border-t border-gray-200">
         <Button
           type="button"
           variant="ghost"
@@ -453,7 +545,21 @@ export function TournamentForm({ clubId, initialData, mode }: TournamentFormProp
           disabled={isLoading}
           className="w-full sm:w-auto"
         >
-          {mode === 'create' ? 'Create Tournament' : 'Update Tournament'}
+          {mode === 'create' ? (
+            <>
+              <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              </svg>
+              Create Tournament
+            </>
+          ) : (
+            <>
+              <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+              Update Tournament
+            </>
+          )}
         </Button>
       </div>
     </form>

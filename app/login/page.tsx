@@ -35,7 +35,7 @@ export default async function LoginPage() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 10V3L4 14h7v7l9-11h-7z" />
               </svg>
             </div>
-            <span className="text-2xl font-bold text-white">ClubHub</span>
+            <span className="text-2xl font-bold text-white">Eskimos</span>
           </div>
 
           {/* Main Content */}
@@ -69,7 +69,7 @@ export default async function LoginPage() {
 
         {/* Footer */}
         <div className="relative z-10 text-blue-200 text-sm mt-8 lg:mt-0">
-          <p>&copy; 2024 ClubHub. All rights reserved.</p>
+          <p>&copy; 2024 Eskimos. All rights reserved.</p>
         </div>
       </div>
 
