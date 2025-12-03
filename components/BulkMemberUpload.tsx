@@ -8,6 +8,7 @@ import { Input } from './ui/Input';
 import { Select } from './ui/Select';
 import { useToast } from './ui/Toast';
 import { INDIAN_STATES, INDIAN_STATES_DISTRICTS } from '@/lib/data/indian-states-districts';
+import { COUNTRIES } from '@/lib/data/countries';
 
 interface BulkMemberUploadProps {
   clubId: number;
@@ -17,6 +18,7 @@ interface ParsedMember {
   name: string;
   email: string;
   phone?: string;
+  country?: string;
   state?: string;
   district?: string;
   dateOfBirth?: string;
@@ -40,7 +42,7 @@ export function BulkMemberUpload({ clubId }: BulkMemberUploadProps) {
   
   // Form mode state
   const [formMembers, setFormMembers] = useState<FormMember[]>([
-    { id: 1, name: '', email: '', phone: '', state: '', district: '', dateOfBirth: '', role: 'PLAYER' }
+    { id: 1, name: '', email: '', phone: '', country: '', state: '', district: '', dateOfBirth: '', role: 'PLAYER' }
   ]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -65,11 +67,11 @@ export function BulkMemberUpload({ clubId }: BulkMemberUploadProps) {
     }
 
     const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
-    const requiredHeaders = ['name', 'email'];
+    const requiredHeaders = ['name'];
     const missingHeaders = requiredHeaders.filter(h => !headers.includes(h));
     
     if (missingHeaders.length > 0) {
-      setErrors([`Missing required columns: ${missingHeaders.join(', ')}`]);
+      setErrors([`Missing required column: ${missingHeaders.join(', ')}`]);
       return;
     }
 
@@ -95,6 +97,9 @@ export function BulkMemberUpload({ clubId }: BulkMemberUploadProps) {
           case 'phone':
             member.phone = value;
             break;
+          case 'country':
+            member.country = value;
+            break;
           case 'state':
             member.state = value;
             break;
@@ -111,9 +116,9 @@ export function BulkMemberUpload({ clubId }: BulkMemberUploadProps) {
         }
       });
 
-      if (!member.name || !member.email) {
-        parseErrors.push(`Row ${i + 1}: Name and email are required`);
-      } else if (!member.email.includes('@')) {
+      if (!member.name) {
+        parseErrors.push(`Row ${i + 1}: Name is required`);
+      } else if (member.email && !member.email.includes('@')) {
         parseErrors.push(`Row ${i + 1}: Invalid email format`);
       } else {
         members.push(member);
@@ -170,6 +175,7 @@ export function BulkMemberUpload({ clubId }: BulkMemberUploadProps) {
         name: '',
         email: '',
         phone: '',
+        country: '',
         state: '',
         district: '',
         dateOfBirth: '',
@@ -196,10 +202,10 @@ export function BulkMemberUpload({ clubId }: BulkMemberUploadProps) {
 
   const handleFormSubmit = async () => {
     // Validate form members
-    const validMembers = formMembers.filter(m => m.name && m.email);
+    const validMembers = formMembers.filter(m => m.name);
     
     if (validMembers.length === 0) {
-      showToast('Please fill in at least one member with name and email', 'error');
+      showToast('Please fill in at least one member with a name', 'error');
       return;
     }
 
@@ -237,19 +243,23 @@ export function BulkMemberUpload({ clubId }: BulkMemberUploadProps) {
 
   const downloadTemplate = () => {
     // Create CSV with instructions
-    const template = `name,email,phone,state,district,dateOfBirth,role
-John Doe,john@example.com,+91 1234567890,Karnataka,Bengaluru Urban,1990-01-15,PLAYER
-Jane Smith,jane@example.com,+91 9876543210,Maharashtra,Mumbai City,1992-05-20,MANAGER
+    const template = `name,email,phone,country,state,district,dateOfBirth,role
+John Doe,john@example.com,+91 1234567890,India,Karnataka,Bengaluru Urban,1990-01-15,PLAYER
+Jane Smith,jane@example.com,+91 9876543210,India,Maharashtra,Mumbai City,1992-05-20,MANAGER
+Mike Johnson,mike@example.com,+1 5551234567,United States,,,1988-03-10,PLAYER
 
 Instructions:
-- name and email are required
-- phone format: +91 XXXXXXXXXX
-- state: Select from Indian states
-- district: Select district based on state
+- name is required (all other fields are optional)
+- email format: valid email address
+- phone format: country code + number
+- country: Select from available countries
+- state: Only for India - Select from Indian states
+- district: Only for India - Select district based on state
 - dateOfBirth format: YYYY-MM-DD
 - role: PLAYER, MANAGER, MENTOR, or CAPTAIN (defaults to PLAYER)
 
-Available States: ${INDIAN_STATES.join(', ')}`;
+Available Countries: ${COUNTRIES.join(', ')}
+Available Indian States: ${INDIAN_STATES.join(', ')}`;
     
     const blob = new Blob([template], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
@@ -413,8 +423,7 @@ Available States: ${INDIAN_STATES.join(', ')}`;
                         type="email"
                         value={member.email}
                         onChange={(e) => updateFormMember(member.id, 'email', e.target.value)}
-                        placeholder="email@example.com"
-                        required
+                        placeholder="email@example.com (optional)"
                       />
                       <Input
                         label="Phone"
@@ -423,30 +432,50 @@ Available States: ${INDIAN_STATES.join(', ')}`;
                         placeholder="+91 1234567890"
                       />
                       <Select
-                        label="State"
-                        value={member.state || ''}
+                        label="Country"
+                        value={member.country || ''}
                         onChange={(e) => {
-                          updateFormMember(member.id, 'state', e.target.value);
-                          updateFormMember(member.id, 'district', ''); // Reset district
+                          const newCountry = e.target.value;
+                          updateFormMember(member.id, 'country', newCountry);
+                          if (newCountry !== 'India') {
+                            updateFormMember(member.id, 'state', '');
+                            updateFormMember(member.id, 'district', '');
+                          }
                         }}
                         options={[
-                          { value: '', label: 'Select State' },
-                          ...INDIAN_STATES.map(state => ({ value: state, label: state }))
+                          { value: '', label: 'Select Country' },
+                          ...COUNTRIES.map(country => ({ value: country, label: country }))
                         ]}
                       />
-                      <Select
-                        label="District"
-                        value={member.district || ''}
-                        onChange={(e) => updateFormMember(member.id, 'district', e.target.value)}
-                        disabled={!member.state}
-                        options={[
-                          { value: '', label: member.state ? 'Select District' : 'Select State First' },
-                          ...(member.state ? INDIAN_STATES_DISTRICTS[member.state]?.map(district => ({
-                            value: district,
-                            label: district
-                          })) || [] : [])
-                        ]}
-                      />
+                      {member.country === 'India' && (
+                        <>
+                          <Select
+                            label="State"
+                            value={member.state || ''}
+                            onChange={(e) => {
+                              updateFormMember(member.id, 'state', e.target.value);
+                              updateFormMember(member.id, 'district', ''); // Reset district
+                            }}
+                            options={[
+                              { value: '', label: 'Select State' },
+                              ...INDIAN_STATES.map(state => ({ value: state, label: state }))
+                            ]}
+                          />
+                          <Select
+                            label="District"
+                            value={member.district || ''}
+                            onChange={(e) => updateFormMember(member.id, 'district', e.target.value)}
+                            disabled={!member.state}
+                            options={[
+                              { value: '', label: member.state ? 'Select District' : 'Select State First' },
+                              ...(member.state ? INDIAN_STATES_DISTRICTS[member.state]?.map(district => ({
+                                value: district,
+                                label: district
+                              })) || [] : [])
+                            ]}
+                          />
+                        </>
+                      )}
                       <Input
                         label="Date of Birth"
                         type="date"
@@ -488,7 +517,7 @@ Available States: ${INDIAN_STATES.join(', ')}`;
                       <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                       </svg>
-                      Add {formMembers.filter(m => m.name && m.email).length} Member{formMembers.filter(m => m.name && m.email).length !== 1 ? 's' : ''}
+                      Add {formMembers.filter(m => m.name).length} Member{formMembers.filter(m => m.name).length !== 1 ? 's' : ''}
                     </>
                   )}
                 </button>
@@ -518,8 +547,9 @@ Available States: ${INDIAN_STATES.join(', ')}`;
               <ol className="space-y-3">
                 {[
                   'Download the CSV template',
-                  'Fill in member details (name and email are required)',
-                  'Optional fields: phone, state, district, dateOfBirth, role',
+                  'Fill in member details (only name is required)',
+                  'Optional fields: email, phone, country, state, district, dateOfBirth, role',
+                  'State and district are only for India - leave empty for other countries',
                   'Role can be: PLAYER, MANAGER, MENTOR, or CAPTAIN (defaults to PLAYER)',
                   'Upload the CSV file and review the preview',
                   'Click "Upload Members" to add them to the club'

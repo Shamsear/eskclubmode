@@ -11,12 +11,14 @@ import { RoleType } from '@prisma/client';
 import { ErrorMessage } from './FormError';
 import { useToast } from './ui/Toast';
 import { INDIAN_STATES, INDIAN_STATES_DISTRICTS } from '@/lib/data/indian-states-districts';
+import { COUNTRIES } from '@/lib/data/countries';
 
 // Validation schema
 const managerSchema = z.object({
   name: z.string().min(1, "Name is required").max(100, "Name must be 100 characters or less"),
-  email: z.string().min(1, "Email is required").email("Invalid email format").max(100, "Email must be 100 characters or less"),
+  email: z.string().email("Invalid email format").max(100, "Email must be 100 characters or less").optional().or(z.literal('')),
   phone: z.string().max(20, "Phone must be 20 characters or less").optional(),
+  country: z.string().optional(),
   state: z.string().optional(),
   district: z.string().optional(),
   dateOfBirth: z.string().optional(),
@@ -78,6 +80,7 @@ export function ManagerForm({ clubId, initialData, mode, preSelectedRoles, retur
     name: initialData?.name || '',
     email: initialData?.email || '',
     phone: initialData?.phone || '',
+    country: initialPlace.state ? 'India' : '',
     state: initialPlace.state,
     district: initialPlace.district,
     dateOfBirth: initialData?.dateOfBirth 
@@ -263,8 +266,7 @@ export function ManagerForm({ clubId, initialData, mode, preSelectedRoles, retur
         value={formData.email}
         onChange={(e) => handleFieldChange('email', e.target.value)}
         error={errors.email}
-        placeholder="member@example.com"
-        required
+        placeholder="member@example.com (optional)"
       />
 
       <Input
@@ -278,28 +280,50 @@ export function ManagerForm({ clubId, initialData, mode, preSelectedRoles, retur
       />
 
       <Select
-        label="State"
-        value={formData.state}
-        onChange={(e) => handleFieldChange('state', e.target.value)}
-        error={errors.state}
+        label="Country"
+        value={formData.country}
+        onChange={(e) => {
+          const newCountry = e.target.value;
+          setFormData({
+            ...formData,
+            country: newCountry,
+            state: newCountry === 'India' ? formData.state : '',
+            district: newCountry === 'India' ? formData.district : '',
+          });
+        }}
         options={[
-          { value: '', label: 'Select State' },
-          ...INDIAN_STATES.map(state => ({ value: state, label: state }))
+          { value: '', label: 'Select Country' },
+          ...COUNTRIES.map(country => ({ value: country, label: country }))
         ]}
       />
 
-      <Select
-        label="District"
-        value={formData.district}
-        onChange={(e) => handleFieldChange('district', e.target.value)}
-        error={errors.district}
-        disabled={!formData.state}
-        options={[
-          { value: '', label: formData.state ? 'Select District' : 'Select State First' },
-          ...availableDistricts.map(district => ({ value: district, label: district }))
-        ]}
-        helperText={formData.state ? 'Optional' : 'Please select a state first'}
-      />
+      {formData.country === 'India' && (
+        <>
+          <Select
+            label="State"
+            value={formData.state}
+            onChange={(e) => handleFieldChange('state', e.target.value)}
+            error={errors.state}
+            options={[
+              { value: '', label: 'Select State' },
+              ...INDIAN_STATES.map(state => ({ value: state, label: state }))
+            ]}
+          />
+
+          <Select
+            label="District"
+            value={formData.district}
+            onChange={(e) => handleFieldChange('district', e.target.value)}
+            error={errors.district}
+            disabled={!formData.state}
+            options={[
+              { value: '', label: formData.state ? 'Select District' : 'Select State First' },
+              ...availableDistricts.map(district => ({ value: district, label: district }))
+            ]}
+            helperText={formData.state ? 'Optional' : 'Please select a state first'}
+          />
+        </>
+      )}
 
       <Input
         label="Date of Birth"
