@@ -5,6 +5,10 @@ import { Card } from "@/components/ui/Card";
 
 import { RoleType } from "@prisma/client";
 
+// Disable caching for this page to always show fresh data
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 async function getDashboardStats() {
   const clubsCount = await prisma.club.count();
   const playersCount = await prisma.player.count();

@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { createErrorResponse, UnauthorizedError } from "@/lib/errors";
 import { RoleType } from "@prisma/client";
+import { revalidatePath } from "next/cache";
 
 interface BulkMember {
   name: string;
@@ -112,6 +113,10 @@ export async function POST(
       }
     }
 
+    // Revalidate relevant paths
+    revalidatePath('/dashboard');
+    revalidatePath(`/dashboard/clubs/${clubId}`);
+    
     return NextResponse.json({
       success: true,
       added,

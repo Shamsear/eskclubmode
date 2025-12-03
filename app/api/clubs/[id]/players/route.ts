@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { playerSchema } from "@/lib/validations/manager";
 import { Prisma, RoleType } from "@prisma/client";
+import { revalidatePath } from "next/cache";
 
 // GET /api/clubs/[id]/players?role=ROLE - Get all players for a club, optionally filtered by role
 export async function GET(
@@ -159,6 +160,10 @@ export async function POST(
       }
     });
 
+    // Revalidate relevant paths
+    revalidatePath('/dashboard');
+    revalidatePath(`/dashboard/clubs/${clubId}`);
+    
     return NextResponse.json(player, { status: 201 });
   } catch (error) {
     console.error("Error creating player:", error);
