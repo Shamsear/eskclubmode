@@ -56,6 +56,9 @@ const tournament: Tournament = {
   pointsPerGoalConceded: 0,
   pointsForWalkoverWin: 3,
   pointsForWalkoverLoss: -3,
+  pointsPerStageWin: 0,
+  pointsPerStageDraw: 0,
+  pointsPerCleanSheet: 0,
   createdAt: new Date(),
   updatedAt: new Date(),
 };
