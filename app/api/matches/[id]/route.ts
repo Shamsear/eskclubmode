@@ -182,12 +182,10 @@ export async function PUT(
       
       // If a stage is selected, try to use stage-specific points
       if (effectiveStageId && existingMatch.tournament.pointSystemTemplateId) {
-        const stagePoint = await prisma.stagePoint.findUnique({
+        const stagePoint = await prisma.stagePoint.findFirst({
           where: {
-            templateId_stageId: {
-              templateId: existingMatch.tournament.pointSystemTemplateId,
-              stageId: effectiveStageId,
-            },
+            id: effectiveStageId,
+            pointSystemTemplateId: existingMatch.tournament.pointSystemTemplateId,
           },
         });
 

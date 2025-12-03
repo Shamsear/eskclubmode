@@ -119,17 +119,20 @@ model PointSystemTemplate {
 
 model StagePoint {
   id                    Int                  @id @default(autoincrement())
+  stageId               Int                  // Unique stage identifier within template  
   pointSystemTemplateId Int
   stageName             String               @db.VarChar(100)
   stageOrder            Int                  // Order of the stage (1, 2, 3, etc.)
-  pointsForWin          Int
-  pointsForDraw         Int
-  pointsForLoss         Int
-  pointsForAdvancing    Int                  @default(0) // Bonus for advancing to next stage
+  pointsPerWin          Int                  @map("pointsForWin")
+  pointsPerDraw         Int                  @map("pointsForDraw")
+  pointsPerLoss         Int                  @map("pointsForLoss")
+  pointsPerGoalScored   Int                  @default(0)
+  pointsPerGoalConceded Int                  @default(0)
   
   pointSystemTemplate   PointSystemTemplate  @relation(fields: [pointSystemTemplateId], references: [id], onDelete: Cascade)
-  matches               Match[]
+  matches               Match[]              @relation("MatchStage")
 
+  @@unique([pointSystemTemplateId, stageId])
   @@index([pointSystemTemplateId])
   @@map("stage_points")
 }
@@ -232,14 +235,14 @@ model TournamentParticipant {
 model Match {
   id           Int      @id @default(autoincrement())
   tournamentId Int
-  stageId      Int?     // Optional reference to tournament stage
+  stageId      Int?     // Optional reference to tournament stage (StagePoint.id)
   stageName    String?  @db.VarChar(100) // Stage name for display
   matchDate    DateTime @db.Date
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
   tournament Tournament    @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
-  stage      StagePoint?   @relation(fields: [stageId], references: [id], onDelete: SetNull)
+  stage      StagePoint?   @relation("MatchStage", fields: [stageId], references: [id], onDelete: SetNull)
   results    MatchResult[]
 
   @@index([tournamentId])
