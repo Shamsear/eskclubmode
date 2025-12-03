@@ -153,10 +153,34 @@ export function BulkMemberUpload({ clubId }: BulkMemberUploadProps) {
         return;
       }
 
-      showToast(
-        `Successfully added ${data.added} member(s). ${data.skipped || 0} skipped (duplicates).`,
-        'success'
-      );
+      // Check if any members were actually added
+      if (data.added === 0) {
+        if (data.skipped > 0) {
+          showToast(
+            `No new members added. ${data.skipped} member(s) already exist with the same email.`,
+            'error'
+          );
+        } else if (data.errors && data.errors.length > 0) {
+          showToast(
+            `Failed to add members. Errors: ${data.errors.join(', ')}`,
+            'error'
+          );
+        } else {
+          showToast('No members were added. Please check your CSV file and try again.', 'error');
+        }
+        return; // Don't redirect, stay on the page
+      }
+
+      // Show success message with details
+      let message = `Successfully added ${data.added} member(s)`;
+      if (data.skipped > 0) {
+        message += `. ${data.skipped} skipped (duplicates)`;
+      }
+      if (data.errors && data.errors.length > 0) {
+        message += `. Some errors occurred: ${data.errors.join(', ')}`;
+      }
+      
+      showToast(message, data.errors && data.errors.length > 0 ? 'warning' : 'success');
       
       router.push(`/dashboard/clubs/${clubId}`);
       router.refresh();
@@ -227,10 +251,34 @@ export function BulkMemberUpload({ clubId }: BulkMemberUploadProps) {
         return;
       }
 
-      showToast(
-        `Successfully added ${data.added} member(s). ${data.skipped || 0} skipped (duplicates).`,
-        'success'
-      );
+      // Check if any members were actually added
+      if (data.added === 0) {
+        if (data.skipped > 0) {
+          showToast(
+            `No new members added. ${data.skipped} member(s) already exist with the same email.`,
+            'error'
+          );
+        } else if (data.errors && data.errors.length > 0) {
+          showToast(
+            `Failed to add members. Errors: ${data.errors.join(', ')}`,
+            'error'
+          );
+        } else {
+          showToast('No members were added. Please check your data and try again.', 'error');
+        }
+        return; // Don't redirect, stay on the page
+      }
+
+      // Show success message with details
+      let message = `Successfully added ${data.added} member(s)`;
+      if (data.skipped > 0) {
+        message += `. ${data.skipped} skipped (duplicates)`;
+      }
+      if (data.errors && data.errors.length > 0) {
+        message += `. Some errors occurred: ${data.errors.join(', ')}`;
+      }
+      
+      showToast(message, data.errors && data.errors.length > 0 ? 'warning' : 'success');
       
       router.push(`/dashboard/clubs/${clubId}`);
       router.refresh();
