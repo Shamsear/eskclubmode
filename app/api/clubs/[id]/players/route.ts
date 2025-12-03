@@ -140,12 +140,17 @@ export async function POST(
 
     const { name, email, phone, place, dateOfBirth, photo, roles } = validationResult.data;
 
+    // Generate email if not provided (required by schema unique constraint)
+    const playerEmail = email && email.trim() !== ''
+      ? email
+      : `noemail_${Date.now()}_${Math.random().toString(36).substring(7)}@placeholder.local`;
+
     // Create player with roles
     const player = await prisma.player.create({
       data: {
         clubId,
         name,
-        email,
+        email: playerEmail,
         phone: phone || null,
         place: place || null,
         dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : null,

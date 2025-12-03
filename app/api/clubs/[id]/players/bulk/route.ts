@@ -8,8 +8,9 @@ import { revalidatePath } from "next/cache";
 
 interface BulkMember {
   name: string;
-  email: string;
+  email?: string;
   phone?: string;
+  country?: string;
   state?: string;
   district?: string;
   dateOfBirth?: string;
@@ -52,6 +53,8 @@ export async function POST(
     const body = await request.json();
     const { members } = body as { members: BulkMember[] };
 
+    console.log('Received members:', JSON.stringify(members, null, 2));
+
     if (!Array.isArray(members) || members.length === 0) {
       return NextResponse.json(
         { error: "No members provided" },
@@ -65,20 +68,31 @@ export async function POST(
 
     for (const member of members) {
       try {
-        // Check if player with this email already exists
-        const existing = await prisma.player.findUnique({
-          where: { email: member.email },
-        });
+        console.log('Processing member:', member.name, 'Email:', member.email);
+        
+        // Check if player with this email already exists (only if email is provided)
+        if (member.email && member.email.trim() !== '') {
+          console.log('Checking for existing email:', member.email);
+          const existing = await prisma.player.findUnique({
+            where: { email: member.email },
+          });
 
-        if (existing) {
-          skipped++;
-          continue;
+          if (existing) {
+            console.log('Found existing player with email:', member.email);
+            skipped++;
+            continue;
+          }
         }
 
         // Prepare place field
-        const place = member.district && member.state
-          ? `${member.district}, ${member.state}`
-          : null;
+        let place = null;
+        if (member.country === 'India' && member.district && member.state) {
+          place = `${member.district}, ${member.state}, India`;
+        } else if (member.country === 'India' && member.state) {
+          place = `${member.state}, India`;
+        } else if (member.country) {
+          place = member.country;
+        }
 
         // Prepare date of birth
         const dateOfBirth = member.dateOfBirth
@@ -90,12 +104,17 @@ export async function POST(
           ? (member.role as RoleType)
           : RoleType.PLAYER;
 
+        // Generate email if not provided (required by schema unique constraint)
+        const playerEmail = member.email && member.email.trim() !== ''
+          ? member.email
+          : `noemail_${Date.now()}_${Math.random().toString(36).substring(7)}@placeholder.local`;
+
         // Create player with role
         await prisma.player.create({
           data: {
             clubId,
             name: member.name,
-            email: member.email,
+            email: playerEmail,
             phone: member.phone || null,
             place,
             dateOfBirth,
@@ -107,8 +126,10 @@ export async function POST(
           },
         });
 
+        console.log('Successfully added:', member.name);
         added++;
       } catch (error) {
+        console.error('Error adding member:', member.name, error);
         errors.push(`Failed to add ${member.name}: ${error instanceof Error ? error.message : 'Unknown error'}`);
       }
     }
