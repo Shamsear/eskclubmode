@@ -1,0 +1,667 @@
+'use client';
+
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { z } from 'zod';
+import { Input } from './ui/Input';
+import { Button } from './ui/Button';
+import { ErrorMessage } from './FormError';
+import { useToast } from './ui/Toast';
+
+// Match outcome enum
+type MatchOutcome = 'WIN' | 'DRAW' | 'LOSS';
+
+// Validation schema for a single match result
+const matchResultSchema = z.object({
+  playerId: z.number().int().positive("Player must be selected"),
+  outcome: z.enum(['WIN', 'DRAW', 'LOSS'], {
+    errorMap: () => ({ message: "Outcome must be selected" }),
+  }),
+  goalsScored: z.number().int().min(0, "Goals scored must be non-negative"),
+  goalsConceded: z.number().int().min(0, "Goals conceded must be non-negative"),
+});
+
+// Validation schema for the entire match
+const matchSchema = z.object({
+  matchDate: z.string().min(1, "Match date is required").refine((date) => !isNaN(Date.parse(date)), {
+    message: "Invalid date format",
+  }),
+  results: z.array(matchResultSchema).min(1, "At least one player result is required"),
+}).refine((data) => {
+  // Check for duplicate player IDs
+  const playerIds = data.results.map(r => r.playerId);
+  const uniquePlayerIds = new Set(playerIds);
+  return playerIds.length === uniquePlayerIds.size;
+}, {
+  message: "Duplicate players are not allowed in match results",
+  path: ["results"],
+});
+
+interface Participant {
+  id: number;
+  name: string;
+  photo?: string | null;
+}
+
+interface PlayerResult {
+  playerId: number;
+  outcome: MatchOutcome | '';
+  goalsScored: number;
+  goalsConceded: number;
+}
+
+interface MatchScore {
+  playerAId: number;
+  playerBId: number;
+  playerAGoals: number;
+  playerBGoals: number;
+}
+
+interface MatchResultFormProps {
+  tournamentId: number | string;
+  clubId?: number | string;
+  matchId?: number | string;
+  participants?: Participant[];
+  initialData?: {
+    id?: number;
+    matchDate: string;
+    results: Array<{
+      id?: number;
+      playerId: number;
+      outcome: MatchOutcome | string;
+      goalsScored: number;
+      goalsConceded: number;
+      pointsEarned?: number;
+      player?: {
+        id: number;
+        name: string;
+        email?: string;
+        photo?: string | null;
+      };
+    }>;
+  };
+  pointSystem?: {
+    pointsPerWin: number;
+    pointsPerDraw: number;
+    pointsPerLoss: number;
+    pointsPerGoalScored: number;
+    pointsPerGoalConceded: number;
+  };
+  mode?: 'create' | 'edit';
+}
+
+interface FormErrors {
+  matchDate?: string;
+  results?: string;
+  submit?: string;
+  [key: string]: string | undefined;
+}
+
+export function MatchResultForm({ 
+  tournamentId, 
+  clubId,
+  matchId,
+  participants: participantsProp, 
+  initialData, 
+  pointSystem,
+  mode: modeProp 
+}: MatchResultFormProps) {
+  const router = useRouter();
+  const { showToast } = useToast();
+  const [isLoading, setIsLoading] = useState(false);
+  const [isFetchingParticipants, setIsFetchingParticipants] = useState(!participantsProp);
+  const [participants, setParticipants] = useState<Participant[]>(participantsProp || []);
+  const [errors, setErrors] = useState<FormErrors>({});
+  
+  // Determine mode from props or initial data
+  const mode = modeProp || (initialData || matchId ? 'edit' : 'create');
+  
+  // Initialize form data
+  const [matchDate, setMatchDate] = useState(
+    initialData?.matchDate ? initialData.matchDate.split('T')[0] : ''
+  );
+  
+  const [playerResults, setPlayerResults] = useState<PlayerResult[]>(
+    initialData?.results.length 
+      ? initialData.results.map(r => ({
+          playerId: r.playerId,
+          outcome: r.outcome as MatchOutcome,
+          goalsScored: r.goalsScored,
+          goalsConceded: r.goalsConceded,
+        }))
+      : [
+          { playerId: 0, outcome: '', goalsScored: 0, goalsConceded: 0 },
+          { playerId: 0, outcome: '', goalsScored: 0, goalsConceded: 0 }
+        ]
+  );
+
+  // Fetch participants if not provided
+  useEffect(() => {
+    if (!participantsProp) {
+      const fetchParticipants = async () => {
+        try {
+          const response = await fetch(`/api/tournaments/${tournamentId}/participants`);
+          if (response.ok) {
+            const data = await response.json();
+            // Transform the response to match our Participant interface
+            const transformedParticipants = data.map((p: any) => ({
+              id: p.player?.id || p.playerId,
+              name: p.player?.name || p.name,
+              photo: p.player?.photo || p.photo,
+            }));
+            setParticipants(transformedParticipants);
+          } else {
+            console.error('Failed to fetch participants: HTTP', response.status);
+            showToast('Failed to load participants. Please refresh the page.', 'error');
+          }
+        } catch (error) {
+          console.error('Failed to fetch participants:', error);
+          showToast('Network error loading participants. Please check your connection.', 'error');
+        } finally {
+          setIsFetchingParticipants(false);
+        }
+      };
+      fetchParticipants();
+    }
+  }, [participantsProp, tournamentId, showToast]);
+
+  // Add a new player result entry
+  const addPlayerResult = () => {
+    setPlayerResults([...playerResults, { playerId: 0, outcome: '', goalsScored: 0, goalsConceded: 0 }]);
+  };
+
+  // Remove a player result entry
+  const removePlayerResult = (index: number) => {
+    if (playerResults.length > 1) {
+      const newResults = playerResults.filter((_, i) => i !== index);
+      setPlayerResults(newResults);
+      // Clear any errors related to this result
+      const newErrors = { ...errors };
+      delete newErrors[`results.${index}.playerId`];
+      delete newErrors[`results.${index}.outcome`];
+      delete newErrors[`results.${index}.goalsScored`];
+      delete newErrors[`results.${index}.goalsConceded`];
+      setErrors(newErrors);
+    }
+  };
+
+  // Update a specific player result field
+  const updatePlayerResult = (index: number, field: keyof PlayerResult, value: any) => {
+    const newResults = [...playerResults];
+    newResults[index] = { ...newResults[index], [field]: value };
+    
+    // Auto-calculate for 2-player matches
+    if (playerResults.length === 2) {
+      const otherIndex = index === 0 ? 1 : 0;
+      
+      // If updating goals scored, update opponent's goals conceded
+      if (field === 'goalsScored') {
+        newResults[otherIndex] = { ...newResults[otherIndex], goalsConceded: value };
+      }
+      
+      // Auto-calculate outcomes based on goals
+      if (newResults[0].goalsScored !== undefined && newResults[1].goalsScored !== undefined) {
+        if (newResults[0].goalsScored > newResults[1].goalsScored) {
+          newResults[0].outcome = 'WIN';
+          newResults[1].outcome = 'LOSS';
+        } else if (newResults[0].goalsScored < newResults[1].goalsScored) {
+          newResults[0].outcome = 'LOSS';
+          newResults[1].outcome = 'WIN';
+        } else {
+          newResults[0].outcome = 'DRAW';
+          newResults[1].outcome = 'DRAW';
+        }
+      }
+    }
+    
+    setPlayerResults(newResults);
+    
+    // Clear error for this field
+    const errorKey = `results.${index}.${field}`;
+    if (errors[errorKey]) {
+      setErrors({ ...errors, [errorKey]: undefined });
+    }
+  };
+
+  const validateForm = (): boolean => {
+    try {
+      // Convert empty outcome strings to undefined for validation
+      const resultsToValidate = playerResults.map(r => ({
+        ...r,
+        outcome: r.outcome || undefined,
+      }));
+      
+      matchSchema.parse({
+        matchDate,
+        results: resultsToValidate,
+      });
+      setErrors({});
+      return true;
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        const newErrors: FormErrors = {};
+        error.errors.forEach((err) => {
+          const path = err.path.join('.');
+          newErrors[path] = err.message;
+        });
+        setErrors(newErrors);
+      }
+      return false;
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!validateForm()) {
+      showToast('Please fix the errors in the form', 'error');
+      return;
+    }
+
+    setIsLoading(true);
+    setErrors({});
+
+    try {
+      const url = mode === 'create' 
+        ? `/api/tournaments/${tournamentId}/matches`
+        : `/api/matches/${matchId || initialData?.id}`;
+      
+      const method = mode === 'create' ? 'POST' : 'PUT';
+
+      const response = await fetch(url, {
+        method,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          matchDate: new Date(matchDate).toISOString(),
+          results: playerResults.map(r => ({
+            playerId: r.playerId,
+            outcome: r.outcome,
+            goalsScored: r.goalsScored,
+            goalsConceded: r.goalsConceded,
+          })),
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        if (data.details) {
+          setErrors(data.details);
+        } else {
+          setErrors({ submit: data.error || 'An error occurred' });
+        }
+        showToast(data.error || 'Failed to save match result', 'error');
+        return;
+      }
+
+      // Success
+      showToast(
+        mode === 'create' ? 'Match result added successfully' : 'Match result updated successfully',
+        'success'
+      );
+      
+      // Redirect based on whether this is a club-specific tournament
+      if (clubId) {
+        router.push(`/dashboard/clubs/${clubId}/tournaments/${tournamentId}`);
+      } else {
+        router.push(`/dashboard/tournaments/${tournamentId}`);
+      }
+      router.refresh();
+    } catch (error) {
+      // Handle network errors specifically
+      let errorMessage = 'An unexpected error occurred. Please try again.';
+      
+      if (error instanceof TypeError && error.message.includes('fetch')) {
+        errorMessage = 'Network error. Please check your internet connection and try again.';
+      } else if (error instanceof Error) {
+        errorMessage = error.message;
+      }
+      
+      setErrors({ submit: errorMessage });
+      showToast(errorMessage, 'error');
+      console.error('Match result form submission error:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleCancel = () => {
+    if (clubId) {
+      router.push(`/dashboard/clubs/${clubId}/tournaments/${tournamentId}`);
+    } else {
+      router.push(`/dashboard/tournaments/${tournamentId}`);
+    }
+  };
+
+  // Get available players for a specific result index (exclude already selected players)
+  const getAvailablePlayers = (currentIndex: number): Participant[] => {
+    const selectedPlayerIds = playerResults
+      .map((r, i) => i !== currentIndex ? r.playerId : 0)
+      .filter(id => id > 0);
+    
+    return participants.filter(p => !selectedPlayerIds.includes(p.id));
+  };
+
+  // Calculate points for a player result
+  const calculatePlayerPoints = (result: PlayerResult): number => {
+    if (!pointSystem || !result.outcome) return 0;
+    
+    let points = 0;
+    
+    // Outcome points
+    if (result.outcome === 'WIN') points += pointSystem.pointsPerWin;
+    else if (result.outcome === 'DRAW') points += pointSystem.pointsPerDraw;
+    else if (result.outcome === 'LOSS') points += pointSystem.pointsPerLoss;
+    
+    // Goal points
+    points += result.goalsScored * pointSystem.pointsPerGoalScored;
+    points += result.goalsConceded * pointSystem.pointsPerGoalConceded;
+    
+    return points;
+  };
+
+  if (isFetchingParticipants) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading participants...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (participants.length === 0) {
+    return (
+      <div className="text-center py-12 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
+        <p className="text-gray-600 text-lg">No participants available</p>
+        <p className="text-gray-500 text-sm mt-2">
+          Please add participants to the tournament before creating match results.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-6" aria-label="Match result form">
+      <div>
+        <div className="flex items-center justify-between mb-2">
+          <label htmlFor="match-date" className="block text-sm font-medium text-gray-700">
+            Match Date *
+          </label>
+          <button
+            type="button"
+            onClick={() => {
+              const today = new Date().toISOString().split('T')[0];
+              setMatchDate(today);
+              if (errors.matchDate) {
+                setErrors({ ...errors, matchDate: undefined });
+              }
+            }}
+            className="px-3 py-1 text-xs font-medium text-purple-600 bg-purple-50 rounded-lg hover:bg-purple-100 transition-colors flex items-center gap-1"
+          >
+            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+            Today
+          </button>
+        </div>
+        <input
+          id="match-date"
+          type="date"
+          value={matchDate}
+          onChange={(e) => {
+            setMatchDate(e.target.value);
+            if (errors.matchDate) {
+              setErrors({ ...errors, matchDate: undefined });
+            }
+          }}
+          className={`block w-full px-3 py-2.5 min-h-[44px] border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-0 transition-colors text-gray-900 bg-white ${
+            errors.matchDate
+              ? 'border-red-500 focus:border-red-500 focus:ring-red-500'
+              : 'border-gray-300 focus:border-purple-500 focus:ring-purple-500'
+          }`}
+          required
+        />
+        {errors.matchDate && (
+          <p className="mt-1 text-sm text-red-600">{errors.matchDate}</p>
+        )}
+      </div>
+
+      <div className="border-t-2 border-gray-200 pt-8">
+        <div className="flex items-center gap-3 mb-6">
+          <div className="w-10 h-10 bg-gradient-to-br from-purple-600 to-pink-600 rounded-xl flex items-center justify-center">
+            <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+            </svg>
+          </div>
+          <div>
+            <h3 id="player-results-heading" className="text-lg font-bold text-gray-900">Player Results</h3>
+            <p className="text-sm text-gray-600 mt-0.5">
+              Record the match result between two players (1v1)
+            </p>
+          </div>
+        </div>
+
+        {errors.results && (
+          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl flex items-start gap-3" role="alert">
+            <svg className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+            </svg>
+            <p className="text-sm text-red-700 font-medium">{errors.results}</p>
+          </div>
+        )}
+
+        <div className="space-y-6" role="list" aria-labelledby="player-results-heading">
+          {playerResults.map((result, index) => {
+            const availablePlayers = getAvailablePlayers(index);
+            
+            return (
+              <div key={index}>
+                {index === 1 && (
+                  <div className="flex items-center justify-center my-6">
+                    <div className="flex-1 border-t-2 border-gray-300"></div>
+                    <div className="px-6 py-2 bg-gradient-to-r from-purple-600 to-pink-600 rounded-full">
+                      <span className="text-lg font-bold text-white">VS</span>
+                    </div>
+                    <div className="flex-1 border-t-2 border-gray-300"></div>
+                  </div>
+                )}
+                <div className={`p-6 border-2 rounded-xl shadow-md transition-all ${
+                  index === 0 
+                    ? 'border-blue-300 bg-gradient-to-br from-blue-50 to-indigo-50' 
+                    : 'border-purple-300 bg-gradient-to-br from-purple-50 to-pink-50'
+                }`} role="listitem">
+                <div className="flex items-center gap-3 mb-5">
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+                    index === 0 
+                      ? 'bg-gradient-to-br from-blue-600 to-indigo-600' 
+                      : 'bg-gradient-to-br from-purple-600 to-pink-600'
+                  }`}>
+                    <span className="text-white font-bold text-lg">{index === 0 ? 'A' : 'B'}</span>
+                  </div>
+                  <h4 id={`player-result-${index}-heading`} className="text-lg font-bold text-gray-900">
+                    {index === 0 ? 'Player A' : 'Player B'}
+                  </h4>
+                </div>
+
+                <div className="space-y-4">
+                  {/* Player Selection */}
+                  <div>
+                    <label htmlFor={`player-${index}`} className="block text-sm font-medium text-gray-700 mb-1">
+                      Player *
+                    </label>
+                    <select
+                      id={`player-${index}`}
+                      value={result.playerId}
+                      onChange={(e) => updatePlayerResult(index, 'playerId', parseInt(e.target.value))}
+                      className={`block w-full px-3 py-2.5 min-h-[44px] border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-0 transition-colors text-base text-gray-900 bg-white ${
+                        errors[`results.${index}.playerId`]
+                          ? 'border-red-500 focus:border-red-500 focus:ring-red-500'
+                          : 'border-gray-300 focus:border-blue-500 focus:ring-blue-500'
+                      }`}
+                      required
+                    >
+                      <option value="0">Select a player</option>
+                      {result.playerId > 0 && !availablePlayers.find(p => p.id === result.playerId) && (
+                        <option value={result.playerId}>
+                          {participants.find(p => p.id === result.playerId)?.name}
+                        </option>
+                      )}
+                      {availablePlayers.map(player => (
+                        <option key={player.id} value={player.id}>
+                          {player.name}
+                        </option>
+                      ))}
+                    </select>
+                    {errors[`results.${index}.playerId`] && (
+                      <p className="mt-1 text-sm text-red-600">{errors[`results.${index}.playerId`]}</p>
+                    )}
+                  </div>
+
+                  {/* Outcome Display (Auto-calculated) */}
+                  {result.outcome && (
+                    <div className={`p-4 rounded-xl border-2 flex items-center gap-3 ${
+                      result.outcome === 'WIN' ? 'bg-green-50 border-green-300' :
+                      result.outcome === 'LOSS' ? 'bg-red-50 border-red-300' :
+                      'bg-yellow-50 border-yellow-300'
+                    }`}>
+                      <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                        result.outcome === 'WIN' ? 'bg-green-600' :
+                        result.outcome === 'LOSS' ? 'bg-red-600' :
+                        'bg-yellow-600'
+                      }`}>
+                        <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          {result.outcome === 'WIN' && (
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          )}
+                          {result.outcome === 'LOSS' && (
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          )}
+                          {result.outcome === 'DRAW' && (
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          )}
+                        </svg>
+                      </div>
+                      <div>
+                        <span className="text-xs text-gray-600 block">Match Result</span>
+                        <span className={`text-lg font-bold ${
+                          result.outcome === 'WIN' ? 'text-green-700' :
+                          result.outcome === 'LOSS' ? 'text-red-700' :
+                          'text-yellow-700'
+                        }`}>
+                          {result.outcome}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Goals - Side by side on larger screens */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {/* Goals Scored */}
+                    <Input
+                      label="Goals Scored"
+                      type="number"
+                      min="0"
+                      value={result.goalsScored.toString()}
+                      onChange={(e) => {
+                        const value = e.target.value === '' ? 0 : parseInt(e.target.value, 10);
+                        if (!isNaN(value)) {
+                          updatePlayerResult(index, 'goalsScored', value);
+                        }
+                      }}
+                      error={errors[`results.${index}.goalsScored`]}
+                      required
+                    />
+
+                    {/* Goals Conceded - Auto-calculated, shown as read-only */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Goals Conceded
+                      </label>
+                      <div className="px-3 py-2.5 min-h-[44px] border border-gray-200 rounded-md bg-gray-50 text-gray-600 flex items-center">
+                        {result.goalsConceded}
+                      </div>
+                      <p className="mt-1 text-xs text-gray-500">Auto-calculated from opponent's goals</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Point Calculation Preview */}
+                {pointSystem && result.outcome && (
+                  <div className="mt-4 p-5 bg-gradient-to-br from-indigo-50 to-purple-50 border-2 border-indigo-200 rounded-xl" role="status" aria-live="polite">
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="w-10 h-10 bg-gradient-to-br from-indigo-600 to-purple-600 rounded-lg flex items-center justify-center">
+                        <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                        </svg>
+                      </div>
+                      <div>
+                        <p className="text-xs text-indigo-600 font-medium">Calculated Points</p>
+                        <p className="text-2xl font-bold text-indigo-900">
+                          {calculatePlayerPoints(result)}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="text-xs text-indigo-700 space-y-1">
+                      <p className="flex items-center gap-2">
+                        <span className="w-2 h-2 bg-indigo-600 rounded-full"></span>
+                        {result.outcome === 'WIN' && `Win: ${pointSystem.pointsPerWin} pts`}
+                        {result.outcome === 'DRAW' && `Draw: ${pointSystem.pointsPerDraw} pts`}
+                        {result.outcome === 'LOSS' && `Loss: ${pointSystem.pointsPerLoss} pts`}
+                      </p>
+                      {result.goalsScored > 0 && (
+                        <p className="flex items-center gap-2">
+                          <span className="w-2 h-2 bg-green-600 rounded-full"></span>
+                          Goals Scored: {result.goalsScored} × {pointSystem.pointsPerGoalScored} = {result.goalsScored * pointSystem.pointsPerGoalScored} pts
+                        </p>
+                      )}
+                      {result.goalsConceded > 0 && (
+                        <p className="flex items-center gap-2">
+                          <span className="w-2 h-2 bg-red-600 rounded-full"></span>
+                          Goals Conceded: {result.goalsConceded} × {pointSystem.pointsPerGoalConceded} = {result.goalsConceded * pointSystem.pointsPerGoalConceded} pts
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {errors.submit && (
+        <ErrorMessage
+          title="Submission Error"
+          message={errors.submit}
+          onDismiss={() => setErrors({ ...errors, submit: undefined })}
+        />
+      )}
+
+      <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-3">
+        <Button
+          type="button"
+          variant="ghost"
+          onClick={handleCancel}
+          disabled={isLoading}
+          className="w-full sm:w-auto"
+        >
+          Cancel
+        </Button>
+        <Button
+          type="submit"
+          variant="primary"
+          isLoading={isLoading}
+          disabled={isLoading}
+          className="w-full sm:w-auto"
+        >
+          {mode === 'create' ? 'Add Match Result' : 'Update Match Result'}
+        </Button>
+      </div>
+    </form>
+  );
+}
