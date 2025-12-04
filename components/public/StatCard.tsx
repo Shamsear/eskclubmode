@@ -78,7 +78,7 @@ function useAnimatedCounter(
 ): number {
   const [currentValue, setCurrentValue] = useState(0);
   const startTimeRef = useRef<number | null>(null);
-  const animationFrameRef = useRef<number>();
+  const animationFrameRef = useRef<number | undefined>(undefined);
 
   useEffect(() => {
     startTimeRef.current = null;
