@@ -233,13 +233,14 @@ model TournamentParticipant {
 }
 
 model Match {
-  id           Int      @id @default(autoincrement())
-  tournamentId Int
-  stageId      Int?     // Optional reference to tournament stage (StagePoint.id)
-  stageName    String?  @db.VarChar(100) // Stage name for display
-  matchDate    DateTime @db.Date
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id              Int      @id @default(autoincrement())
+  tournamentId    Int
+  stageId         Int?     // Optional reference to tournament stage (StagePoint.id)
+  stageName       String?  @db.VarChar(100) // Stage name for display
+  matchDate       DateTime @db.Date
+  walkoverWinnerId Int?    // Player ID who won by walkover (null = normal match, 0 = both forfeit)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
   tournament Tournament    @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
   stage      StagePoint?   @relation("MatchStage", fields: [stageId], references: [id], onDelete: SetNull)

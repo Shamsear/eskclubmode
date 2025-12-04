@@ -11,6 +11,7 @@ interface BulkMatch {
   playerAGoals: number;
   playerBGoals: number;
   matchDate: string;
+  walkover?: string; // 'normal', 'both', or player name
 }
 
 export async function POST(
@@ -84,42 +85,109 @@ export async function POST(
           continue;
         }
 
-        // Determine outcomes
+        // Handle walkover
+        const walkover = match.walkover?.toLowerCase() || 'normal';
+        let walkoverWinnerId: number | null = null;
         let playerAOutcome: 'WIN' | 'DRAW' | 'LOSS';
         let playerBOutcome: 'WIN' | 'DRAW' | 'LOSS';
+        let playerAPoints = 0;
+        let playerBPoints = 0;
 
-        if (match.playerAGoals > match.playerBGoals) {
+        if (walkover === 'both') {
+          // Both forfeited
+          walkoverWinnerId = 0;
+          playerAOutcome = 'LOSS';
+          playerBOutcome = 'LOSS';
+          playerAPoints = 0;
+          playerBPoints = 0;
+        } else if (walkover === match.playerAName.toLowerCase()) {
+          // Player A won by walkover
+          walkoverWinnerId = playerA.player.id;
           playerAOutcome = 'WIN';
           playerBOutcome = 'LOSS';
-        } else if (match.playerAGoals < match.playerBGoals) {
+          
+          // Get walkover points from template if available
+          if (tournament.pointSystemTemplateId) {
+            const template = await prisma.pointSystemTemplate.findUnique({
+              where: { id: tournament.pointSystemTemplateId },
+              select: {
+                pointsForWalkoverWin: true,
+                pointsForWalkoverLoss: true,
+              },
+            });
+            if (template) {
+              playerAPoints = template.pointsForWalkoverWin;
+              playerBPoints = template.pointsForWalkoverLoss;
+            } else {
+              playerAPoints = 3;
+              playerBPoints = -3;
+            }
+          } else {
+            playerAPoints = 3;
+            playerBPoints = -3;
+          }
+        } else if (walkover === match.playerBName.toLowerCase()) {
+          // Player B won by walkover
+          walkoverWinnerId = playerB.player.id;
           playerAOutcome = 'LOSS';
           playerBOutcome = 'WIN';
+          
+          // Get walkover points from template if available
+          if (tournament.pointSystemTemplateId) {
+            const template = await prisma.pointSystemTemplate.findUnique({
+              where: { id: tournament.pointSystemTemplateId },
+              select: {
+                pointsForWalkoverWin: true,
+                pointsForWalkoverLoss: true,
+              },
+            });
+            if (template) {
+              playerBPoints = template.pointsForWalkoverWin;
+              playerAPoints = template.pointsForWalkoverLoss;
+            } else {
+              playerBPoints = 3;
+              playerAPoints = -3;
+            }
+          } else {
+            playerBPoints = 3;
+            playerAPoints = -3;
+          }
         } else {
-          playerAOutcome = 'DRAW';
-          playerBOutcome = 'DRAW';
+          // Normal match - determine outcomes by goals
+          if (match.playerAGoals > match.playerBGoals) {
+            playerAOutcome = 'WIN';
+            playerBOutcome = 'LOSS';
+          } else if (match.playerAGoals < match.playerBGoals) {
+            playerAOutcome = 'LOSS';
+            playerBOutcome = 'WIN';
+          } else {
+            playerAOutcome = 'DRAW';
+            playerBOutcome = 'DRAW';
+          }
+
+          // Calculate points normally
+          const calculatePoints = (outcome: string, goalsScored: number, goalsConceded: number) => {
+            let points = 0;
+            if (outcome === 'WIN') points += tournament.pointsPerWin;
+            else if (outcome === 'DRAW') points += tournament.pointsPerDraw;
+            else points += tournament.pointsPerLoss;
+            
+            points += goalsScored * tournament.pointsPerGoalScored;
+            points += goalsConceded * tournament.pointsPerGoalConceded;
+            
+            return points;
+          };
+
+          playerAPoints = calculatePoints(playerAOutcome, match.playerAGoals, match.playerBGoals);
+          playerBPoints = calculatePoints(playerBOutcome, match.playerBGoals, match.playerAGoals);
         }
-
-        // Calculate points
-        const calculatePoints = (outcome: string, goalsScored: number, goalsConceded: number) => {
-          let points = 0;
-          if (outcome === 'WIN') points += tournament.pointsPerWin;
-          else if (outcome === 'DRAW') points += tournament.pointsPerDraw;
-          else points += tournament.pointsPerLoss;
-          
-          points += goalsScored * tournament.pointsPerGoalScored;
-          points += goalsConceded * tournament.pointsPerGoalConceded;
-          
-          return points;
-        };
-
-        const playerAPoints = calculatePoints(playerAOutcome, match.playerAGoals, match.playerBGoals);
-        const playerBPoints = calculatePoints(playerBOutcome, match.playerBGoals, match.playerAGoals);
 
         // Create match with results
         await prisma.match.create({
           data: {
             tournamentId,
             matchDate: new Date(match.matchDate),
+            ...(walkoverWinnerId !== null && { walkoverWinnerId }),
             results: {
               create: [
                 {

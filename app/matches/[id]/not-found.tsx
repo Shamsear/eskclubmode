@@ -7,7 +7,7 @@ export default function MatchNotFound() {
         <div className="text-6xl mb-4">🔍</div>
         <h1 className="text-3xl font-bold text-gray-900 mb-2">Match Not Found</h1>
         <p className="text-lg text-gray-600 mb-8">
-          The match you're looking for doesn't exist or has been removed.
+          The match you&apos;re looking for doesn&apos;t exist or has been removed.
         </p>
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
           <Link

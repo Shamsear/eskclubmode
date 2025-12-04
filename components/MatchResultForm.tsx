@@ -128,6 +128,9 @@ export function MatchResultForm({
     initialData?.matchDate ? initialData.matchDate.split('T')[0] : ''
   );
   
+  // Walkover state: null = normal match, 0 = both forfeit, playerId = that player won by walkover
+  const [walkoverWinnerId, setWalkoverWinnerId] = useState<number | null>(null);
+  
   const [playerResults, setPlayerResults] = useState<PlayerResult[]>(
     initialData?.results.length 
       ? initialData.results.map(r => ({
@@ -190,6 +193,30 @@ export function MatchResultForm({
     fetchStages();
   }, [tournamentId]);
 
+  // Handle walkover changes - auto-set outcomes and reset goals
+  useEffect(() => {
+    if (walkoverWinnerId !== null && playerResults.length === 2) {
+      const newResults = [...playerResults];
+      
+      if (walkoverWinnerId === 0) {
+        // Both forfeited - no points
+        newResults[0] = { ...newResults[0], outcome: 'LOSS', goalsScored: 0, goalsConceded: 0 };
+        newResults[1] = { ...newResults[1], outcome: 'LOSS', goalsScored: 0, goalsConceded: 0 };
+      } else {
+        // One player won by walkover
+        const winnerIndex = newResults.findIndex(r => r.playerId === walkoverWinnerId);
+        const loserIndex = winnerIndex === 0 ? 1 : 0;
+        
+        if (winnerIndex !== -1) {
+          newResults[winnerIndex] = { ...newResults[winnerIndex], outcome: 'WIN', goalsScored: 0, goalsConceded: 0 };
+          newResults[loserIndex] = { ...newResults[loserIndex], outcome: 'LOSS', goalsScored: 0, goalsConceded: 0 };
+        }
+      }
+      
+      setPlayerResults(newResults);
+    }
+  }, [walkoverWinnerId]);
+
   // Add a new player result entry
   const addPlayerResult = () => {
     setPlayerResults([...playerResults, { playerId: 0, outcome: '', goalsScored: 0, goalsConceded: 0 }]);
@@ -215,8 +242,8 @@ export function MatchResultForm({
     const newResults = [...playerResults];
     newResults[index] = { ...newResults[index], [field]: value };
     
-    // Auto-calculate for 2-player matches
-    if (playerResults.length === 2) {
+    // Auto-calculate for 2-player matches (only if not a walkover)
+    if (playerResults.length === 2 && walkoverWinnerId === null) {
       const otherIndex = index === 0 ? 1 : 0;
       
       // If updating goals scored, update opponent's goals conceded
@@ -302,6 +329,7 @@ export function MatchResultForm({
           matchDate: new Date(matchDate).toISOString(),
           stageId: selectedStageId,
           stageName: selectedStageId ? stages.find(s => s.id === selectedStageId)?.name : null,
+          walkoverWinnerId: walkoverWinnerId,
           results: playerResults.map(r => ({
             playerId: r.playerId,
             outcome: r.outcome,
@@ -454,6 +482,61 @@ export function MatchResultForm({
         />
         {errors.matchDate && (
           <p className="mt-1 text-sm text-red-600">{errors.matchDate}</p>
+        )}
+      </div>
+
+      {/* Walkover Selection */}
+      <div className="bg-gradient-to-br from-orange-50 to-amber-50 border-2 border-orange-200 rounded-xl p-5">
+        <div className="flex items-center gap-3 mb-3">
+          <div className="w-10 h-10 bg-gradient-to-br from-orange-600 to-amber-600 rounded-lg flex items-center justify-center">
+            <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+          </div>
+          <div>
+            <label htmlFor="walkover-select" className="block text-sm font-bold text-gray-900">
+              Walkover / Forfeit
+            </label>
+            <p className="text-xs text-gray-600 mt-0.5">Select if a player didn&apos;t show up or both forfeited</p>
+          </div>
+        </div>
+        <select
+          id="walkover-select"
+          value={walkoverWinnerId === null ? '' : walkoverWinnerId.toString()}
+          onChange={(e) => {
+            const value = e.target.value;
+            if (value === '') {
+              setWalkoverWinnerId(null);
+            } else if (value === '0') {
+              setWalkoverWinnerId(0);
+            } else {
+              setWalkoverWinnerId(parseInt(value));
+            }
+          }}
+          className="block w-full px-3 py-2.5 border border-orange-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors bg-white"
+        >
+          <option value="">Normal Match (no walkover)</option>
+          <option value="0">Both Players Forfeited (no points awarded)</option>
+          {playerResults[0]?.playerId > 0 && (
+            <option value={playerResults[0].playerId}>
+              {participants.find(p => p.id === playerResults[0].playerId)?.name} Won by Walkover
+            </option>
+          )}
+          {playerResults[1]?.playerId > 0 && (
+            <option value={playerResults[1].playerId}>
+              {participants.find(p => p.id === playerResults[1].playerId)?.name} Won by Walkover
+            </option>
+          )}
+        </select>
+        {walkoverWinnerId !== null && (
+          <div className="mt-3 p-3 bg-white rounded-lg border border-orange-200">
+            <p className="text-sm text-orange-800 font-medium">
+              {walkoverWinnerId === 0 
+                ? '⚠️ Both players forfeited - no points will be awarded'
+                : `✓ ${participants.find(p => p.id === walkoverWinnerId)?.name} wins by walkover`
+              }
+            </p>
+          </div>
         )}
       </div>
 
@@ -611,34 +694,45 @@ export function MatchResultForm({
                   )}
 
                   {/* Goals - Side by side on larger screens */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    {/* Goals Scored */}
-                    <Input
-                      label="Goals Scored"
-                      type="number"
-                      min="0"
-                      value={result.goalsScored.toString()}
-                      onChange={(e) => {
-                        const value = e.target.value === '' ? 0 : parseInt(e.target.value, 10);
-                        if (!isNaN(value)) {
-                          updatePlayerResult(index, 'goalsScored', value);
-                        }
-                      }}
-                      error={errors[`results.${index}.goalsScored`]}
-                      required
-                    />
-
-                    {/* Goals Conceded - Auto-calculated, shown as read-only */}
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Goals Conceded
-                      </label>
-                      <div className="px-3 py-2.5 min-h-[44px] border border-gray-200 rounded-md bg-gray-50 text-gray-600 flex items-center">
-                        {result.goalsConceded}
-                      </div>
-                      <p className="mt-1 text-xs text-gray-500">Auto-calculated from opponent&apos;s goals</p>
+                  {walkoverWinnerId !== null ? (
+                    <div className="p-4 bg-orange-50 border-2 border-orange-200 rounded-lg">
+                      <p className="text-sm text-orange-800 font-medium flex items-center gap-2">
+                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        Goals are not recorded for walkover matches
+                      </p>
                     </div>
-                  </div>
+                  ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      {/* Goals Scored */}
+                      <Input
+                        label="Goals Scored"
+                        type="number"
+                        min="0"
+                        value={result.goalsScored.toString()}
+                        onChange={(e) => {
+                          const value = e.target.value === '' ? 0 : parseInt(e.target.value, 10);
+                          if (!isNaN(value)) {
+                            updatePlayerResult(index, 'goalsScored', value);
+                          }
+                        }}
+                        error={errors[`results.${index}.goalsScored`]}
+                        required
+                      />
+
+                      {/* Goals Conceded - Auto-calculated, shown as read-only */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Goals Conceded
+                        </label>
+                        <div className="px-3 py-2.5 min-h-[44px] border border-gray-200 rounded-md bg-gray-50 text-gray-600 flex items-center">
+                          {result.goalsConceded}
+                        </div>
+                        <p className="mt-1 text-xs text-gray-500">Auto-calculated from opponent&apos;s goals</p>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* Point Calculation Preview */}

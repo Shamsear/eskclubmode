@@ -20,6 +20,7 @@ interface ParsedMatch {
   playerAGoals: number;
   playerBGoals: number;
   matchDate: string;
+  walkover?: string; // 'normal', 'both', playerName
 }
 
 interface FormMatch extends ParsedMatch {
@@ -42,7 +43,7 @@ export function BulkMatchUpload({ tournamentId, participants }: BulkMatchUploadP
   // Form mode state
   const today = new Date().toISOString().split('T')[0];
   const [formMatches, setFormMatches] = useState<FormMatch[]>([
-    { id: 1, playerAId: 0, playerBId: 0, playerAName: '', playerBName: '', playerAGoals: 0, playerBGoals: 0, matchDate: today }
+    { id: 1, playerAId: 0, playerBId: 0, playerAName: '', playerBName: '', playerAGoals: 0, playerBGoals: 0, matchDate: today, walkover: 'normal' }
   ]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -71,7 +72,7 @@ export function BulkMatchUpload({ tournamentId, participants }: BulkMatchUploadP
     const missingHeaders = requiredHeaders.filter(h => !headers.includes(h));
     
     if (missingHeaders.length > 0) {
-      setErrors([`Missing required columns: ${missingHeaders.join(', ')}`]);
+      setErrors([`Missing required columns: ${missingHeaders.join(', ')}. Optional: walkover`]);
       return;
     }
 
@@ -86,6 +87,7 @@ export function BulkMatchUpload({ tournamentId, participants }: BulkMatchUploadP
         playerAGoals: 0,
         playerBGoals: 0,
         matchDate: '',
+        walkover: 'normal',
       };
 
       headers.forEach((header, index) => {
@@ -105,6 +107,9 @@ export function BulkMatchUpload({ tournamentId, participants }: BulkMatchUploadP
             break;
           case 'matchdate':
             match.matchDate = value;
+            break;
+          case 'walkover':
+            match.walkover = value.toLowerCase() || 'normal';
             break;
         }
       });
@@ -162,14 +167,20 @@ export function BulkMatchUpload({ tournamentId, participants }: BulkMatchUploadP
 
   const downloadTemplate = () => {
     const playerNames = participants.map(p => p.name).slice(0, 4);
-    const template = `playerA,playerB,playerAGoals,playerBGoals,matchDate
-${playerNames[0] || 'Player 1'},${playerNames[1] || 'Player 2'},3,1,2024-01-15
-${playerNames[2] || 'Player 3'},${playerNames[3] || 'Player 4'},2,2,2024-01-16
+    const template = `playerA,playerB,playerAGoals,playerBGoals,matchDate,walkover
+${playerNames[0] || 'Player 1'},${playerNames[1] || 'Player 2'},3,1,2024-01-15,normal
+${playerNames[2] || 'Player 3'},${playerNames[3] || 'Player 4'},2,2,2024-01-16,normal
+${playerNames[0] || 'Player 1'},${playerNames[2] || 'Player 3'},0,0,2024-01-17,${playerNames[0] || 'Player 1'}
+${playerNames[1] || 'Player 2'},${playerNames[3] || 'Player 4'},0,0,2024-01-18,both
 
 Instructions:
 - playerA and playerB must match participant names exactly
 - Goals must be non-negative integers
 - matchDate format: YYYY-MM-DD
+- walkover options:
+  * normal (or empty) = regular match with goals
+  * both = both players forfeited (no points)
+  * player name = that player won by walkover
 
 Available Participants:
 ${participants.map(p => p.name).join(', ')}`;
@@ -194,7 +205,8 @@ ${participants.map(p => p.name).join(', ')}`;
       playerBName: '', 
       playerAGoals: 0, 
       playerBGoals: 0, 
-      matchDate: today 
+      matchDate: today,
+      walkover: 'normal'
     }]);
   };
 
@@ -257,6 +269,7 @@ ${participants.map(p => p.name).join(', ')}`;
         playerAGoals: match.playerAGoals,
         playerBGoals: match.playerBGoals,
         matchDate: match.matchDate,
+        walkover: match.walkover || 'normal',
       }));
 
       const response = await fetch(`/api/tournaments/${tournamentId}/matches/bulk`, {
@@ -420,8 +433,12 @@ ${participants.map(p => p.name).join(', ')}`;
                         min="0"
                         value={match.playerAGoals}
                         onChange={(e) => updateFormMatch(match.id, 'playerAGoals', Number(e.target.value))}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-violet-500 focus:border-transparent bg-white text-gray-900"
+                        disabled={match.walkover !== 'normal'}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-violet-500 focus:border-transparent bg-white text-gray-900 disabled:bg-gray-100 disabled:cursor-not-allowed"
                       />
+                      {match.walkover !== 'normal' && (
+                        <p className="mt-1 text-xs text-gray-500">Goals not recorded for walkover</p>
+                      )}
                     </div>
 
                     {/* Player B Goals */}
@@ -434,8 +451,48 @@ ${participants.map(p => p.name).join(', ')}`;
                         min="0"
                         value={match.playerBGoals}
                         onChange={(e) => updateFormMatch(match.id, 'playerBGoals', Number(e.target.value))}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-violet-500 focus:border-transparent bg-white text-gray-900"
+                        disabled={match.walkover !== 'normal'}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-violet-500 focus:border-transparent bg-white text-gray-900 disabled:bg-gray-100 disabled:cursor-not-allowed"
                       />
+                      {match.walkover !== 'normal' && (
+                        <p className="mt-1 text-xs text-gray-500">Goals not recorded for walkover</p>
+                      )}
+                    </div>
+
+                    {/* Walkover */}
+                    <div className="md:col-span-2">
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Walkover / Forfeit
+                      </label>
+                      <select
+                        value={match.walkover || 'normal'}
+                        onChange={(e) => {
+                          updateFormMatch(match.id, 'walkover', e.target.value);
+                          // Reset goals when walkover is selected
+                          if (e.target.value !== 'normal') {
+                            updateFormMatch(match.id, 'playerAGoals', 0);
+                            updateFormMatch(match.id, 'playerBGoals', 0);
+                          }
+                        }}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-violet-500 focus:border-transparent bg-white text-gray-900"
+                      >
+                        <option value="normal">Normal Match (no walkover)</option>
+                        <option value="both">Both Players Forfeited</option>
+                        {match.playerAName && (
+                          <option value={match.playerAName}>{match.playerAName} Won by Walkover</option>
+                        )}
+                        {match.playerBName && (
+                          <option value={match.playerBName}>{match.playerBName} Won by Walkover</option>
+                        )}
+                      </select>
+                      {match.walkover && match.walkover !== 'normal' && (
+                        <p className="mt-1 text-sm text-orange-600">
+                          {match.walkover === 'both' 
+                            ? '⚠️ Both players forfeited - no points will be awarded'
+                            : `✓ ${match.walkover} wins by walkover`
+                          }
+                        </p>
+                      )}
                     </div>
 
                     {/* Match Date */}
@@ -467,7 +524,31 @@ ${participants.map(p => p.name).join(', ')}`;
                       <div className="flex items-center justify-between">
                         <span className="text-sm font-medium text-gray-700">Match Outcome:</span>
                         <div className="flex items-center gap-2">
-                          {match.playerAGoals > match.playerBGoals ? (
+                          {match.walkover === 'both' ? (
+                            <span className="px-3 py-1 bg-gray-100 text-gray-800 rounded-full text-sm font-medium">
+                              Both Forfeited
+                            </span>
+                          ) : match.walkover === match.playerAName ? (
+                            <>
+                              <span className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm font-medium">
+                                {match.playerAName} Wins (Walkover)
+                              </span>
+                              <span className="text-gray-400">•</span>
+                              <span className="px-3 py-1 bg-red-100 text-red-800 rounded-full text-sm font-medium">
+                                {match.playerBName} Loses (Forfeit)
+                              </span>
+                            </>
+                          ) : match.walkover === match.playerBName ? (
+                            <>
+                              <span className="px-3 py-1 bg-red-100 text-red-800 rounded-full text-sm font-medium">
+                                {match.playerAName} Loses (Forfeit)
+                              </span>
+                              <span className="text-gray-400">•</span>
+                              <span className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm font-medium">
+                                {match.playerBName} Wins (Walkover)
+                              </span>
+                            </>
+                          ) : match.playerAGoals > match.playerBGoals ? (
                             <>
                               <span className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm font-medium">
                                 {match.playerAName} Wins
@@ -549,10 +630,11 @@ ${participants.map(p => p.name).join(', ')}`;
             <h2 className="text-lg font-semibold text-gray-900 mb-4">Instructions</h2>
             <ol className="list-decimal list-inside space-y-2 text-sm text-gray-600">
               <li>Download the CSV template</li>
-              <li>Fill in match details (all fields are required)</li>
+              <li>Fill in match details (playerA, playerB, playerAGoals, playerBGoals, matchDate are required)</li>
               <li>Player names must match tournament participants exactly</li>
               <li>Goals must be non-negative integers</li>
               <li>Date format: YYYY-MM-DD</li>
+              <li>Walkover column (optional): &quot;normal&quot;, &quot;both&quot;, or player name</li>
               <li>Upload the CSV file and review the preview</li>
               <li>Click &quot;Upload Matches&quot; to add them to the tournament</li>
             </ol>

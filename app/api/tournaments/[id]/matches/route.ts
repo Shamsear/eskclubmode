@@ -101,7 +101,7 @@ export async function POST(
       throw validationResult.error;
     }
 
-    const { matchDate, stageId, stageName, results } = validationResult.data;
+    const { matchDate, stageId, stageName, walkoverWinnerId, results } = validationResult.data;
 
     // Check if tournament exists and get its point system
     const tournament = await prisma.tournament.findUnique({
@@ -254,6 +254,57 @@ export async function POST(
       };
     });
 
+    // Handle walkover point calculations if applicable
+    let finalResultsWithPoints = resultsWithPoints;
+    if (walkoverWinnerId !== undefined && walkoverWinnerId !== null) {
+      // Get walkover points from template or tournament
+      let walkoverWinPoints = 3;
+      let walkoverLossPoints = -3;
+      
+      if (tournament.pointSystemTemplateId) {
+        const template = await prisma.pointSystemTemplate.findUnique({
+          where: { id: tournament.pointSystemTemplateId },
+          select: {
+            pointsForWalkoverWin: true,
+            pointsForWalkoverLoss: true,
+          },
+        });
+        if (template) {
+          walkoverWinPoints = template.pointsForWalkoverWin;
+          walkoverLossPoints = template.pointsForWalkoverLoss;
+        }
+      }
+      
+      // Apply walkover points
+      finalResultsWithPoints = results.map(result => {
+        if (walkoverWinnerId === 0) {
+          // Both forfeited - no points
+          return {
+            ...result,
+            pointsEarned: 0,
+            basePoints: 0,
+            conditionalPoints: 0,
+          };
+        } else if (result.playerId === walkoverWinnerId) {
+          // Winner by walkover
+          return {
+            ...result,
+            pointsEarned: walkoverWinPoints,
+            basePoints: walkoverWinPoints,
+            conditionalPoints: 0,
+          };
+        } else {
+          // Loser by walkover
+          return {
+            ...result,
+            pointsEarned: walkoverLossPoints,
+            basePoints: walkoverLossPoints,
+            conditionalPoints: 0,
+          };
+        }
+      });
+    }
+
     // Create match with results in a transaction
     const match = await prisma.$transaction(async (tx) => {
       // Create the match
@@ -263,12 +314,13 @@ export async function POST(
           matchDate: new Date(matchDate),
           ...(stageId && { stageId }),
           ...(stageName && { stageName }),
+          ...(walkoverWinnerId !== undefined && { walkoverWinnerId }),
         },
       });
 
       // Create match results
       await tx.matchResult.createMany({
-        data: resultsWithPoints.map(result => ({
+        data: finalResultsWithPoints.map(result => ({
           matchId: newMatch.id,
           playerId: result.playerId,
           outcome: result.outcome,

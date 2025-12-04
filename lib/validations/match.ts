@@ -18,6 +18,7 @@ export const matchCreateSchema = z.object({
   }),
   stageId: z.number().int().positive("Stage ID must be a positive integer").optional(),
   stageName: z.string().optional(),
+  walkoverWinnerId: z.number().int().nullable().optional(), // null = normal, 0 = both forfeit, playerId = winner
   results: z.array(matchResultSchema).min(1, "At least one match result is required"),
 }).refine((data) => {
   // Check for duplicate player IDs
@@ -36,6 +37,7 @@ export const matchUpdateSchema = z.object({
   }).optional(),
   stageId: z.number().int().positive("Stage ID must be a positive integer").optional(),
   stageName: z.string().optional(),
+  walkoverWinnerId: z.number().int().nullable().optional(), // null = normal, 0 = both forfeit, playerId = winner
   results: z.array(matchResultSchema).min(1, "At least one match result is required").optional(),
 }).refine((data) => {
   // Check for duplicate player IDs if results are provided
