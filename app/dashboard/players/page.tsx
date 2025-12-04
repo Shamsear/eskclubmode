@@ -65,14 +65,17 @@ async function getPlayerOverallStats() {
       };
     });
 
+    // Filter out players with 0 matches
+    const activePlayers = playerStats.filter(player => player.totalMatches > 0);
+
     // Sort by total points, then win rate, then goal difference
-    playerStats.sort((a, b) => {
+    activePlayers.sort((a, b) => {
       if (b.totalPoints !== a.totalPoints) return b.totalPoints - a.totalPoints;
       if (b.winRate !== a.winRate) return b.winRate - a.winRate;
       return b.goalDifference - a.goalDifference;
     });
 
-    return playerStats;
+    return activePlayers;
   } catch (error) {
     console.error('Error fetching player stats:', error);
     return [];
