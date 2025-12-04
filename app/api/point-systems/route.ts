@@ -38,6 +38,11 @@ export async function POST(request: NextRequest) {
       pointsPerLoss,
       pointsPerGoalScored,
       pointsPerGoalConceded,
+      pointsForWalkoverWin,
+      pointsForWalkoverLoss,
+      pointsPerStageWin,
+      pointsPerStageDraw,
+      pointsPerCleanSheet,
     } = validationResult.data;
 
     // Extract conditional rules if provided
@@ -64,6 +69,11 @@ export async function POST(request: NextRequest) {
         pointsPerLoss,
         pointsPerGoalScored,
         pointsPerGoalConceded,
+        pointsForWalkoverWin: pointsForWalkoverWin ?? 3,
+        pointsForWalkoverLoss: pointsForWalkoverLoss ?? -3,
+        pointsPerStageWin: pointsPerStageWin ?? 0,
+        pointsPerStageDraw: pointsPerStageDraw ?? 0,
+        pointsPerCleanSheet: pointsPerCleanSheet ?? 0,
         conditionalRules: {
           create: conditionalRules.map((rule: any) => ({
             conditionType: rule.conditionType,

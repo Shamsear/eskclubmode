@@ -24,3 +24,7 @@ export {
   StatCardSkeleton,
   TournamentJourneySkeleton,
 } from './PublicSkeletons';
+
+export { default as LeaderboardStream } from './LeaderboardStream';
+
+export { MatchTheater } from './MatchTheater';

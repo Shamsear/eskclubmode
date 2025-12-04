@@ -61,6 +61,11 @@ export default async function EditPointSystemPage({
             pointsPerLoss: template.pointsPerLoss,
             pointsPerGoalScored: template.pointsPerGoalScored,
             pointsPerGoalConceded: template.pointsPerGoalConceded,
+            pointsForWalkoverWin: template.pointsForWalkoverWin,
+            pointsForWalkoverLoss: template.pointsForWalkoverLoss,
+            pointsPerStageWin: template.pointsPerStageWin,
+            pointsPerStageDraw: template.pointsPerStageDraw,
+            pointsPerCleanSheet: template.pointsPerCleanSheet,
             conditionalRules: template.conditionalRules.map((rule) => ({
               id: rule.id,
               conditionType: rule.conditionType as any,

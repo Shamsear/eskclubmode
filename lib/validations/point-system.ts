@@ -41,6 +41,36 @@ export const pointSystemTemplateSchema = z.object({
       invalid_type_error: "Points per goal conceded must be a number",
     })
     .int("Points per goal conceded must be an integer"),
+  pointsForWalkoverWin: z
+    .number({
+      invalid_type_error: "Points for walkover win must be a number",
+    })
+    .int("Points for walkover win must be an integer")
+    .optional(),
+  pointsForWalkoverLoss: z
+    .number({
+      invalid_type_error: "Points for walkover loss must be a number",
+    })
+    .int("Points for walkover loss must be an integer")
+    .optional(),
+  pointsPerStageWin: z
+    .number({
+      invalid_type_error: "Points per stage win must be a number",
+    })
+    .int("Points per stage win must be an integer")
+    .optional(),
+  pointsPerStageDraw: z
+    .number({
+      invalid_type_error: "Points per stage draw must be a number",
+    })
+    .int("Points per stage draw must be an integer")
+    .optional(),
+  pointsPerCleanSheet: z
+    .number({
+      invalid_type_error: "Points per clean sheet must be a number",
+    })
+    .int("Points per clean sheet must be an integer")
+    .optional(),
 });
 
 /**
@@ -83,6 +113,36 @@ export const pointSystemTemplateUpdateSchema = z.object({
       invalid_type_error: "Points per goal conceded must be a number",
     })
     .int("Points per goal conceded must be an integer")
+    .optional(),
+  pointsForWalkoverWin: z
+    .number({
+      invalid_type_error: "Points for walkover win must be a number",
+    })
+    .int("Points for walkover win must be an integer")
+    .optional(),
+  pointsForWalkoverLoss: z
+    .number({
+      invalid_type_error: "Points for walkover loss must be a number",
+    })
+    .int("Points for walkover loss must be an integer")
+    .optional(),
+  pointsPerStageWin: z
+    .number({
+      invalid_type_error: "Points per stage win must be a number",
+    })
+    .int("Points per stage win must be an integer")
+    .optional(),
+  pointsPerStageDraw: z
+    .number({
+      invalid_type_error: "Points per stage draw must be a number",
+    })
+    .int("Points per stage draw must be an integer")
+    .optional(),
+  pointsPerCleanSheet: z
+    .number({
+      invalid_type_error: "Points per clean sheet must be a number",
+    })
+    .int("Points per clean sheet must be an integer")
     .optional(),
 });
 

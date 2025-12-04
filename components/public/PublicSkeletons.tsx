@@ -292,3 +292,31 @@ export function TournamentJourneySkeleton() {
     </div>
   );
 }
+
+// Generic Card Skeleton
+export function CardSkeleton() {
+  return (
+    <div className="bg-white rounded-lg border border-gray-200 shadow-md p-6">
+      <Skeleton className="h-6 w-3/4 mb-4" />
+      <Skeleton className="h-4 w-full mb-2" />
+      <Skeleton className="h-4 w-5/6 mb-4" />
+      <div className="flex gap-2 mb-4">
+        <Skeleton className="h-6 w-20" />
+        <Skeleton className="h-6 w-24" />
+      </div>
+      <Skeleton className="h-10 w-full" />
+    </div>
+  );
+}
+
+// Export all skeletons as a namespace
+export const PublicSkeletons = {
+  Card: CardSkeleton,
+  TournamentCard: TournamentCardSkeleton,
+  MatchTheater: MatchTheaterSkeleton,
+  Leaderboard: LeaderboardSkeleton,
+  PlayerProfile: PlayerProfileSkeleton,
+  ClubCard: ClubCardSkeleton,
+  StatCard: StatCardSkeleton,
+  TournamentJourney: TournamentJourneySkeleton,
+};

@@ -114,28 +114,25 @@ export async function PUT(
       }
     }
 
+    // Build update data object
+    const updateData: any = {};
+    if (data.name !== undefined) updateData.name = data.name;
+    if (data.description !== undefined) updateData.description = data.description;
+    if (data.pointsPerWin !== undefined) updateData.pointsPerWin = data.pointsPerWin;
+    if (data.pointsPerDraw !== undefined) updateData.pointsPerDraw = data.pointsPerDraw;
+    if (data.pointsPerLoss !== undefined) updateData.pointsPerLoss = data.pointsPerLoss;
+    if (data.pointsPerGoalScored !== undefined) updateData.pointsPerGoalScored = data.pointsPerGoalScored;
+    if (data.pointsPerGoalConceded !== undefined) updateData.pointsPerGoalConceded = data.pointsPerGoalConceded;
+    if (data.pointsForWalkoverWin !== undefined) updateData.pointsForWalkoverWin = data.pointsForWalkoverWin;
+    if (data.pointsForWalkoverLoss !== undefined) updateData.pointsForWalkoverLoss = data.pointsForWalkoverLoss;
+    if (data.pointsPerStageWin !== undefined) updateData.pointsPerStageWin = data.pointsPerStageWin;
+    if (data.pointsPerStageDraw !== undefined) updateData.pointsPerStageDraw = data.pointsPerStageDraw;
+    if (data.pointsPerCleanSheet !== undefined) updateData.pointsPerCleanSheet = data.pointsPerCleanSheet;
+
     // Update template in database
     const updatedTemplate = await prisma.pointSystemTemplate.update({
       where: { id: templateId },
-      data: {
-        ...(data.name !== undefined && { name: data.name }),
-        ...(data.description !== undefined && { description: data.description }),
-        ...(data.pointsPerWin !== undefined && {
-          pointsPerWin: data.pointsPerWin,
-        }),
-        ...(data.pointsPerDraw !== undefined && {
-          pointsPerDraw: data.pointsPerDraw,
-        }),
-        ...(data.pointsPerLoss !== undefined && {
-          pointsPerLoss: data.pointsPerLoss,
-        }),
-        ...(data.pointsPerGoalScored !== undefined && {
-          pointsPerGoalScored: data.pointsPerGoalScored,
-        }),
-        ...(data.pointsPerGoalConceded !== undefined && {
-          pointsPerGoalConceded: data.pointsPerGoalConceded,
-        }),
-      },
+      data: updateData,
       include: {
         conditionalRules: true,
       },

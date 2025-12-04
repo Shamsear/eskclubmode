@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { createErrorResponse, NotFoundError, ValidationError } from "@/lib/errors";
 
-// GET /api/public/tournaments/[id]/leaderboard - Get tournament leaderboard
+// GET /api/public/tournaments/[id]/leaderboard - Get public tournament leaderboard
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -15,7 +15,7 @@ export async function GET(
       throw new ValidationError("Invalid tournament ID");
     }
 
-    // Verify tournament exists
+    // Check if tournament exists
     const tournament = await prisma.tournament.findUnique({
       where: { id: tournamentId },
       select: {
@@ -28,11 +28,9 @@ export async function GET(
       throw new NotFoundError("Tournament");
     }
 
-    // Get player stats with player and club information
-    const playerStats = await prisma.tournamentPlayerStats.findMany({
-      where: {
-        tournamentId: tournamentId,
-      },
+    // Get player statistics for the tournament
+    const stats = await prisma.tournamentPlayerStats.findMany({
+      where: { tournamentId },
       include: {
         player: {
           select: {
@@ -56,30 +54,43 @@ export async function GET(
       ],
     });
 
-    // Transform and rank players
-    const rankings = playerStats.map((stat, index) => {
-      const goalDifference = stat.goalsScored - stat.goalsConceded;
+    // Calculate goal difference and apply tiebreaker logic
+    const leaderboardWithGoalDiff = stats.map((entry) => ({
+      ...entry,
+      goalDifference: entry.goalsScored - entry.goalsConceded,
+    }));
 
-      return {
-        rank: index + 1,
-        player: {
-          id: stat.player.id,
-          name: stat.player.name,
-          photo: stat.player.photo,
-          club: stat.player.club,
-        },
-        stats: {
-          matchesPlayed: stat.matchesPlayed,
-          wins: stat.wins,
-          draws: stat.draws,
-          losses: stat.losses,
-          goalsScored: stat.goalsScored,
-          goalsConceded: stat.goalsConceded,
-          goalDifference,
-          totalPoints: stat.totalPoints,
-        },
-      };
+    // Sort with proper tiebreaker: points > goal difference > goals scored
+    leaderboardWithGoalDiff.sort((a, b) => {
+      if (b.totalPoints !== a.totalPoints) {
+        return b.totalPoints - a.totalPoints;
+      }
+      if (b.goalDifference !== a.goalDifference) {
+        return b.goalDifference - a.goalDifference;
+      }
+      return b.goalsScored - a.goalsScored;
     });
+
+    // Format the response with rank
+    const rankings = leaderboardWithGoalDiff.map((entry, index) => ({
+      rank: index + 1,
+      player: {
+        id: entry.player.id,
+        name: entry.player.name,
+        photo: entry.player.photo,
+        club: entry.player.club,
+      },
+      stats: {
+        matchesPlayed: entry.matchesPlayed,
+        wins: entry.wins,
+        draws: entry.draws,
+        losses: entry.losses,
+        goalsScored: entry.goalsScored,
+        goalsConceded: entry.goalsConceded,
+        goalDifference: entry.goalDifference,
+        totalPoints: entry.totalPoints,
+      },
+    }));
 
     return NextResponse.json({
       tournament: {

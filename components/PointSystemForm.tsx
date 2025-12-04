@@ -142,6 +142,11 @@ export function PointSystemForm({ initialData, mode }: PointSystemFormProps) {
         pointsPerLoss: formData.pointsPerLoss,
         pointsPerGoalScored: formData.pointsPerGoalScored,
         pointsPerGoalConceded: formData.pointsPerGoalConceded,
+        pointsForWalkoverWin: formData.pointsForWalkoverWin,
+        pointsForWalkoverLoss: formData.pointsForWalkoverLoss,
+        pointsPerStageWin: formData.pointsPerStageWin,
+        pointsPerStageDraw: formData.pointsPerStageDraw,
+        pointsPerCleanSheet: formData.pointsPerCleanSheet,
       };
 
       // Include conditional rules for create mode
