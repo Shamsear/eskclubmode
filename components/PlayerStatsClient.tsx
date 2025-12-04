@@ -129,8 +129,7 @@ export function PlayerStatsClient({ players, tournaments }: PlayerStatsClientPro
                       )}
                       <div className="min-w-0 flex-1">
                         <div className="font-semibold text-gray-900 text-xs sm:text-sm md:text-base truncate">{player.name}</div>
-                        <div className="text-xs text-gray-500 truncate hidden md:block">{player.email}</div>
-                        <div className="text-xs text-gray-500 truncate md:hidden lg:hidden">
+                        <div className="text-xs text-gray-500 truncate lg:hidden">
                           {player.club.name}
                         </div>
                       </div>
