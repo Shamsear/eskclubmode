@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { createErrorResponse, UnauthorizedError } from "@/lib/errors";
+import { updatePlayerStatistics } from "@/lib/match-utils";
 
 interface BulkMatch {
   playerAName: string;
@@ -65,6 +66,7 @@ export async function POST(
     let added = 0;
     let skipped = 0;
     const errors: string[] = [];
+    const affectedPlayerIds = new Set<number>();
 
     for (const match of matches) {
       try {
@@ -143,11 +145,20 @@ export async function POST(
           },
         });
 
+        // Track affected players for statistics update
+        affectedPlayerIds.add(playerA.player.id);
+        affectedPlayerIds.add(playerB.player.id);
+
         added++;
       } catch (error) {
         errors.push(`Failed to add match ${match.playerAName} vs ${match.playerBName}: ${error instanceof Error ? error.message : 'Unknown error'}`);
         skipped++;
       }
+    }
+
+    // Update statistics for all affected players
+    if (affectedPlayerIds.size > 0) {
+      await updatePlayerStatistics(tournamentId, Array.from(affectedPlayerIds));
     }
 
     return NextResponse.json({
