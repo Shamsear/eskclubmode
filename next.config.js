@@ -18,7 +18,6 @@ const nextConfig = {
   },
   reactStrictMode: true,
   compress: true,
-  outputFileTracingIgnores: ['**/*_client-reference-manifest.js'],
 }
 
 module.exports = nextConfig
