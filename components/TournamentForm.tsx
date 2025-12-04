@@ -120,10 +120,19 @@ export function TournamentForm({ clubId, initialData, mode }: TournamentFormProp
   useEffect(() => {
     const fetchTemplates = async () => {
       try {
+        console.log('Fetching point system templates...');
         const response = await fetch('/api/point-systems');
+        console.log('Response status:', response.status);
+        
         if (response.ok) {
           const data = await response.json();
+          console.log('Received data:', data);
+          console.log('Templates array:', data.templates);
+          console.log('Number of templates:', data.templates?.length || 0);
           setTemplates(data.templates || []);
+        } else {
+          const errorText = await response.text();
+          console.error('Failed to fetch templates:', response.status, response.statusText, errorText);
         }
       } catch (error) {
         console.error('Failed to fetch point system templates:', error);
