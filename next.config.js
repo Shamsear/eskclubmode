@@ -18,12 +18,14 @@ const nextConfig = {
   },
   // Enable React strict mode for better development experience
   reactStrictMode: true,
-  // Optimize production builds
-  swcMinify: true,
   // Enable compression
   compress: true,
-  // Optimize fonts
-  optimizeFonts: true,
+  // Experimental features for better build stability
+  experimental: {
+    outputFileTracingIncludes: {
+      '/(public)': ['./app/(public)/**/*'],
+    },
+  },
 }
 
 module.exports = nextConfig
