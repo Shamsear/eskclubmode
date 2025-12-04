@@ -1,4 +1,10 @@
 import Link from "next/link";
+import { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Sports Platform - Experience Sports Data Like Never Before",
+  description: "Immersive visualizations, real-time statistics, and engaging storytelling. Discover tournaments, players, and clubs.",
+};
 
 export default function PublicHomePage() {
   return (
