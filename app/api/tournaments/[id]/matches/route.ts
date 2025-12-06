@@ -245,6 +245,17 @@ export async function POST(
 
     // Calculate points for each result with detailed breakdown
     const resultsWithPoints = results.map(result => {
+      // If custom points are provided, use them directly
+      if (result.customPoints !== undefined) {
+        return {
+          ...result,
+          pointsEarned: result.customPoints,
+          basePoints: result.customPoints,
+          conditionalPoints: 0,
+        };
+      }
+      
+      // Otherwise calculate normally
       const calculation = calculatePointsWithRules(result, pointSystemConfig);
       return {
         ...result,
@@ -275,8 +286,18 @@ export async function POST(
         }
       }
       
-      // Apply walkover points
+      // Apply walkover points (unless custom points are specified)
       finalResultsWithPoints = results.map(result => {
+        // If custom points are provided, use them even for walkovers
+        if (result.customPoints !== undefined) {
+          return {
+            ...result,
+            pointsEarned: result.customPoints,
+            basePoints: result.customPoints,
+            conditionalPoints: 0,
+          };
+        }
+        
         if (walkoverWinnerId === 0) {
           // Both forfeited - no points
           return {

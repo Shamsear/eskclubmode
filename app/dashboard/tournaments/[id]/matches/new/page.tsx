@@ -25,6 +25,7 @@ async function getTournamentWithParticipants(id: string) {
         pointsPerLoss: true,
         pointsPerGoalScored: true,
         pointsPerGoalConceded: true,
+        pointSystemTemplateId: true,
         participants: {
           select: {
             player: {
@@ -50,9 +51,28 @@ async function getTournamentWithParticipants(id: string) {
       photo: p.player.photo,
     }));
 
+    // Fetch walkover points from template if available
+    let walkoverPoints = { pointsForWalkoverWin: 3, pointsForWalkoverLoss: -3 };
+    if (tournament.pointSystemTemplateId) {
+      const template = await prisma.pointSystemTemplate.findUnique({
+        where: { id: tournament.pointSystemTemplateId },
+        select: {
+          pointsForWalkoverWin: true,
+          pointsForWalkoverLoss: true,
+        },
+      });
+      if (template) {
+        walkoverPoints = {
+          pointsForWalkoverWin: template.pointsForWalkoverWin,
+          pointsForWalkoverLoss: template.pointsForWalkoverLoss,
+        };
+      }
+    }
+
     return {
       ...tournament,
       participants,
+      ...walkoverPoints,
     };
   } catch (error) {
     // Log error but return null to trigger not found
@@ -186,6 +206,8 @@ export default async function AddMatchResultPage({
               pointsPerLoss: tournament.pointsPerLoss,
               pointsPerGoalScored: tournament.pointsPerGoalScored,
               pointsPerGoalConceded: tournament.pointsPerGoalConceded,
+              pointsForWalkoverWin: tournament.pointsForWalkoverWin,
+              pointsForWalkoverLoss: tournament.pointsForWalkoverLoss,
             }}
             mode="create"
           />

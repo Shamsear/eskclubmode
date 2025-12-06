@@ -29,8 +29,11 @@ model Club {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  players     Player[]
-  tournaments Tournament[]
+  players         Player[]
+  tournaments     Tournament[]
+  transfersFrom   PlayerTransfer[]  @relation("TransfersFrom")
+  transfersTo     PlayerTransfer[]  @relation("TransfersTo")
+  playerStats     PlayerClubStats[] @relation("ClubPlayerStats")
 
   @@index([name])
   @@index([createdAt])
@@ -46,27 +49,80 @@ enum RoleType {
 
 model Player {
   id          Int       @id @default(autoincrement())
-  clubId      Int
+  clubId      Int?      // Optional - null for free agents
   name        String    @db.VarChar(100)
   email       String    @unique @db.VarChar(100)
   phone       String?   @db.VarChar(20)
   place       String?   @db.VarChar(100)
   dateOfBirth DateTime? @db.Date
   photo       String?   @db.VarChar(255)
+  gender      String    @default("MALE") @db.VarChar(20)
+  state       String    @default("") @db.VarChar(100)
+  district    String    @default("") @db.VarChar(100)
+  isFreeAgent Boolean   @default(false) // True if player is not affiliated with any club
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
-  club                   Club                    @relation(fields: [clubId], references: [id], onDelete: Cascade)
+  club                   Club?                   @relation(fields: [clubId], references: [id], onDelete: SetNull)
   roles                  PlayerRole[]
   tournamentParticipants TournamentParticipant[]
   matchResults           MatchResult[]
   tournamentStats        TournamentPlayerStats[]
+  transferHistory        PlayerTransfer[]        @relation("PlayerTransfers")
+  clubStats              PlayerClubStats[]
 
   @@index([clubId])
   @@index([email])
   @@index([name])
+  @@index([isFreeAgent])
   @@index([createdAt])
   @@map("players")
+}
+
+// Track player stats per club (including free agent period)
+model PlayerClubStats {
+  id               Int      @id @default(autoincrement())
+  playerId         Int
+  clubId           Int?     // null for free agent stats
+  joinedAt         DateTime
+  leftAt           DateTime?
+  matchesPlayed    Int      @default(0)
+  wins             Int      @default(0)
+  draws            Int      @default(0)
+  losses           Int      @default(0)
+  goalsScored      Int      @default(0)
+  goalsConceded    Int      @default(0)
+  totalPoints      Int      @default(0)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  player Player @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  club   Club?  @relation("ClubPlayerStats", fields: [clubId], references: [id], onDelete: SetNull)
+
+  @@index([playerId])
+  @@index([clubId])
+  @@index([joinedAt])
+  @@map("player_club_stats")
+}
+
+model PlayerTransfer {
+  id            Int       @id @default(autoincrement())
+  playerId      Int
+  fromClubId    Int?      // null if transferring from free agent
+  toClubId      Int?      // null if transferring to free agent
+  transferDate  DateTime  @default(now())
+  notes         String?   @db.Text
+  createdAt     DateTime  @default(now())
+
+  player   Player @relation("PlayerTransfers", fields: [playerId], references: [id], onDelete: Cascade)
+  fromClub Club?  @relation("TransfersFrom", fields: [fromClubId], references: [id], onDelete: SetNull)
+  toClub   Club?  @relation("TransfersTo", fields: [toClubId], references: [id], onDelete: SetNull)
+
+  @@index([playerId])
+  @@index([fromClubId])
+  @@index([toClubId])
+  @@index([transferDate])
+  @@map("player_transfers")
 }
 
 model PlayerRole {

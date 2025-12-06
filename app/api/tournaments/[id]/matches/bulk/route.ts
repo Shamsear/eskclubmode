@@ -12,6 +12,8 @@ interface BulkMatch {
   playerBGoals: number;
   matchDate: string;
   walkover?: string; // 'normal', 'both', or player name
+  playerAExtraPoints?: number;
+  playerBExtraPoints?: number;
 }
 
 export async function POST(
@@ -180,6 +182,14 @@ export async function POST(
 
           playerAPoints = calculatePoints(playerAOutcome, match.playerAGoals, match.playerBGoals);
           playerBPoints = calculatePoints(playerBOutcome, match.playerBGoals, match.playerAGoals);
+        }
+
+        // Add extra points if provided
+        if (match.playerAExtraPoints) {
+          playerAPoints += match.playerAExtraPoints;
+        }
+        if (match.playerBExtraPoints) {
+          playerBPoints += match.playerBExtraPoints;
         }
 
         // Create match with results

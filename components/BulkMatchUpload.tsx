@@ -12,6 +12,15 @@ interface Participant {
 interface BulkMatchUploadProps {
   tournamentId: number;
   participants: Participant[];
+  pointSystem?: {
+    pointsPerWin: number;
+    pointsPerDraw: number;
+    pointsPerLoss: number;
+    pointsPerGoalScored: number;
+    pointsPerGoalConceded: number;
+    pointsForWalkoverWin?: number;
+    pointsForWalkoverLoss?: number;
+  };
 }
 
 interface ParsedMatch {
@@ -21,6 +30,8 @@ interface ParsedMatch {
   playerBGoals: number;
   matchDate: string;
   walkover?: string; // 'normal', 'both', playerName
+  playerAExtraPoints?: number;
+  playerBExtraPoints?: number;
 }
 
 interface FormMatch extends ParsedMatch {
@@ -31,7 +42,7 @@ interface FormMatch extends ParsedMatch {
 
 type UploadMode = 'form' | 'csv';
 
-export function BulkMatchUpload({ tournamentId, participants }: BulkMatchUploadProps) {
+export function BulkMatchUpload({ tournamentId, participants, pointSystem }: BulkMatchUploadProps) {
   const router = useRouter();
   const { showToast } = useToast();
   const [mode, setMode] = useState<UploadMode>('form');
@@ -43,8 +54,114 @@ export function BulkMatchUpload({ tournamentId, participants }: BulkMatchUploadP
   // Form mode state
   const today = new Date().toISOString().split('T')[0];
   const [formMatches, setFormMatches] = useState<FormMatch[]>([
-    { id: 1, playerAId: 0, playerBId: 0, playerAName: '', playerBName: '', playerAGoals: 0, playerBGoals: 0, matchDate: today, walkover: 'normal' }
+    { id: 1, playerAId: 0, playerBId: 0, playerAName: '', playerBName: '', playerAGoals: 0, playerBGoals: 0, matchDate: today, walkover: 'normal', playerAExtraPoints: 0, playerBExtraPoints: 0 }
   ]);
+  
+  // Track which matches have expanded point details
+  const [expandedMatches, setExpandedMatches] = useState<Set<number>>(new Set());
+  
+  // Track point component selections for each match
+  const [matchPointOverrides, setMatchPointOverrides] = useState<{
+    [matchId: number]: {
+      playerA: {
+        outcomeEnabled: boolean;
+        goalsEnabled: boolean;
+        concededEnabled: boolean;
+      };
+      playerB: {
+        outcomeEnabled: boolean;
+        goalsEnabled: boolean;
+        concededEnabled: boolean;
+      };
+    };
+  }>({});
+  
+  // Track point customization for each match
+  const [matchPointCustomization, setMatchPointCustomization] = useState<{
+    [matchId: number]: {
+      playerA: {
+        useOutcome: boolean;
+        useGoals: boolean;
+      };
+      playerB: {
+        useOutcome: boolean;
+        useGoals: boolean;
+      };
+    };
+  }>({});
+
+  // Calculate points for a player
+  const calculatePlayerPoints = (match: FormMatch, isPlayerA: boolean): number => {
+    if (!pointSystem) return 0;
+
+    const walkover = match.walkover?.toLowerCase() || 'normal';
+    const playerName = isPlayerA ? match.playerAName : match.playerBName;
+    const goals = isPlayerA ? match.playerAGoals : match.playerBGoals;
+    const conceded = isPlayerA ? match.playerBGoals : match.playerAGoals;
+    const extraPoints = isPlayerA ? (match.playerAExtraPoints || 0) : (match.playerBExtraPoints || 0);
+
+    // Get customization settings
+    const customization = matchPointCustomization[match.id];
+    const playerCustom = isPlayerA ? customization?.playerA : customization?.playerB;
+    const useOutcome = playerCustom?.useOutcome ?? true;
+    const useGoals = playerCustom?.useGoals ?? true;
+
+    // Handle walkover
+    if (walkover === 'both') {
+      return extraPoints;
+    } else if (walkover === playerName.toLowerCase()) {
+      return (useOutcome ? (pointSystem.pointsForWalkoverWin ?? 3) : 0) + extraPoints;
+    } else if (walkover !== 'normal' && walkover !== '') {
+      return (useOutcome ? (pointSystem.pointsForWalkoverLoss ?? -3) : 0) + extraPoints;
+    }
+
+    // Normal match
+    let points = 0;
+    
+    // Outcome points
+    if (useOutcome) {
+      if (goals > conceded) {
+        points += pointSystem.pointsPerWin;
+      } else if (goals < conceded) {
+        points += pointSystem.pointsPerLoss;
+      } else {
+        points += pointSystem.pointsPerDraw;
+      }
+    }
+
+    // Goal points
+    if (useGoals) {
+      points += goals * pointSystem.pointsPerGoalScored;
+      points += conceded * pointSystem.pointsPerGoalConceded;
+    }
+
+    points += extraPoints;
+
+    return points;
+  };
+
+  const toggleMatchExpanded = (matchId: number) => {
+    const newExpanded = new Set(expandedMatches);
+    if (newExpanded.has(matchId)) {
+      newExpanded.delete(matchId);
+    } else {
+      newExpanded.add(matchId);
+    }
+    setExpandedMatches(newExpanded);
+  };
+
+  const togglePointComponent = (matchId: number, player: 'playerA' | 'playerB', component: 'useOutcome' | 'useGoals') => {
+    setMatchPointCustomization(prev => ({
+      ...prev,
+      [matchId]: {
+        ...prev[matchId],
+        [player]: {
+          ...(prev[matchId]?.[player] || { useOutcome: true, useGoals: true }),
+          [component]: !(prev[matchId]?.[player]?.[component] ?? true),
+        },
+      },
+    }));
+  };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
@@ -111,6 +228,12 @@ export function BulkMatchUpload({ tournamentId, participants }: BulkMatchUploadP
           case 'walkover':
             match.walkover = value.toLowerCase() || 'normal';
             break;
+          case 'playeraextrapoints':
+            match.playerAExtraPoints = parseInt(value) || 0;
+            break;
+          case 'playerbextrapoints':
+            match.playerBExtraPoints = parseInt(value) || 0;
+            break;
         }
       });
 
@@ -167,11 +290,12 @@ export function BulkMatchUpload({ tournamentId, participants }: BulkMatchUploadP
 
   const downloadTemplate = () => {
     const playerNames = participants.map(p => p.name).slice(0, 4);
-    const template = `playerA,playerB,playerAGoals,playerBGoals,matchDate,walkover
-${playerNames[0] || 'Player 1'},${playerNames[1] || 'Player 2'},3,1,2024-01-15,normal
-${playerNames[2] || 'Player 3'},${playerNames[3] || 'Player 4'},2,2,2024-01-16,normal
-${playerNames[0] || 'Player 1'},${playerNames[2] || 'Player 3'},0,0,2024-01-17,${playerNames[0] || 'Player 1'}
-${playerNames[1] || 'Player 2'},${playerNames[3] || 'Player 4'},0,0,2024-01-18,both
+    const template = `playerA,playerB,playerAGoals,playerBGoals,matchDate,walkover,playerAExtraPoints,playerBExtraPoints
+${playerNames[0] || 'Player 1'},${playerNames[1] || 'Player 2'},3,1,2024-01-15,normal,0,0
+${playerNames[2] || 'Player 3'},${playerNames[3] || 'Player 4'},2,2,2024-01-16,normal,0,0
+${playerNames[0] || 'Player 1'},${playerNames[2] || 'Player 3'},0,0,2024-01-17,${playerNames[0] || 'Player 1'},0,0
+${playerNames[1] || 'Player 2'},${playerNames[3] || 'Player 4'},0,0,2024-01-18,both,0,0
+${playerNames[0] || 'Player 1'},${playerNames[1] || 'Player 2'},3,1,2024-01-19,normal,5,-2
 
 Instructions:
 - playerA and playerB must match participant names exactly
@@ -181,6 +305,10 @@ Instructions:
   * normal (or empty) = regular match with goals
   * both = both players forfeited (no points)
   * player name = that player won by walkover
+- playerAExtraPoints and playerBExtraPoints (optional):
+  * positive numbers = bonus points
+  * negative numbers = penalty points
+  * 0 or empty = no extra points
 
 Available Participants:
 ${participants.map(p => p.name).join(', ')}`;
@@ -206,7 +334,9 @@ ${participants.map(p => p.name).join(', ')}`;
       playerAGoals: 0, 
       playerBGoals: 0, 
       matchDate: today,
-      walkover: 'normal'
+      walkover: 'normal',
+      playerAExtraPoints: 0,
+      playerBExtraPoints: 0
     }]);
   };
 
@@ -270,6 +400,8 @@ ${participants.map(p => p.name).join(', ')}`;
         playerBGoals: match.playerBGoals,
         matchDate: match.matchDate,
         walkover: match.walkover || 'normal',
+        playerAExtraPoints: match.playerAExtraPoints || 0,
+        playerBExtraPoints: match.playerBExtraPoints || 0,
       }));
 
       const response = await fetch(`/api/tournaments/${tournamentId}/matches/bulk`, {
@@ -516,6 +648,48 @@ ${participants.map(p => p.name).join(', ')}`;
                         </button>
                       </div>
                     </div>
+
+                    {/* Extra Points Section */}
+                    <div className="md:col-span-2 pt-3 border-t border-gray-200">
+                      <label className="block text-sm font-medium text-gray-700 mb-3">
+                        Extra Points (Bonus/Penalty) - Optional
+                      </label>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-xs text-gray-600 mb-1">
+                            Player A Extra Points
+                          </label>
+                          <input
+                            type="number"
+                            value={match.playerAExtraPoints === 0 ? '' : match.playerAExtraPoints}
+                            onChange={(e) => {
+                              const value = e.target.value === '' ? 0 : parseInt(e.target.value, 10);
+                              updateFormMatch(match.id, 'playerAExtraPoints', isNaN(value) ? 0 : value);
+                            }}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-violet-500 focus:border-transparent bg-white text-gray-900"
+                            placeholder="0"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs text-gray-600 mb-1">
+                            Player B Extra Points
+                          </label>
+                          <input
+                            type="number"
+                            value={match.playerBExtraPoints === 0 ? '' : match.playerBExtraPoints}
+                            onChange={(e) => {
+                              const value = e.target.value === '' ? 0 : parseInt(e.target.value, 10);
+                              updateFormMatch(match.id, 'playerBExtraPoints', isNaN(value) ? 0 : value);
+                            }}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-violet-500 focus:border-transparent bg-white text-gray-900"
+                            placeholder="0"
+                          />
+                        </div>
+                      </div>
+                      <p className="mt-2 text-xs text-gray-500">
+                        Add bonus (positive) or penalty (negative) points for special circumstances
+                      </p>
+                    </div>
                   </div>
 
                   {/* Match Outcome Display */}
@@ -575,6 +749,122 @@ ${participants.map(p => p.name).join(', ')}`;
                           )}
                         </div>
                       </div>
+
+                      {/* Point Calculation Display */}
+                      {pointSystem && (
+                        <div className="mt-3">
+                          <button
+                            type="button"
+                            onClick={() => toggleMatchExpanded(match.id)}
+                            className="w-full flex items-center justify-between p-3 bg-indigo-50 border border-indigo-200 rounded-lg hover:bg-indigo-100 transition-colors"
+                          >
+                            <span className="text-sm font-medium text-indigo-900">
+                              {expandedMatches.has(match.id) ? '▼' : '▶'} Point Calculation
+                            </span>
+                            <div className="flex items-center gap-4">
+                              <div className="text-right">
+                                <span className="text-xs text-indigo-600 block">{match.playerAName}</span>
+                                <span className="text-lg font-bold text-indigo-900">
+                                  {calculatePlayerPoints(match, true)} pts
+                                </span>
+                              </div>
+                              <span className="text-indigo-400">vs</span>
+                              <div className="text-right">
+                                <span className="text-xs text-indigo-600 block">{match.playerBName}</span>
+                                <span className="text-lg font-bold text-indigo-900">
+                                  {calculatePlayerPoints(match, false)} pts
+                                </span>
+                              </div>
+                            </div>
+                          </button>
+
+                          {expandedMatches.has(match.id) && (
+                            <div className="mt-2 p-4 bg-white border border-indigo-200 rounded-lg space-y-3">
+                              {/* Player A Points */}
+                              <div className="p-3 bg-blue-50 rounded-lg">
+                                <h4 className="text-sm font-semibold text-blue-900 mb-3">{match.playerAName}</h4>
+                                <div className="space-y-2">
+                                  <label className="flex items-center gap-2 cursor-pointer">
+                                    <input
+                                      type="checkbox"
+                                      checked={matchPointCustomization[match.id]?.playerA?.useOutcome ?? true}
+                                      onChange={() => togglePointComponent(match.id, 'playerA', 'useOutcome')}
+                                      className="w-4 h-4 text-blue-600 rounded"
+                                    />
+                                    <span className="text-xs text-blue-700">
+                                      {match.walkover === 'both' ? 'Both Forfeited: 0 pts' :
+                                       match.walkover === match.playerAName ? `Walkover Win: ${pointSystem.pointsForWalkoverWin ?? 3} pts` :
+                                       match.walkover && match.walkover !== 'normal' ? `Walkover Loss: ${pointSystem.pointsForWalkoverLoss ?? -3} pts` :
+                                       match.playerAGoals > match.playerBGoals ? `Win: ${pointSystem.pointsPerWin} pts` :
+                                       match.playerAGoals < match.playerBGoals ? `Loss: ${pointSystem.pointsPerLoss} pts` :
+                                       `Draw: ${pointSystem.pointsPerDraw} pts`}
+                                    </span>
+                                  </label>
+                                  {match.walkover === 'normal' || !match.walkover ? (
+                                    <label className="flex items-center gap-2 cursor-pointer">
+                                      <input
+                                        type="checkbox"
+                                        checked={matchPointCustomization[match.id]?.playerA?.useGoals ?? true}
+                                        onChange={() => togglePointComponent(match.id, 'playerA', 'useGoals')}
+                                        className="w-4 h-4 text-blue-600 rounded"
+                                      />
+                                      <span className="text-xs text-blue-700">
+                                        Goals: {match.playerAGoals} × {pointSystem.pointsPerGoalScored} + {match.playerBGoals} × {pointSystem.pointsPerGoalConceded} = {match.playerAGoals * pointSystem.pointsPerGoalScored + match.playerBGoals * pointSystem.pointsPerGoalConceded} pts
+                                      </span>
+                                    </label>
+                                  ) : null}
+                                  {match.playerAExtraPoints !== 0 && (
+                                    <p className="text-xs font-semibold text-amber-700 ml-6">
+                                      Extra: {match.playerAExtraPoints > 0 ? '+' : ''}{match.playerAExtraPoints} pts
+                                    </p>
+                                  )}
+                                </div>
+                              </div>
+
+                              {/* Player B Points */}
+                              <div className="p-3 bg-purple-50 rounded-lg">
+                                <h4 className="text-sm font-semibold text-purple-900 mb-3">{match.playerBName}</h4>
+                                <div className="space-y-2">
+                                  <label className="flex items-center gap-2 cursor-pointer">
+                                    <input
+                                      type="checkbox"
+                                      checked={matchPointCustomization[match.id]?.playerB?.useOutcome ?? true}
+                                      onChange={() => togglePointComponent(match.id, 'playerB', 'useOutcome')}
+                                      className="w-4 h-4 text-purple-600 rounded"
+                                    />
+                                    <span className="text-xs text-purple-700">
+                                      {match.walkover === 'both' ? 'Both Forfeited: 0 pts' :
+                                       match.walkover === match.playerBName ? `Walkover Win: ${pointSystem.pointsForWalkoverWin ?? 3} pts` :
+                                       match.walkover && match.walkover !== 'normal' ? `Walkover Loss: ${pointSystem.pointsForWalkoverLoss ?? -3} pts` :
+                                       match.playerBGoals > match.playerAGoals ? `Win: ${pointSystem.pointsPerWin} pts` :
+                                       match.playerBGoals < match.playerAGoals ? `Loss: ${pointSystem.pointsPerLoss} pts` :
+                                       `Draw: ${pointSystem.pointsPerDraw} pts`}
+                                    </span>
+                                  </label>
+                                  {match.walkover === 'normal' || !match.walkover ? (
+                                    <label className="flex items-center gap-2 cursor-pointer">
+                                      <input
+                                        type="checkbox"
+                                        checked={matchPointCustomization[match.id]?.playerB?.useGoals ?? true}
+                                        onChange={() => togglePointComponent(match.id, 'playerB', 'useGoals')}
+                                        className="w-4 h-4 text-purple-600 rounded"
+                                      />
+                                      <span className="text-xs text-purple-700">
+                                        Goals: {match.playerBGoals} × {pointSystem.pointsPerGoalScored} + {match.playerAGoals} × {pointSystem.pointsPerGoalConceded} = {match.playerBGoals * pointSystem.pointsPerGoalScored + match.playerAGoals * pointSystem.pointsPerGoalConceded} pts
+                                      </span>
+                                    </label>
+                                  ) : null}
+                                  {match.playerBExtraPoints !== 0 && (
+                                    <p className="text-xs font-semibold text-amber-700 ml-6">
+                                      Extra: {match.playerBExtraPoints > 0 ? '+' : ''}{match.playerBExtraPoints} pts
+                                    </p>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>

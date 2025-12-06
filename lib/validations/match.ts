@@ -9,6 +9,7 @@ export const matchResultSchema = z.object({
   }),
   goalsScored: z.number().int().min(0, "Goals scored must be non-negative"),
   goalsConceded: z.number().int().min(0, "Goals conceded must be non-negative"),
+  customPoints: z.number().int().optional(), // Optional custom point override
 });
 
 // Schema for creating a match with results
