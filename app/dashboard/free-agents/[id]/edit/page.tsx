@@ -49,7 +49,7 @@ export default async function EditFreeAgentPage({
         <FreeAgentForm
           mode="edit"
           initialData={{
-            id: freeAgent.id,
+            id: freeAgent.id.toString(),
             name: freeAgent.name,
             email: freeAgent.email,
             phone: freeAgent.phone,
