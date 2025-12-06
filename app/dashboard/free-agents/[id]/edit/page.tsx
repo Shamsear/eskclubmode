@@ -6,13 +6,15 @@ import FreeAgentForm from "@/components/FreeAgentForm";
 export default async function EditFreeAgentPage({
   params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
   await requireAuth();
 
+  const { id } = await params;
+
   const freeAgent = await prisma.player.findUnique({
     where: {
-      id: params.id,
+      id,
       clubId: null,
     },
   });

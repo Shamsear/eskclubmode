@@ -6,12 +6,14 @@ import Link from "next/link";
 export default async function PlayerDetailPage({
   params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
   await requireAuth();
 
+  const { id } = await params;
+
   const player = await prisma.player.findUnique({
-    where: { id: parseInt(params.id) },
+    where: { id: parseInt(id) },
     include: {
       club: true,
       clubStats: {
