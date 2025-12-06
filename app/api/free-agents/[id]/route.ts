@@ -17,7 +17,7 @@ export async function GET(
 
     const freeAgent = await prisma.player.findUnique({
       where: {
-        id,
+        id: parseInt(id),
         clubId: null,
       },
     });
@@ -56,7 +56,7 @@ export async function PUT(
     // Check if free agent exists
     const existingFreeAgent = await prisma.player.findUnique({
       where: {
-        id,
+        id: parseInt(id),
         clubId: null,
       },
     });
@@ -83,7 +83,7 @@ export async function PUT(
     }
 
     const updatedFreeAgent = await prisma.player.update({
-      where: { id },
+      where: { id: parseInt(id) },
       data: {
         name,
         email,
@@ -119,7 +119,7 @@ export async function DELETE(
     // Check if free agent exists
     const freeAgent = await prisma.player.findUnique({
       where: {
-        id,
+        id: parseInt(id),
         clubId: null,
       },
     });
@@ -132,7 +132,7 @@ export async function DELETE(
     }
 
     await prisma.player.delete({
-      where: { id },
+      where: { id: parseInt(id) },
     });
 
     return NextResponse.json({ message: "Free agent deleted successfully" });

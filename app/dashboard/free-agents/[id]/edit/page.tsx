@@ -14,7 +14,7 @@ export default async function EditFreeAgentPage({
 
   const freeAgent = await prisma.player.findUnique({
     where: {
-      id,
+      id: parseInt(id),
       clubId: null,
     },
   });
