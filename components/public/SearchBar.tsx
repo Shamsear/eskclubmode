@@ -24,7 +24,7 @@ export function SearchBar({
   onClear,
 }: SearchBarProps) {
   const [localValue, setLocalValue] = useState(value);
-  const timeoutRef = useRef<NodeJS.Timeout>();
+  const timeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
 
   // Sync local value with prop value
   useEffect(() => {
