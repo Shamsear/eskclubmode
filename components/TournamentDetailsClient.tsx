@@ -40,7 +40,7 @@ interface TournamentDetailsClientProps {
         club: {
           id: number;
           name: string;
-        };
+        } | null;
       };
     }>;
     matches: Array<{
@@ -76,7 +76,7 @@ interface TournamentDetailsClientProps {
         club: {
           id: number;
           name: string;
-        };
+        } | null;
       };
     }>;
     _count: {
@@ -349,7 +349,7 @@ function OverviewTab({ tournament }: TournamentDetailsClientProps) {
   // Calculate club breakdown
   const clubBreakdown = tournament.participants.reduce(
     (acc, participant) => {
-      const clubName = participant.player.club.name;
+      const clubName = participant.player.club ? participant.player.club.name : "Free Agent";
       acc[clubName] = (acc[clubName] || 0) + 1;
       return acc;
     },
@@ -533,7 +533,7 @@ function ParticipantsTab({ tournament }: TournamentDetailsClientProps) {
 
   // Group participants by club
   const participantsByClub = tournament.participants.reduce((acc, participant) => {
-    const clubName = participant.player.club.name;
+    const clubName = participant.player.club ? participant.player.club.name : "Free Agent";
     if (!acc[clubName]) {
       acc[clubName] = [];
     }

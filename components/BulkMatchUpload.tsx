@@ -813,9 +813,9 @@ ${participants.map(p => p.name).join(', ')}`;
                                       </span>
                                     </label>
                                   ) : null}
-                                  {match.playerAExtraPoints !== 0 && (
+                                  {(match.playerAExtraPoints ?? 0) !== 0 && (
                                     <p className="text-xs font-semibold text-amber-700 ml-6">
-                                      Extra: {match.playerAExtraPoints > 0 ? '+' : ''}{match.playerAExtraPoints} pts
+                                      Extra: {(match.playerAExtraPoints ?? 0) > 0 ? '+' : ''}{match.playerAExtraPoints} pts
                                     </p>
                                   )}
                                 </div>
@@ -854,9 +854,9 @@ ${participants.map(p => p.name).join(', ')}`;
                                       </span>
                                     </label>
                                   ) : null}
-                                  {match.playerBExtraPoints !== 0 && (
+                                  {(match.playerBExtraPoints ?? 0) !== 0 && (
                                     <p className="text-xs font-semibold text-amber-700 ml-6">
-                                      Extra: {match.playerBExtraPoints > 0 ? '+' : ''}{match.playerBExtraPoints} pts
+                                      Extra: {(match.playerBExtraPoints ?? 0) > 0 ? '+' : ''}{match.playerBExtraPoints} pts
                                     </p>
                                   )}
                                 </div>

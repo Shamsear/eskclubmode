@@ -145,7 +145,7 @@ async function verifyWorkflow() {
     console.log('   📊 Leaderboard:');
     leaderboard.forEach((stat, index) => {
       console.log(
-        `      ${index + 1}. ${stat.player.name} (${stat.player.club.name}) - ` +
+        `      ${index + 1}. ${stat.player.name} (${stat.player.club ? stat.player.club.name : "Free Agent"}) - ` +
         `${stat.totalPoints} pts, ${stat.wins}W ${stat.draws}D ${stat.losses}L, ` +
         `${stat.goalsScored} GF, ${stat.goalsConceded} GA`
       );

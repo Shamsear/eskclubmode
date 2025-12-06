@@ -12,7 +12,7 @@ interface Player {
     id: number;
     name: string;
     logo: string | null;
-  };
+  } | null;
   totalPoints: number;
   totalMatches: number;
   totalWins: number;
@@ -130,22 +130,26 @@ export function PlayerStatsClient({ players, tournaments }: PlayerStatsClientPro
                       <div className="min-w-0 flex-1">
                         <div className="font-semibold text-gray-900 text-xs sm:text-sm md:text-base truncate">{player.name}</div>
                         <div className="text-xs text-gray-500 truncate lg:hidden">
-                          {player.club.name}
+                          {player.club ? player.club.name : "Free Agent"}
                         </div>
                       </div>
                     </div>
                   </td>
                   <td className="px-2 sm:px-4 md:px-6 py-3 sm:py-4 hidden lg:table-cell">
-                    <Link href={`/dashboard/clubs/${player.club.id}`} className="flex items-center gap-2 group-hover:text-purple-600 transition-colors">
-                      {player.club.logo ? (
-                        <img src={player.club.logo} alt={player.club.name} className="w-6 h-6 rounded object-cover flex-shrink-0" />
-                      ) : (
-                        <div className="w-6 h-6 bg-gradient-to-br from-purple-100 to-pink-100 rounded flex items-center justify-center flex-shrink-0">
-                          <span className="text-xs font-bold text-purple-700">{player.club.name.charAt(0)}</span>
-                        </div>
-                      )}
-                      <span className="text-sm font-medium text-gray-700 truncate max-w-[120px]">{player.club.name}</span>
-                    </Link>
+                    {player.club ? (
+                      <Link href={`/dashboard/clubs/${player.club.id}`} className="flex items-center gap-2 group-hover:text-purple-600 transition-colors">
+                        {player.club.logo ? (
+                          <img src={player.club.logo} alt={player.club.name} className="w-6 h-6 rounded object-cover flex-shrink-0" />
+                        ) : (
+                          <div className="w-6 h-6 bg-gradient-to-br from-purple-100 to-pink-100 rounded flex items-center justify-center flex-shrink-0">
+                            <span className="text-xs font-bold text-purple-700">{player.club.name.charAt(0)}</span>
+                          </div>
+                        )}
+                        <span className="text-sm font-medium text-gray-700 truncate max-w-[120px]">{player.club.name}</span>
+                      </Link>
+                    ) : (
+                      <span className="text-sm text-gray-500">Free Agent</span>
+                    )}
                   </td>
                   <td className="px-2 sm:px-4 md:px-6 py-3 sm:py-4 text-center text-xs sm:text-sm text-gray-600 hidden md:table-cell">{player.totalMatches}</td>
                   <td className="px-2 sm:px-4 md:px-6 py-3 sm:py-4 text-center hidden sm:table-cell">

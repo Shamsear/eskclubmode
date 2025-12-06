@@ -53,7 +53,7 @@ export default async function EditFreeAgentPage({
             name: freeAgent.name,
             email: freeAgent.email,
             phone: freeAgent.phone || "",
-            dateOfBirth: freeAgent.dateOfBirth.toISOString().split("T")[0],
+            dateOfBirth: freeAgent.dateOfBirth?.toISOString().split("T")[0] || "",
             gender: freeAgent.gender,
             state: freeAgent.state,
             district: freeAgent.district,

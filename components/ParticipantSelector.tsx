@@ -11,7 +11,7 @@ interface Player {
   club: {
     id: number;
     name: string;
-  };
+  } | null;
 }
 
 interface ParticipantSelectorProps {
@@ -41,7 +41,7 @@ export function ParticipantSelector({
   const clubs = useMemo(() => {
     const clubMap = new Map<number, { id: number; name: string }>();
     allPlayers.forEach((player) => {
-      if (!clubMap.has(player.club.id)) {
+      if (player.club && !clubMap.has(player.club.id)) {
         clubMap.set(player.club.id, player.club);
       }
     });
@@ -61,7 +61,7 @@ export function ParticipantSelector({
 
       // Filter by club
       const matchesClub =
-        selectedClubId === null || player.club.id === selectedClubId;
+        selectedClubId === null || (player.club && player.club.id === selectedClubId);
 
       return matchesSearch && matchesClub;
     });
@@ -315,7 +315,7 @@ export function ParticipantSelector({
                         checked={selectedPlayerIds.includes(player.id)}
                         onChange={() => handleTogglePlayer(player.id)}
                         className="h-5 w-5 mt-1 sm:mt-0 text-blue-600 focus:ring-blue-500 border-gray-300 rounded flex-shrink-0"
-                        aria-label={`Select ${player.name} from ${player.club.name}`}
+                        aria-label={`Select ${player.name}${player.club ? ` from ${player.club.name}` : ''}`}
                       />
                       <div className="ml-3 flex flex-col sm:flex-row sm:items-center flex-1 min-w-0 gap-2">
                         <div className="flex items-center flex-1 min-w-0">
@@ -342,7 +342,7 @@ export function ParticipantSelector({
                           </div>
                         </div>
                         <div className="text-xs sm:text-sm text-gray-500 sm:ml-4 pl-13 sm:pl-0">
-                          {player.club.name}
+                          {player.club ? player.club.name : "Free Agent"}
                         </div>
                       </div>
                     </label>
@@ -399,7 +399,7 @@ export function ParticipantSelector({
                           </p>
                         </div>
                         <div className="ml-4 text-sm text-gray-500">
-                          {player.club.name}
+                          {player.club ? player.club.name : "Free Agent"}
                         </div>
                       </div>
                     </div>

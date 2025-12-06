@@ -90,7 +90,7 @@ async function testPublicAPI() {
     });
     if (player) {
       console.log(`✓ Player loaded: ${player.name}`);
-      console.log(`  Club: ${player.club.name}`);
+      console.log(`  Club: ${player.club ? player.club.name : "Free Agent"}`);
       console.log(`  Roles: ${player.roles.map((r) => r.role).join(", ")}`);
     } else {
       console.log("  No players found in database");

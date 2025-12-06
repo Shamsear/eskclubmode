@@ -30,7 +30,7 @@ interface LeaderboardProps {
       club: {
         id: number;
         name: string;
-      };
+      } | null;
     };
   }>;
   isLoading?: boolean;
@@ -141,7 +141,7 @@ function DesktopLeaderboardTable({ stats, tournament, expandedRows, toggleRowExp
                     )}
                     <div>
                       <div className="text-sm font-medium text-gray-900">{stat.player.name}</div>
-                      <div className="text-xs text-gray-500">{stat.player.club.name}</div>
+                      <div className="text-xs text-gray-500">{stat.player.club ? stat.player.club.name : "Free Agent"}</div>
                     </div>
                   </div>
                 </td>
@@ -434,7 +434,7 @@ function MobileLeaderboardCards({ stats }: MobileLeaderboardCardsProps) {
                   <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
                   </svg>
-                  {stat.player.club.name}
+                  {stat.player.club ? stat.player.club.name : "Free Agent"}
                 </p>
               </div>
             </div>
@@ -491,7 +491,7 @@ function LeaderboardSkeleton() {
 interface ExportButtonProps {
   tournament: { id: number; name: string; };
   stats: Array<{
-    player: { name: string; club: { name: string; }; };
+    player: { name: string; club: { name: string; } | null; };
     matchesPlayed: number;
     wins: number;
     draws: number;
@@ -510,7 +510,7 @@ function ExportButton({ tournament, stats }: ExportButtonProps) {
     try {
       const headers = ['Rank', 'Player', 'Club', 'Matches Played', 'Wins', 'Draws', 'Losses', 'Goals Scored', 'Goals Conceded', 'Total Points'];
       const rows = stats.map((stat, index) => [
-        index + 1, stat.player.name, stat.player.club.name, stat.matchesPlayed,
+        index + 1, stat.player.name, stat.player.club ? stat.player.club.name : "Free Agent", stat.matchesPlayed,
         stat.wins, stat.draws, stat.losses, stat.goalsScored, stat.goalsConceded, stat.totalPoints,
       ]);
       const csvContent = [headers.join(','), ...rows.map(row => row.join(','))].join('\n');

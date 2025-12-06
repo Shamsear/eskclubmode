@@ -113,7 +113,7 @@ export default async function FreeAgentsPage() {
                         <div>
                           <p className="font-medium text-gray-900">{agent.name}</p>
                           <p className="text-sm text-gray-500">
-                            {new Date(agent.dateOfBirth).toLocaleDateString()}
+                            {agent.dateOfBirth ? new Date(agent.dateOfBirth).toLocaleDateString() : "N/A"}
                           </p>
                         </div>
                       </div>
