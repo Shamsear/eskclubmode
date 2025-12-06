@@ -523,15 +523,15 @@ ${participants.map(p => p.name).join(', ')}`;
                         Player A
                       </label>
                       <select
-                        value={match.playerAId}
+                        value={String(match.playerAId)}
                         onChange={(e) => updateFormMatch(match.id, 'playerAId', Number(e.target.value))}
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-violet-500 focus:border-transparent bg-white text-gray-900"
                       >
-                        <option value={0}>Select Player A</option>
+                        <option value="0">Select Player A</option>
                         {participants
                           .filter(p => p.id !== match.playerBId)
                           .map(p => (
-                            <option key={p.id} value={p.id}>{p.name}</option>
+                            <option key={p.id} value={String(p.id)}>{p.name}</option>
                           ))}
                       </select>
                     </div>
@@ -542,15 +542,15 @@ ${participants.map(p => p.name).join(', ')}`;
                         Player B
                       </label>
                       <select
-                        value={match.playerBId}
+                        value={String(match.playerBId)}
                         onChange={(e) => updateFormMatch(match.id, 'playerBId', Number(e.target.value))}
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-violet-500 focus:border-transparent bg-white text-gray-900"
                       >
-                        <option value={0}>Select Player B</option>
+                        <option value="0">Select Player B</option>
                         {participants
                           .filter(p => p.id !== match.playerAId)
                           .map(p => (
-                            <option key={p.id} value={p.id}>{p.name}</option>
+                            <option key={p.id} value={String(p.id)}>{p.name}</option>
                           ))}
                       </select>
                     </div>
