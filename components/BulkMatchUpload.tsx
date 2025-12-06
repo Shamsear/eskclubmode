@@ -32,6 +32,9 @@ interface ParsedMatch {
   walkover?: string; // 'normal', 'both', playerName
   playerAExtraPoints?: number;
   playerBExtraPoints?: number;
+  rowNumber?: number; // Track original CSV row
+  validationErrors?: string[]; // Track validation errors
+  isValid?: boolean; // Quick validation check
 }
 
 interface FormMatch extends ParsedMatch {
@@ -50,6 +53,7 @@ export function BulkMatchUpload({ tournamentId, participants, pointSystem }: Bul
   const [isUploading, setIsUploading] = useState(false);
   const [preview, setPreview] = useState<ParsedMatch[]>([]);
   const [errors, setErrors] = useState<string[]>([]);
+  const [editingMatch, setEditingMatch] = useState<number | null>(null);
   
   // Form mode state
   const today = new Date().toISOString().split('T')[0];
@@ -175,12 +179,68 @@ export function BulkMatchUpload({ tournamentId, participants, pointSystem }: Bul
     }
   };
 
+  const validateMatch = (match: ParsedMatch): { isValid: boolean; errors: string[] } => {
+    const errors: string[] = [];
+    
+    // Check if player names are provided
+    if (!match.playerAName || !match.playerBName) {
+      errors.push('Both player names are required');
+    }
+    
+    // Check if players exist in participants (case-insensitive)
+    const playerAExists = participants.some(
+      p => p.name.toLowerCase() === match.playerAName.toLowerCase()
+    );
+    const playerBExists = participants.some(
+      p => p.name.toLowerCase() === match.playerBName.toLowerCase()
+    );
+    
+    if (match.playerAName && !playerAExists) {
+      errors.push(`Player A "${match.playerAName}" not found in tournament participants`);
+    }
+    if (match.playerBName && !playerBExists) {
+      errors.push(`Player B "${match.playerBName}" not found in tournament participants`);
+    }
+    
+    // Check if players are different
+    if (match.playerAName && match.playerBName && 
+        match.playerAName.toLowerCase() === match.playerBName.toLowerCase()) {
+      errors.push('Players must be different');
+    }
+    
+    // Check date format
+    if (!match.matchDate) {
+      errors.push('Match date is required');
+    } else if (!/^\d{4}-\d{2}-\d{2}$/.test(match.matchDate)) {
+      errors.push('Date must be in YYYY-MM-DD format');
+    }
+    
+    // Check goals are non-negative
+    if (match.playerAGoals < 0 || match.playerBGoals < 0) {
+      errors.push('Goals cannot be negative');
+    }
+    
+    // Validate walkover value
+    if (match.walkover && match.walkover !== 'normal' && match.walkover !== 'both') {
+      const walkoverPlayerExists = 
+        match.walkover.toLowerCase() === match.playerAName.toLowerCase() ||
+        match.walkover.toLowerCase() === match.playerBName.toLowerCase();
+      
+      if (!walkoverPlayerExists) {
+        errors.push(`Walkover value must be "normal", "both", or one of the player names`);
+      }
+    }
+    
+    return { isValid: errors.length === 0, errors };
+  };
+
   const parseCSV = async (file: File) => {
     const text = await file.text();
     const lines = text.split('\n').filter(line => line.trim());
     
     if (lines.length < 2) {
       setErrors(['CSV file must contain at least a header row and one data row']);
+      setPreview([]);
       return;
     }
 
@@ -189,7 +249,8 @@ export function BulkMatchUpload({ tournamentId, participants, pointSystem }: Bul
     const missingHeaders = requiredHeaders.filter(h => !headers.includes(h));
     
     if (missingHeaders.length > 0) {
-      setErrors([`Missing required columns: ${missingHeaders.join(', ')}. Optional: walkover`]);
+      setErrors([`Missing required columns: ${missingHeaders.join(', ')}. Optional: walkover, playerAExtraPoints, playerBExtraPoints`]);
+      setPreview([]);
       return;
     }
 
@@ -205,6 +266,7 @@ export function BulkMatchUpload({ tournamentId, participants, pointSystem }: Bul
         playerBGoals: 0,
         matchDate: '',
         walkover: 'normal',
+        rowNumber: i + 1,
       };
 
       headers.forEach((header, index) => {
@@ -237,13 +299,12 @@ export function BulkMatchUpload({ tournamentId, participants, pointSystem }: Bul
         }
       });
 
-      if (!match.playerAName || !match.playerBName) {
-        parseErrors.push(`Row ${i + 1}: Player names are required`);
-      } else if (!match.matchDate) {
-        parseErrors.push(`Row ${i + 1}: Match date is required`);
-      } else {
-        matches.push(match);
-      }
+      // Validate the match
+      const validation = validateMatch(match);
+      match.validationErrors = validation.errors;
+      match.isValid = validation.isValid;
+      
+      matches.push(match);
     }
 
     setPreview(matches);
@@ -252,7 +313,14 @@ export function BulkMatchUpload({ tournamentId, participants, pointSystem }: Bul
 
   const handleUpload = async () => {
     if (preview.length === 0) {
-      showToast('No valid matches to upload', 'error');
+      showToast('No matches to upload', 'error');
+      return;
+    }
+
+    // Check if there are any invalid matches
+    const invalidMatches = preview.filter(m => !m.isValid);
+    if (invalidMatches.length > 0) {
+      showToast(`Cannot upload: ${invalidMatches.length} match(es) have validation errors. Please fix them first.`, 'error');
       return;
     }
 
@@ -271,11 +339,25 @@ export function BulkMatchUpload({ tournamentId, participants, pointSystem }: Bul
 
       if (!response.ok) {
         showToast(data.error || 'Failed to upload matches', 'error');
+        if (data.errors && data.errors.length > 0) {
+          setErrors(data.errors);
+        }
+        return;
+      }
+
+      // Show detailed results
+      if (data.errors && data.errors.length > 0) {
+        setErrors(data.errors);
+        showToast(
+          `Added ${data.added} match(es), but ${data.skipped} were skipped. Check errors below.`,
+          data.added > 0 ? 'warning' : 'error'
+        );
+        // Don't redirect if there were errors - let user fix them
         return;
       }
 
       showToast(
-        `Successfully added ${data.added} match(es). ${data.skipped || 0} skipped.`,
+        `Successfully added ${data.added} match(es)!`,
         'success'
       );
       
@@ -286,6 +368,22 @@ export function BulkMatchUpload({ tournamentId, participants, pointSystem }: Bul
     } finally {
       setIsUploading(false);
     }
+  };
+
+  const updatePreviewMatch = (index: number, field: keyof ParsedMatch, value: any) => {
+    const updatedPreview = [...preview];
+    updatedPreview[index] = { ...updatedPreview[index], [field]: value };
+    
+    // Re-validate the match
+    const validation = validateMatch(updatedPreview[index]);
+    updatedPreview[index].validationErrors = validation.errors;
+    updatedPreview[index].isValid = validation.isValid;
+    
+    setPreview(updatedPreview);
+  };
+
+  const removePreviewMatch = (index: number) => {
+    setPreview(preview.filter((_, i) => i !== index));
   };
 
   const downloadTemplate = () => {
@@ -347,7 +445,7 @@ ${participants.map(p => p.name).join(', ')}`;
   };
 
   const updateFormMatch = (id: number, field: keyof FormMatch, value: any) => {
-    setFormMatches(formMatches.map(match => {
+    setFormMatches(prevMatches => prevMatches.map(match => {
       if (match.id === id) {
         const updated = { ...match, [field]: value };
         
@@ -419,8 +517,19 @@ ${participants.map(p => p.name).join(', ')}`;
         return;
       }
 
+      // Show detailed results
+      if (data.errors && data.errors.length > 0) {
+        setErrors(data.errors);
+        showToast(
+          `Added ${data.added} match(es), but ${data.skipped} were skipped. Check errors below.`,
+          data.added > 0 ? 'warning' : 'error'
+        );
+        // Don't redirect if there were errors
+        return;
+      }
+
       showToast(
-        `Successfully added ${data.added} match(es). ${data.skipped || 0} skipped.`,
+        `Successfully added ${data.added} match(es)!`,
         'success'
       );
       
@@ -928,16 +1037,33 @@ ${participants.map(p => p.name).join(', ')}`;
               <li>Upload the CSV file and review the preview</li>
               <li>Click &quot;Upload Matches&quot; to add them to the tournament</li>
             </ol>
-            <div className="mt-4">
+            <div className="mt-4 flex gap-3">
               <button
                 onClick={downloadTemplate}
-                className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+                className="flex items-center gap-2 px-4 py-2 bg-violet-600 text-white rounded-lg hover:bg-violet-700 transition-colors"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                 </svg>
                 Download CSV Template
               </button>
+            </div>
+            
+            {/* Available Participants */}
+            <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+              <h3 className="text-sm font-semibold text-blue-900 mb-2">
+                Available Participants ({participants.length})
+              </h3>
+              <p className="text-xs text-blue-700 mb-2">
+                Player names in your CSV must exactly match one of these names:
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {participants.map(p => (
+                  <span key={p.id} className="px-2 py-1 bg-white border border-blue-300 rounded text-xs text-blue-900 font-medium">
+                    {p.name}
+                  </span>
+                ))}
+              </div>
             </div>
           </div>
 
@@ -975,12 +1101,19 @@ ${participants.map(p => p.name).join(', ')}`;
           {preview.length > 0 && (
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-semibold text-gray-900">
-                  Preview ({preview.length} matches)
-                </h2>
+                <div>
+                  <h2 className="text-lg font-semibold text-gray-900">
+                    Preview ({preview.length} matches)
+                  </h2>
+                  {preview.some(m => !m.isValid) && (
+                    <p className="text-sm text-red-600 mt-1">
+                      ⚠️ {preview.filter(m => !m.isValid).length} match(es) have validation errors
+                    </p>
+                  )}
+                </div>
                 <button
                   onClick={handleUpload}
-                  disabled={isUploading || errors.length > 0}
+                  disabled={isUploading || preview.some(m => !m.isValid)}
                   className="px-6 py-3 bg-violet-600 text-white rounded-lg hover:bg-violet-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                 >
                   {isUploading ? (
@@ -1005,10 +1138,11 @@ ${participants.map(p => p.name).join(', ')}`;
                 <table className="min-w-full divide-y divide-gray-200">
                   <thead className="bg-gray-50">
                     <tr>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Row</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Player A</th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Player B</th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Score</th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Outcome</th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
                     </tr>
                   </thead>
@@ -1019,16 +1153,45 @@ ${participants.map(p => p.name).join(', ')}`;
                       const isDraw = match.playerAGoals === match.playerBGoals;
                       
                       return (
-                        <tr key={index}>
+                        <tr key={index} className={!match.isValid ? 'bg-red-50' : ''}>
+                          <td className="px-4 py-3 text-sm text-gray-500">
+                            {match.rowNumber || index + 2}
+                          </td>
+                          <td className="px-4 py-3 text-sm">
+                            {match.isValid ? (
+                              <span className="flex items-center gap-1 text-green-600">
+                                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                                </svg>
+                                <span className="text-xs font-medium">Valid</span>
+                              </span>
+                            ) : (
+                              <div className="flex flex-col gap-1">
+                                <span className="flex items-center gap-1 text-red-600">
+                                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                                  </svg>
+                                  <span className="text-xs font-medium">Error</span>
+                                </span>
+                                {match.validationErrors && match.validationErrors.length > 0 && (
+                                  <div className="text-xs text-red-600 mt-1">
+                                    {match.validationErrors.map((err, i) => (
+                                      <div key={i}>• {err}</div>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                          </td>
                           <td className="px-4 py-3 text-sm">
                             <div className="flex items-center gap-2">
-                              <span className="text-gray-900">{match.playerAName}</span>
-                              {isPlayerAWinner && (
+                              <span className={match.isValid ? "text-gray-900" : "text-red-700 font-medium"}>{match.playerAName || '(empty)'}</span>
+                              {match.isValid && isPlayerAWinner && (
                                 <span className="px-2 py-0.5 bg-green-100 text-green-800 rounded text-xs font-medium">
                                   Winner
                                 </span>
                               )}
-                              {isPlayerBWinner && (
+                              {match.isValid && isPlayerBWinner && (
                                 <span className="px-2 py-0.5 bg-red-100 text-red-800 rounded text-xs font-medium">
                                   Loser
                                 </span>
@@ -1037,13 +1200,13 @@ ${participants.map(p => p.name).join(', ')}`;
                           </td>
                           <td className="px-4 py-3 text-sm">
                             <div className="flex items-center gap-2">
-                              <span className="text-gray-900">{match.playerBName}</span>
-                              {isPlayerBWinner && (
+                              <span className={match.isValid ? "text-gray-900" : "text-red-700 font-medium"}>{match.playerBName || '(empty)'}</span>
+                              {match.isValid && isPlayerBWinner && (
                                 <span className="px-2 py-0.5 bg-green-100 text-green-800 rounded text-xs font-medium">
                                   Winner
                                 </span>
                               )}
-                              {isPlayerAWinner && (
+                              {match.isValid && isPlayerAWinner && (
                                 <span className="px-2 py-0.5 bg-red-100 text-red-800 rounded text-xs font-medium">
                                   Loser
                                 </span>
@@ -1053,18 +1216,7 @@ ${participants.map(p => p.name).join(', ')}`;
                           <td className="px-4 py-3 text-sm text-gray-600 font-medium">
                             {match.playerAGoals} - {match.playerBGoals}
                           </td>
-                          <td className="px-4 py-3 text-sm">
-                            {isDraw ? (
-                              <span className="px-2 py-1 bg-yellow-100 text-yellow-800 rounded-full text-xs font-medium">
-                                Draw
-                              </span>
-                            ) : (
-                              <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-medium">
-                                Decisive
-                              </span>
-                            )}
-                          </td>
-                          <td className="px-4 py-3 text-sm text-gray-600">{match.matchDate}</td>
+                          <td className="px-4 py-3 text-sm text-gray-600">{match.matchDate || '(empty)'}</td>
                         </tr>
                       );
                     })}

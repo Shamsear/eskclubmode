@@ -1,10 +1,14 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { PublicCard, CardContent } from './PublicCard';
 import { StatusBadge } from './Badge';
 import { PublicSkeletons } from './PublicSkeletons';
+import { SearchBar, HighlightedText } from './SearchBar';
+import { FilterPanel, FilterConfig } from './FilterPanel';
+import { SearchEmptyState, FilterEmptyState } from './EmptyState';
+import { applyFilters, getActiveFilterCount } from '@/lib/utils/filterUtils';
 
 interface Tournament {
   id: number;
@@ -25,43 +29,33 @@ interface TournamentListResponse {
   };
 }
 
-type FilterStatus = 'all' | 'upcoming' | 'active' | 'completed';
-
 export default function TournamentListingClient() {
-  const [tournaments, setTournaments] = useState<Tournament[]>([]);
+  const [allTournaments, setAllTournaments] = useState<Tournament[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [filter, setFilter] = useState<FilterStatus>('all');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filters, setFilters] = useState<FilterConfig>({});
   const [page, setPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
+  const pageSize = 12;
 
   useEffect(() => {
     fetchTournaments();
-  }, [filter, page]);
+  }, []);
 
   const fetchTournaments = async () => {
     try {
       setLoading(true);
       setError(null);
       
-      const params = new URLSearchParams({
-        page: page.toString(),
-        pageSize: '12',
-      });
-      
-      if (filter !== 'all') {
-        params.append('status', filter);
-      }
-
-      const response = await fetch(`/api/public/tournaments?${params}`);
+      // Fetch all tournaments for client-side filtering
+      const response = await fetch(`/api/public/tournaments?page=1&pageSize=1000`);
       
       if (!response.ok) {
         throw new Error('Failed to fetch tournaments');
       }
 
       const data: TournamentListResponse = await response.json();
-      setTournaments(data.tournaments);
-      setTotalPages(Math.ceil(data.pagination.total / data.pagination.pageSize));
+      setAllTournaments(data.tournaments);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {
@@ -69,9 +63,38 @@ export default function TournamentListingClient() {
     }
   };
 
-  const handleFilterChange = (newFilter: FilterStatus) => {
-    setFilter(newFilter);
-    setPage(1); // Reset to first page when filter changes
+  // Apply filters with AND logic
+  const filteredTournaments = useMemo(() => {
+    const filterConfig = {
+      ...filters,
+      search: searchQuery,
+    };
+    
+    return applyFilters(allTournaments, filterConfig, ['name']);
+  }, [allTournaments, filters, searchQuery]);
+
+  // Paginate filtered results
+  const paginatedTournaments = useMemo(() => {
+    const startIndex = (page - 1) * pageSize;
+    const endIndex = startIndex + pageSize;
+    return filteredTournaments.slice(startIndex, endIndex);
+  }, [filteredTournaments, page]);
+
+  const totalPages = Math.ceil(filteredTournaments.length / pageSize);
+  const activeFilterCount = getActiveFilterCount(filters);
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setPage(1);
+  }, [filters, searchQuery]);
+
+  const handleClearSearch = () => {
+    setSearchQuery('');
+  };
+
+  const handleClearFilters = () => {
+    setFilters({});
+    setSearchQuery('');
   };
 
   const formatDate = (dateString: string) => {
@@ -99,28 +122,57 @@ export default function TournamentListingClient() {
 
   return (
     <div>
-      {/* Filter Buttons */}
-      <div className="mb-6 sm:mb-8">
-        <div className="flex flex-wrap gap-2 sm:gap-3">
-          {(['all', 'upcoming', 'active', 'completed'] as FilterStatus[]).map((status) => (
-            <button
-              key={status}
-              onClick={() => handleFilterChange(status)}
-              className={`
-                px-4 py-2 rounded-lg font-medium text-sm transition-all
-                ${
-                  filter === status
-                    ? 'bg-primary-600 text-white shadow-md'
-                    : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
-                }
-              `}
-              aria-pressed={filter === status}
-            >
-              {status.charAt(0).toUpperCase() + status.slice(1)}
-            </button>
-          ))}
+      {/* Search and Filter Section */}
+      <div className="mb-6 sm:mb-8 grid grid-cols-1 lg:grid-cols-4 gap-4">
+        {/* Search Bar */}
+        <div className="lg:col-span-3">
+          <SearchBar
+            value={searchQuery}
+            onChange={setSearchQuery}
+            placeholder="Search tournaments by name..."
+            onClear={handleClearSearch}
+          />
+        </div>
+
+        {/* Filter Panel */}
+        <div className="lg:col-span-1">
+          <FilterPanel
+            filters={filters}
+            onFilterChange={setFilters}
+            filterSections={[
+              {
+                id: 'status',
+                title: 'Status',
+                type: 'checkbox',
+                options: [
+                  { value: 'upcoming', label: 'Upcoming' },
+                  { value: 'active', label: 'Active' },
+                  { value: 'completed', label: 'Completed' },
+                ],
+              },
+              {
+                id: 'participantCount',
+                title: 'Participants',
+                type: 'range',
+                min: 0,
+                max: 100,
+              },
+            ]}
+          />
         </div>
       </div>
+
+      {/* Results Count */}
+      {!loading && (
+        <div className="mb-4 text-sm text-gray-600">
+          Showing {paginatedTournaments.length} of {filteredTournaments.length} tournaments
+          {(searchQuery || activeFilterCount > 0) && (
+            <span className="ml-2 text-primary-600 font-medium">
+              (filtered from {allTournaments.length} total)
+            </span>
+          )}
+        </div>
+      )}
 
       {/* Tournament Grid */}
       {loading ? (
@@ -129,30 +181,32 @@ export default function TournamentListingClient() {
             <PublicSkeletons.Card key={i} />
           ))}
         </div>
-      ) : tournaments.length === 0 ? (
-        <div className="bg-white rounded-2xl border border-gray-200 p-12 text-center">
-          <div className="text-6xl mb-4">🏆</div>
-          <h3 className="text-xl font-semibold text-gray-900 mb-2">
-            No tournaments found
-          </h3>
-          <p className="text-gray-600 mb-6">
-            {filter === 'all'
-              ? 'There are no tournaments available at the moment.'
-              : `There are no ${filter} tournaments at the moment.`}
-          </p>
-          {filter !== 'all' && (
-            <button
-              onClick={() => handleFilterChange('all')}
-              className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
-            >
-              View All Tournaments
-            </button>
-          )}
-        </div>
+      ) : paginatedTournaments.length === 0 ? (
+        searchQuery ? (
+          <SearchEmptyState
+            searchQuery={searchQuery}
+            onClearSearch={handleClearSearch}
+          />
+        ) : activeFilterCount > 0 ? (
+          <FilterEmptyState
+            onClearFilters={handleClearFilters}
+            activeFilterCount={activeFilterCount}
+          />
+        ) : (
+          <div className="bg-white rounded-2xl border border-gray-200 p-12 text-center">
+            <div className="text-6xl mb-4">🏆</div>
+            <h3 className="text-xl font-semibold text-gray-900 mb-2">
+              No tournaments found
+            </h3>
+            <p className="text-gray-600 mb-6">
+              There are no tournaments available at the moment.
+            </p>
+          </div>
+        )
       ) : (
         <>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-            {tournaments.map((tournament, index) => (
+            {paginatedTournaments.map((tournament, index) => (
               <Link
                 key={tournament.id}
                 href={`/tournaments/${tournament.id}`}
@@ -168,7 +222,7 @@ export default function TournamentListingClient() {
                   <CardContent>
                     <div className="flex items-start justify-between mb-4">
                       <h3 className="text-lg sm:text-xl font-bold text-gray-900 group-hover:text-primary-600 transition-colors line-clamp-2">
-                        {tournament.name}
+                        <HighlightedText text={tournament.name} highlight={searchQuery} />
                       </h3>
                       <StatusBadge status={tournament.status} size="sm" />
                     </div>

@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import Link from 'next/link';
 import { Button } from '@/components/ui/Button';
 import {
   StatCard,
@@ -21,10 +22,16 @@ import {
   ClubCardSkeleton,
   StatCardSkeleton,
   TournamentJourneySkeleton,
+  SearchBar,
+  HighlightedText,
+  FilterPanel,
+  EmptyState,
 } from '@/components/public';
 
 export default function ComponentsDemoPage() {
   const [showSkeletons, setShowSkeletons] = React.useState(false);
+  const [searchQuery, setSearchQuery] = React.useState('');
+  const [filters, setFilters] = React.useState({});
 
   return (
     <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
@@ -210,6 +217,106 @@ export default function ComponentsDemoPage() {
                 </div>
               </Card3D>
             ))}
+          </div>
+        </section>
+
+        {/* Search and Filter Section */}
+        <section>
+          <h2 className="text-2xl font-bold text-gray-900 mb-6">
+            Search & Filter System
+          </h2>
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 mb-6">
+            <h3 className="text-lg font-semibold text-blue-900 mb-2">
+              ✨ New Feature: Comprehensive Search & Filter System
+            </h3>
+            <p className="text-blue-800 mb-4">
+              A complete search and filtering solution with debounced search, text highlighting, 
+              AND filter logic, and contextual empty states.
+            </p>
+            <Link href="/tournaments">
+              <Button variant="primary">
+                View Live Example (Tournaments Page)
+              </Button>
+            </Link>
+          </div>
+
+          <div className="space-y-6">
+            <div>
+              <h3 className="text-lg font-semibold mb-4">Search Bar with Debouncing</h3>
+              <SearchBar
+                value={searchQuery}
+                onChange={setSearchQuery}
+                placeholder="Try typing to see debounced search..."
+              />
+              {searchQuery && (
+                <p className="mt-2 text-sm text-gray-600">
+                  Search query: <strong>{searchQuery}</strong>
+                </p>
+              )}
+            </div>
+
+            <div>
+              <h3 className="text-lg font-semibold mb-4">Text Highlighting</h3>
+              <div className="bg-white p-4 rounded-lg border border-gray-200">
+                <p className="text-gray-900">
+                  <HighlightedText 
+                    text="The quick brown fox jumps over the lazy dog" 
+                    highlight={searchQuery || 'fox'} 
+                  />
+                </p>
+              </div>
+            </div>
+
+            <div>
+              <h3 className="text-lg font-semibold mb-4">Filter Panel</h3>
+              <div className="max-w-sm">
+                <FilterPanel
+                  filters={filters}
+                  onFilterChange={setFilters}
+                  filterSections={[
+                    {
+                      id: 'status',
+                      title: 'Status',
+                      type: 'checkbox',
+                      options: [
+                        { value: 'active', label: 'Active', count: 10 },
+                        { value: 'pending', label: 'Pending', count: 5 },
+                        { value: 'completed', label: 'Completed', count: 15 },
+                      ],
+                    },
+                    {
+                      id: 'priority',
+                      title: 'Priority',
+                      type: 'radio',
+                      options: [
+                        { value: 'high', label: 'High' },
+                        { value: 'medium', label: 'Medium' },
+                        { value: 'low', label: 'Low' },
+                      ],
+                    },
+                  ]}
+                />
+              </div>
+            </div>
+
+            <div>
+              <h3 className="text-lg font-semibold mb-4">Empty States</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <EmptyState
+                  title="No results found"
+                  description="We couldn't find any items matching your criteria"
+                  action={{
+                    label: 'Clear Filters',
+                    onClick: () => alert('Filters cleared!'),
+                  }}
+                  suggestions={[
+                    'Check your spelling',
+                    'Try more general keywords',
+                    'Use fewer filters',
+                  ]}
+                />
+              </div>
+            </div>
           </div>
         </section>
 

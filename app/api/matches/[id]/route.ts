@@ -32,7 +32,15 @@ export async function GET(
 
     const match = await prisma.match.findUnique({
       where: { id: matchId },
-      include: {
+      select: {
+        id: true,
+        tournamentId: true,
+        stageId: true,
+        stageName: true,
+        matchDate: true,
+        walkoverWinnerId: true,
+        createdAt: true,
+        updatedAt: true,
         tournament: {
           select: {
             id: true,
@@ -104,7 +112,7 @@ export async function PUT(
       throw validationResult.error;
     }
 
-    const { matchDate, stageId, stageName, results } = validationResult.data;
+    const { matchDate, stageId, stageName, walkoverWinnerId, results } = validationResult.data;
 
     // Check if match exists and get tournament info with point system template
     const existingMatch = await prisma.match.findUnique({
@@ -287,6 +295,7 @@ export async function PUT(
           ...(matchDate && { matchDate: new Date(matchDate) }),
           ...(stageId !== undefined && { stageId }),
           ...(stageName !== undefined && { stageName }),
+          ...(walkoverWinnerId !== undefined && { walkoverWinnerId }),
         },
       });
 

@@ -67,6 +67,7 @@ interface MatchResultFormProps {
     matchDate: string;
     stageId?: number | null;
     stageName?: string | null;
+    walkoverWinnerId?: number | null;
     results: Array<{
       id?: number;
       playerId: number;
@@ -131,7 +132,9 @@ export function MatchResultForm({
   );
   
   // Walkover state: null = normal match, 0 = both forfeit, playerId = that player won by walkover
-  const [walkoverWinnerId, setWalkoverWinnerId] = useState<number | null>(null);
+  const [walkoverWinnerId, setWalkoverWinnerId] = useState<number | null>(
+    initialData?.walkoverWinnerId !== undefined ? initialData.walkoverWinnerId : null
+  );
   
   // Point override state
   const [showPointOverride, setShowPointOverride] = useState(false);
@@ -209,6 +212,18 @@ export function MatchResultForm({
     };
     fetchStages();
   }, [tournamentId]);
+
+  // Validate walkover selection when players change
+  useEffect(() => {
+    if (walkoverWinnerId !== null && walkoverWinnerId !== 0) {
+      // Check if the selected walkover winner is still in the player results
+      const isValidWalkover = playerResults.some(r => r.playerId === walkoverWinnerId);
+      if (!isValidWalkover) {
+        // Reset walkover if the selected player is no longer in the match
+        setWalkoverWinnerId(null);
+      }
+    }
+  }, [playerResults, walkoverWinnerId]);
 
   // Handle walkover changes - auto-set outcomes and reset goals
   useEffect(() => {
@@ -597,21 +612,24 @@ export function MatchResultForm({
               setWalkoverWinnerId(parseInt(value));
             }
           }}
-          className="block w-full px-3 py-2.5 border border-orange-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors bg-white"
+          disabled={playerResults.filter(r => r.playerId > 0).length < 2}
+          className="block w-full px-3 py-2.5 border border-orange-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors bg-white disabled:bg-gray-100 disabled:cursor-not-allowed"
         >
           <option value="">Normal Match (no walkover)</option>
           <option value="0">Both Players Forfeited (no points awarded)</option>
-          {playerResults[0]?.playerId > 0 && (
-            <option value={playerResults[0].playerId}>
-              {participants.find(p => p.id === playerResults[0].playerId)?.name} Won by Walkover
-            </option>
-          )}
-          {playerResults[1]?.playerId > 0 && (
-            <option value={playerResults[1].playerId}>
-              {participants.find(p => p.id === playerResults[1].playerId)?.name} Won by Walkover
-            </option>
+          {playerResults.map((result, index) => 
+            result.playerId > 0 && (
+              <option key={`player-${result.playerId}-${index}`} value={result.playerId}>
+                {participants.find(p => p.id === result.playerId)?.name || `Player ${index + 1}`} Won by Walkover
+              </option>
+            )
           )}
         </select>
+        {playerResults.filter(r => r.playerId > 0).length < 2 && (
+          <p className="mt-2 text-sm text-orange-600">
+            ⚠️ Please select both players before choosing a walkover option
+          </p>
+        )}
         {walkoverWinnerId !== null && (
           <div className="mt-3 p-3 bg-white rounded-lg border border-orange-200">
             <p className="text-sm text-orange-800 font-medium">
@@ -793,6 +811,8 @@ export function MatchResultForm({
                       <Input
                         label="Goals Scored"
                         type="number"
+                        id={`goals-scored-${index}`}
+                        name={`goals-scored-${index}`}
                         min="0"
                         value={result.goalsScored.toString()}
                         onChange={(e) => {
@@ -918,6 +938,8 @@ export function MatchResultForm({
                             <div className="flex items-center gap-3">
                               <input
                                 type="checkbox"
+                                id={`outcome-points-${index}`}
+                                name={`outcome-points-${index}`}
                                 checked={pointOverrides[index].components.outcomePoints.enabled}
                                 onChange={(e) => {
                                   const components = pointOverrides[index].components;
@@ -986,6 +1008,8 @@ export function MatchResultForm({
                               <div className="flex items-center gap-3">
                                 <input
                                   type="checkbox"
+                                  id={`goal-scored-points-${index}`}
+                                  name={`goal-scored-points-${index}`}
                                   checked={pointOverrides[index].components.goalScoredPoints.enabled}
                                   onChange={(e) => {
                                     const components = pointOverrides[index].components;
@@ -1028,6 +1052,8 @@ export function MatchResultForm({
                               <div className="flex items-center gap-3">
                                 <input
                                   type="checkbox"
+                                  id={`goal-conceded-points-${index}`}
+                                  name={`goal-conceded-points-${index}`}
                                   checked={pointOverrides[index].components.goalConcededPoints.enabled}
                                   onChange={(e) => {
                                     const components = pointOverrides[index].components;
@@ -1078,6 +1104,8 @@ export function MatchResultForm({
                             <div className="flex gap-2">
                               <input
                                 type="number"
+                                id={`extra-points-${index}`}
+                                name={`extra-points-${index}`}
                                 value={pointOverrides[index].extraPoints === 0 ? '' : pointOverrides[index].extraPoints}
                                 onChange={(e) => {
                                   const value = e.target.value === '' || e.target.value === '-' ? 0 : parseInt(e.target.value, 10);

@@ -14,9 +14,11 @@ export function Input({
   helperText,
   className = '',
   id,
+  name,
   ...props
 }: InputProps) {
   const inputId = id || label?.toLowerCase().replace(/\s+/g, '-');
+  const inputName = name || inputId;
   
   const baseStyles = 'block w-full px-3 py-2.5 min-h-[44px] border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-0 transition-colors text-gray-900 bg-white';
   const normalStyles = 'border-gray-300 focus:border-blue-500 focus:ring-blue-500';
@@ -36,6 +38,7 @@ export function Input({
       )}
       <input
         id={inputId}
+        name={inputName}
         className={inputClassName}
         aria-invalid={error ? 'true' : 'false'}
         aria-describedby={error ? `${inputId}-error` : helperText ? `${inputId}-helper` : undefined}

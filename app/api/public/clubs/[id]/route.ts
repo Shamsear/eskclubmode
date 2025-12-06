@@ -35,6 +35,7 @@ export async function GET(
             _count: {
               select: {
                 participants: true,
+                matches: true,
               },
             },
           },
@@ -99,6 +100,7 @@ export async function GET(
         startDate: tournament.startDate.toISOString(),
         endDate: tournament.endDate?.toISOString() || null,
         participantCount: tournament._count.participants,
+        matchCount: tournament._count.matches,
         status,
       };
     });
