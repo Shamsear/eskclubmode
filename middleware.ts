@@ -1,25 +1,50 @@
 import { withAuth } from "next-auth/middleware";
 import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
 
-export default withAuth(
-  function middleware(req) {
+export default function middleware(req: NextRequest) {
+  const { pathname } = req.nextUrl;
+
+  // Allow public API routes without authentication
+  if (pathname.startsWith('/api/public') || 
+      pathname.startsWith('/api/auth') || 
+      pathname.startsWith('/api/imagekit-auth')) {
     return NextResponse.next();
-  },
-  {
-    callbacks: {
-      authorized: ({ token }) => !!token,
-    },
-    pages: {
-      signIn: "/login",
-    },
   }
-);
+
+  // Allow public pages without authentication
+  if (pathname.startsWith('/tournaments') ||
+      pathname.startsWith('/matches') ||
+      pathname.startsWith('/players') ||
+      pathname.startsWith('/clubs') ||
+      pathname.startsWith('/leaderboard') ||
+      pathname === '/login' ||
+      pathname === '/') {
+    return NextResponse.next();
+  }
+
+  // Protect dashboard and private API routes with authentication
+  if (pathname.startsWith('/dashboard') || pathname.startsWith('/api/')) {
+    return withAuth(
+      function middleware(req) {
+        return NextResponse.next();
+      },
+      {
+        callbacks: {
+          authorized: ({ token }) => !!token,
+        },
+        pages: {
+          signIn: "/login",
+        },
+      }
+    )(req as any, {} as any);
+  }
+
+  return NextResponse.next();
+}
 
 export const config = {
   matcher: [
-    // Protect dashboard routes
-    "/dashboard/:path*",
-    // Protect private API routes (but not /api/public or /api/auth)
-    "/api/((?!public|auth|imagekit-auth).*)",
+    '/((?!_next/static|_next/image|favicon.ico|logo.png).*)',
   ],
 };
