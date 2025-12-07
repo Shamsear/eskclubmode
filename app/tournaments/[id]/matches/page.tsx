@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { Suspense } from 'react';
+import { prisma } from '@/lib/prisma';
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -42,29 +43,108 @@ interface TournamentMatchesData {
 
 async function getTournamentMatches(id: number): Promise<TournamentMatchesData | null> {
   try {
-    const baseUrl = process.env.VERCEL_URL 
-      ? `https://${process.env.VERCEL_URL}`
-      : process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
-    const response = await fetch(`${baseUrl}/api/public/tournaments/${id}/matches`, {
-      cache: 'no-store',
+    // Use direct database query instead of API fetch for better reliability
+    const tournament = await prisma.tournament.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        name: true,
+      },
     });
 
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      console.error('API Error:', response.status, errorData);
-      
-      if (response.status === 404) {
-        return null;
-      }
-      
-      // Return null instead of throwing to show empty state
+    if (!tournament) {
       return null;
     }
 
-    return await response.json();
+    // Get all matches for this tournament with results
+    const matches = await prisma.match.findMany({
+      where: {
+        tournamentId: id,
+      },
+      include: {
+        stage: {
+          select: {
+            id: true,
+            stageName: true,
+            stageOrder: true,
+          },
+        },
+        results: {
+          include: {
+            player: {
+              select: {
+                id: true,
+                name: true,
+                photo: true,
+              },
+            },
+          },
+          orderBy: {
+            id: 'asc',
+          },
+        },
+      },
+      orderBy: [
+        { matchDate: 'asc' },
+      ],
+    });
+
+    // Transform matches to the expected format
+    const transformedMatches = matches.map((match) => {
+      const player1Result = match.results[0];
+      const player2Result = match.results[1];
+      
+      // Determine status based on results
+      let status: 'SCHEDULED' | 'COMPLETED' | 'CANCELLED' = 'SCHEDULED';
+      
+      // Match is completed if both players have results with outcome set
+      if (player1Result && player2Result && 
+          player1Result.outcome && player2Result.outcome) {
+        status = 'COMPLETED';
+      } else if (match.walkoverWinnerId !== null && match.walkoverWinnerId !== undefined) {
+        status = 'CANCELLED';
+      }
+      
+      // Determine winner
+      let winner = null;
+      if (status === 'COMPLETED' && player1Result && player2Result) {
+        if (player1Result.outcome === 'WIN') {
+          winner = player1Result.player;
+        } else if (player2Result.outcome === 'WIN') {
+          winner = player2Result.player;
+        }
+      } else if (match.walkoverWinnerId && match.walkoverWinnerId > 0) {
+        const winnerResult = match.results.find(r => r.playerId === match.walkoverWinnerId);
+        if (winnerResult) {
+          winner = winnerResult.player;
+        }
+      }
+
+      return {
+        id: match.id,
+        date: match.matchDate.toISOString(),
+        stage: match.stage ? {
+          id: match.stage.id,
+          name: match.stage.stageName,
+        } : {
+          id: 0,
+          name: match.stageName || 'General',
+        },
+        player1: player1Result ? player1Result.player : null,
+        player2: player2Result ? player2Result.player : null,
+        player1Score: player1Result ? player1Result.goalsScored : null,
+        player2Score: player2Result ? player2Result.goalsScored : null,
+        winner,
+        status,
+      };
+    });
+
+    return {
+      tournament,
+      matches: transformedMatches,
+    };
   } catch (error) {
     console.error('Error fetching tournament matches:', error);
-    // Return null to show empty state instead of crashing
     return null;
   }
 }
