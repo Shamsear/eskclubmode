@@ -57,7 +57,7 @@ export const LazyPerformanceHeatmap = dynamic(
  * Complex component with animations
  */
 export const LazyMatchTheater = dynamic(
-  () => import('./MatchTheater'),
+  () => import('./MatchTheater').then(mod => mod.MatchTheater),
   {
     loading: () => <PublicSkeletons.MatchTheater />,
   }
