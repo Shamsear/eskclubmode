@@ -9,6 +9,7 @@ export default function middleware(req: NextRequest) {
   if (pathname.startsWith('/api/public') || 
       pathname.startsWith('/api/auth') || 
       pathname.startsWith('/api/imagekit-auth')) {
+    console.log('[Middleware] Allowing public API:', pathname);
     return NextResponse.next();
   }
 
@@ -20,11 +21,13 @@ export default function middleware(req: NextRequest) {
       pathname.startsWith('/leaderboard') ||
       pathname === '/login' ||
       pathname === '/') {
+    console.log('[Middleware] Allowing public page:', pathname);
     return NextResponse.next();
   }
 
   // Protect dashboard and private API routes with authentication
   if (pathname.startsWith('/dashboard') || pathname.startsWith('/api/')) {
+    console.log('[Middleware] Requiring auth for:', pathname);
     return withAuth(
       function middleware(req) {
         return NextResponse.next();
