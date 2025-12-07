@@ -47,6 +47,7 @@ async function getPlayerData(id: number) {
               select: {
                 id: true,
                 name: true,
+                startDate: true,
               },
             },
           },
@@ -67,6 +68,12 @@ async function getPlayerData(id: number) {
     const totalGoalsConceded = player.matchResults.reduce((sum, r) => sum + r.goalsConceded, 0);
     const totalPoints = player.matchResults.reduce((sum, r) => sum + r.pointsEarned, 0);
 
+    // Get player roles
+    const roles = await prisma.playerRole.findMany({
+      where: { playerId: id },
+      select: { role: true },
+    });
+
     return {
       player: {
         id: player.id,
@@ -76,13 +83,11 @@ async function getPlayerData(id: number) {
         place: player.place,
         dateOfBirth: player.dateOfBirth?.toISOString() || null,
         photo: player.photo,
-        gender: player.gender,
-        state: player.state,
-        district: player.district,
-        isFreeAgent: player.isFreeAgent,
         club: player.club,
+        roles: roles.map(r => r.role as 'PLAYER' | 'CAPTAIN' | 'MENTOR' | 'MANAGER'),
       },
       stats: {
+        totalTournaments: player.tournamentStats.length,
         totalMatches,
         totalWins,
         totalDraws,
@@ -92,16 +97,22 @@ async function getPlayerData(id: number) {
         totalPoints,
         winRate: totalMatches > 0 ? (totalWins / totalMatches) * 100 : 0,
       },
-      recentMatches: player.matchResults.map(result => ({
+      recentMatches: player.matchResults.slice(0, 10).map(result => ({
         id: result.id,
-        matchId: result.matchId,
-        outcome: result.outcome,
+        date: result.match.matchDate.toISOString(),
+        tournament: result.match.tournament,
+        outcome: result.outcome as 'WIN' | 'DRAW' | 'LOSS',
         goalsScored: result.goalsScored,
         goalsConceded: result.goalsConceded,
         pointsEarned: result.pointsEarned,
-        match: result.match,
       })),
-      tournamentStats: player.tournamentStats,
+      tournaments: player.tournamentStats.map(stat => ({
+        id: stat.tournament.id,
+        name: stat.tournament.name,
+        startDate: stat.tournament.startDate?.toISOString() || new Date().toISOString(),
+        rank: stat.rank,
+        totalPoints: stat.totalPoints,
+      })),
     };
   } catch (error) {
     console.error('Error fetching player:', error);
