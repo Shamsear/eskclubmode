@@ -17,12 +17,9 @@ export default withAuth(
 
 export const config = {
   matcher: [
+    // Protect dashboard routes
     "/dashboard/:path*",
-    "/clubs/:path*",
-    "/managers/:path*",
-    "/mentors/:path*",
-    "/captains/:path*",
-    "/players/:path*",
-    "/search/:path*",
+    // Protect private API routes (but not /api/public or /api/auth)
+    "/api/((?!public|auth|imagekit-auth).*)",
   ],
 };
