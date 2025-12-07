@@ -20,7 +20,9 @@ async function getTournamentData(id: number) {
       if (response.status === 404) {
         return null;
       }
-      throw new Error('Failed to fetch tournament');
+      const errorText = await response.text();
+      console.error(`API Error (${response.status}):`, errorText);
+      throw new Error(`Failed to fetch tournament: ${response.status}`);
     }
 
     return await response.json();
