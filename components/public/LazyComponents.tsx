@@ -104,13 +104,14 @@ export function createLazyComponent<P extends object>(
 
 /**
  * Lazy component with error boundary
+ * Note: This is a simplified version. For production use, wrap with ErrorBoundary component
  */
 export function createLazyComponentWithError<P extends object>(
   importFn: () => Promise<{ default: React.ComponentType<P> }>,
   LoadingComponent?: React.ComponentType,
   ErrorComponent?: React.ComponentType<{ error?: Error; onReset?: () => void }>
 ) {
-  const LazyComponent = dynamic(importFn, {
+  return dynamic(importFn, {
     loading: LoadingComponent
       ? () => <LoadingComponent />
       : () => (
@@ -119,13 +120,4 @@ export function createLazyComponentWithError<P extends object>(
           </div>
         ),
   });
-
-  return function LazyComponentWithError(props: P) {
-    const ErrorWrapper = ErrorComponent || CompactErrorFallback;
-    return (
-      <ErrorWrapper>
-        <LazyComponent {...props} />
-      </ErrorWrapper>
-    );
-  };
 }
