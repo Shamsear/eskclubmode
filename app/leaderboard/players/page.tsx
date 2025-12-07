@@ -17,7 +17,7 @@ interface PlayerStats {
       id: number;
       name: string;
       logo: string | null;
-    };
+    } | null;
   };
   stats: {
     totalMatches: number;
@@ -255,7 +255,7 @@ async function PlayersLeaderboardContent({ tournamentId }: { tournamentId?: stri
                           <div className="font-bold text-[#1A1A1A] group-hover:text-[#FF6600] transition-colors">
                             {item.player.name}
                           </div>
-                          <div className="text-sm text-gray-600">{item.player.club.name}</div>
+                          <div className="text-sm text-gray-600">{item.player.club?.name || 'Free Agent'}</div>
                         </div>
                       </Link>
                     </td>
