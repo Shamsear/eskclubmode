@@ -110,7 +110,7 @@ async function getPlayerData(id: number) {
         id: stat.tournament.id,
         name: stat.tournament.name,
         startDate: stat.tournament.startDate?.toISOString() || new Date().toISOString(),
-        rank: stat.rank,
+        rank: null, // Rank would need to be calculated separately
         totalPoints: stat.totalPoints,
       })),
     };
