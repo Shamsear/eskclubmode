@@ -2,13 +2,44 @@ import Link from "next/link";
 import PublicNavigation from "@/components/public/PublicNavigation";
 import PublicFooter from "@/components/public/PublicFooter";
 import type { Metadata } from "next";
+import { prisma } from "@/lib/prisma";
 
 export const metadata: Metadata = {
   title: "Eskimos Club - eFootball Club Mode Platform",
   description: "Join the Eskimos Club community. Track tournaments, player stats, and club achievements in our eFootball platform.",
 };
 
-export default function Home() {
+// Revalidate every 10 minutes
+export const revalidate = 600;
+
+async function getStats() {
+  try {
+    const [tournamentsCount, matchesCount, playersCount, clubsCount] = await Promise.all([
+      prisma.tournament.count(),
+      prisma.match.count(),
+      prisma.player.count(),
+      prisma.club.count(),
+    ]);
+    
+    return {
+      tournaments: tournamentsCount,
+      matches: matchesCount,
+      players: playersCount,
+      clubs: clubsCount,
+    };
+  } catch (error) {
+    console.error('Error fetching stats:', error);
+    return {
+      tournaments: 0,
+      matches: 0,
+      players: 0,
+      clubs: 0,
+    };
+  }
+}
+
+export default async function Home() {
+  const stats = await getStats();
   return (
     <div className="min-h-screen flex flex-col bg-[#E4E5E7]">
       <PublicNavigation />
@@ -80,10 +111,10 @@ export default function Home() {
               {/* Quick Stats Preview */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 max-w-4xl mx-auto">
                 {[
-                  { label: 'Tournaments', value: '100+' },
-                  { label: 'Matches', value: '500+' },
-                  { label: 'Players', value: '1000+' },
-                  { label: 'Clubs', value: '50+' }
+                  { label: 'Tournaments', value: stats.tournaments },
+                  { label: 'Matches', value: stats.matches },
+                  { label: 'Players', value: stats.players },
+                  { label: 'Clubs', value: stats.clubs }
                 ].map((stat, idx) => (
                   <div key={idx} className="bg-white/5 backdrop-blur-sm rounded-lg p-3 sm:p-4 border border-[#FFB700]/20 hover:border-[#FFB700]/50 transition-colors">
                     <div className="text-xl sm:text-2xl lg:text-3xl font-bold text-[#FFB700] mb-0.5 sm:mb-1">{stat.value}</div>
@@ -174,25 +205,25 @@ export default function Home() {
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8">
               <div className="text-center">
                 <div className="text-3xl sm:text-4xl lg:text-5xl font-bold bg-gradient-to-r from-[#FFB700] to-[#FF6600] bg-clip-text text-transparent mb-2">
-                  100+
+                  {stats.tournaments}
                 </div>
                 <div className="text-[#E4E5E7] font-medium text-xs sm:text-sm lg:text-base">Tournaments</div>
               </div>
               <div className="text-center">
                 <div className="text-3xl sm:text-4xl lg:text-5xl font-bold bg-gradient-to-r from-[#FF6600] to-[#CC2900] bg-clip-text text-transparent mb-2">
-                  500+
+                  {stats.matches}
                 </div>
                 <div className="text-[#E4E5E7] font-medium text-xs sm:text-sm lg:text-base">Matches</div>
               </div>
               <div className="text-center">
                 <div className="text-3xl sm:text-4xl lg:text-5xl font-bold bg-gradient-to-r from-[#FFB700] to-[#FF6600] bg-clip-text text-transparent mb-2">
-                  1000+
+                  {stats.players}
                 </div>
                 <div className="text-[#E4E5E7] font-medium text-xs sm:text-sm lg:text-base">Players</div>
               </div>
               <div className="text-center">
                 <div className="text-3xl sm:text-4xl lg:text-5xl font-bold bg-gradient-to-r from-[#FF6600] to-[#FFB700] bg-clip-text text-transparent mb-2">
-                  50+
+                  {stats.clubs}
                 </div>
                 <div className="text-[#E4E5E7] font-medium text-xs sm:text-sm lg:text-base">Clubs</div>
               </div>
