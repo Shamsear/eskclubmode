@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import LeaderboardStream from '@/components/public/LeaderboardStream';
 import { Suspense } from 'react';
+import { prisma } from '@/lib/prisma';
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -37,23 +38,87 @@ interface LeaderboardData {
   }>;
 }
 
+// Revalidate every 5 minutes
+export const revalidate = 300;
+
 async function getLeaderboardData(id: number): Promise<LeaderboardData | null> {
   try {
-    const baseUrl = process.env.VERCEL_URL 
-      ? `https://${process.env.VERCEL_URL}`
-      : process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
-    const response = await fetch(`${baseUrl}/api/public/tournaments/${id}/leaderboard`, {
-      cache: 'no-store',
+    const tournament = await prisma.tournament.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        name: true,
+      },
     });
 
-    if (!response.ok) {
-      if (response.status === 404) {
-        return null;
-      }
-      throw new Error('Failed to fetch leaderboard');
+    if (!tournament) {
+      return null;
     }
 
-    return await response.json();
+    const stats = await prisma.tournamentPlayerStats.findMany({
+      where: { tournamentId: id },
+      include: {
+        player: {
+          select: {
+            id: true,
+            name: true,
+            photo: true,
+            club: {
+              select: {
+                id: true,
+                name: true,
+                logo: true,
+              },
+            },
+          },
+        },
+      },
+      orderBy: [
+        { totalPoints: "desc" },
+        { goalsScored: "desc" },
+        { goalsConceded: "asc" },
+      ],
+    });
+
+    const leaderboardWithGoalDiff = stats.map((entry) => ({
+      ...entry,
+      goalDifference: entry.goalsScored - entry.goalsConceded,
+    }));
+
+    leaderboardWithGoalDiff.sort((a, b) => {
+      if (b.totalPoints !== a.totalPoints) {
+        return b.totalPoints - a.totalPoints;
+      }
+      if (b.goalDifference !== a.goalDifference) {
+        return b.goalDifference - a.goalDifference;
+      }
+      return b.goalsScored - a.goalsScored;
+    });
+
+    const rankings = leaderboardWithGoalDiff.map((entry, index) => ({
+      rank: index + 1,
+      player: {
+        id: entry.player.id,
+        name: entry.player.name,
+        photo: entry.player.photo,
+        club: entry.player.club,
+      },
+      stats: {
+        matchesPlayed: entry.matchesPlayed,
+        wins: entry.wins,
+        draws: entry.draws,
+        losses: entry.losses,
+        goalsScored: entry.goalsScored,
+        goalsConceded: entry.goalsConceded,
+        goalDifference: entry.goalDifference,
+        totalPoints: entry.totalPoints,
+      },
+    }));
+
+    return {
+      tournament,
+      rankings,
+    };
   } catch (error) {
     console.error('Error fetching leaderboard:', error);
     return null;
