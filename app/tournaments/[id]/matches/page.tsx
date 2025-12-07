@@ -42,7 +42,9 @@ interface TournamentMatchesData {
 
 async function getTournamentMatches(id: number): Promise<TournamentMatchesData | null> {
   try {
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
+    const baseUrl = process.env.VERCEL_URL 
+      ? `https://${process.env.VERCEL_URL}`
+      : process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
     const response = await fetch(`${baseUrl}/api/public/tournaments/${id}/matches`, {
       cache: 'no-store',
     });

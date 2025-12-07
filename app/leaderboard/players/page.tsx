@@ -31,7 +31,9 @@ interface PlayerStats {
 }
 
 async function getPlayersLeaderboard(tournamentId?: string) {
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
+  const baseUrl = process.env.VERCEL_URL 
+    ? `https://${process.env.VERCEL_URL}`
+    : process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
   const url = tournamentId 
     ? `${baseUrl}/api/public/leaderboard/players?tournament=${tournamentId}`
     : `${baseUrl}/api/public/leaderboard/players`;
@@ -47,7 +49,9 @@ async function getPlayersLeaderboard(tournamentId?: string) {
 }
 
 async function getTournaments() {
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
+  const baseUrl = process.env.VERCEL_URL 
+    ? `https://${process.env.VERCEL_URL}`
+    : process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
   try {
     const response = await fetch(`${baseUrl}/api/public/tournaments`, { cache: 'no-store' });
     if (!response.ok) return [];

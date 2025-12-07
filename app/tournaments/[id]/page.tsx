@@ -7,7 +7,11 @@ interface PageProps {
 
 async function getTournamentData(id: number) {
   try {
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
+    // Use VERCEL_URL for server-side rendering on Vercel, or NEXT_PUBLIC_BASE_URL for client-side
+    const baseUrl = process.env.VERCEL_URL 
+      ? `https://${process.env.VERCEL_URL}`
+      : process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
+    
     const response = await fetch(`${baseUrl}/api/public/tournaments/${id}`, {
       cache: 'no-store',
     });
