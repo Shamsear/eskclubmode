@@ -29,7 +29,7 @@ async function getPlayerData(id: number) {
           },
         },
       }),
-      // Fetch only recent 10 matches
+      // Fetch only recent 10 matches with all results to find opponent
       prisma.matchResult.findMany({
         where: { playerId: id },
         include: {
@@ -42,6 +42,17 @@ async function getPlayerData(id: number) {
                 select: {
                   id: true,
                   name: true,
+                },
+              },
+              results: {
+                include: {
+                  player: {
+                    select: {
+                      id: true,
+                      name: true,
+                      photo: true,
+                    },
+                  },
                 },
               },
             },
@@ -110,15 +121,29 @@ async function getPlayerData(id: number) {
         totalPoints,
         winRate: totalMatches > 0 ? (totalWins / totalMatches) * 100 : 0,
       },
-      recentMatches: recentMatches.map(result => ({
-        id: result.id,
-        date: result.match.matchDate.toISOString(),
-        tournament: result.match.tournament,
-        outcome: result.outcome as 'WIN' | 'DRAW' | 'LOSS',
-        goalsScored: result.goalsScored,
-        goalsConceded: result.goalsConceded,
-        pointsEarned: result.pointsEarned,
-      })),
+      recentMatches: recentMatches.map(result => {
+        // Find opponent from match results
+        const opponent = result.match.results.find(r => r.playerId !== id);
+        
+        return {
+          id: result.id,
+          matchId: result.match.id,
+          date: result.match.matchDate.toISOString(),
+          tournament: result.match.tournament,
+          stageName: result.match.stageName,
+          outcome: result.outcome as 'WIN' | 'DRAW' | 'LOSS',
+          goalsScored: result.goalsScored,
+          goalsConceded: result.goalsConceded,
+          pointsEarned: result.pointsEarned,
+          opponent: opponent ? {
+            id: opponent.player.id,
+            name: opponent.player.name,
+            photo: opponent.player.photo,
+            goalsScored: opponent.goalsScored,
+            goalsConceded: opponent.goalsConceded,
+          } : null,
+        };
+      }),
       tournaments: tournamentStats.map(stat => ({
         id: stat.tournament.id,
         name: stat.tournament.name,

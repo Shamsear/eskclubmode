@@ -144,31 +144,31 @@ async function TournamentMatchesContent({ tournamentId }: { tournamentId: number
         {/* Orange Gradient Overlay */}
         <div className="absolute inset-0 bg-gradient-to-r from-[#FF6600]/20 via-transparent to-[#CC2900]/20"></div>
         
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 lg:py-16">
+          <div className="flex flex-col gap-4 sm:gap-6">
             <div className="flex-1">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-16 h-16 bg-gradient-to-br from-[#FFB700] to-[#FF6600] rounded-xl flex items-center justify-center shadow-lg">
-                  <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4">
+                <div className="w-12 h-12 sm:w-16 sm:h-16 bg-gradient-to-br from-[#FFB700] to-[#FF6600] rounded-xl flex items-center justify-center shadow-lg flex-shrink-0">
+                  <svg className="w-6 h-6 sm:w-8 sm:h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
                   </svg>
                 </div>
-                <div>
-                  <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold bg-gradient-to-r from-white to-[#FFB700] bg-clip-text text-transparent">
+                <div className="min-w-0 flex-1">
+                  <h1 className="text-2xl sm:text-4xl lg:text-6xl font-bold bg-gradient-to-r from-white to-[#FFB700] bg-clip-text text-transparent">
                     All Matches
                   </h1>
                 </div>
               </div>
-              <p className="text-base sm:text-lg text-gray-300 max-w-2xl">
+              <p className="text-sm sm:text-base lg:text-lg text-gray-300 max-w-2xl">
                 {data.tournament.name}
               </p>
             </div>
 
             <Link
               href={`/tournaments/${data.tournament.id}`}
-              className="inline-flex items-center gap-2 px-6 py-3 bg-white/10 backdrop-blur-sm border-2 border-white/20 rounded-xl text-white font-bold hover:bg-white/20 transition-all group"
+              className="inline-flex items-center justify-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 bg-white/10 backdrop-blur-sm border-2 border-white/20 rounded-xl text-white text-sm sm:text-base font-bold hover:bg-white/20 transition-all group"
             >
-              <svg className="w-5 h-5 group-hover:-translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-4 h-4 sm:w-5 sm:h-5 group-hover:-translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
               </svg>
               Back to Tournament
@@ -178,50 +178,50 @@ async function TournamentMatchesContent({ tournamentId }: { tournamentId: number
       </div>
 
       {/* Stats Section */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-8 relative z-10 mb-12">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="bg-white rounded-xl shadow-lg p-6 border-t-4 border-[#FF6600] transform hover:-translate-y-1 transition-all duration-300">
-            <div className="flex items-center justify-between mb-3">
-              <div className="text-sm text-gray-600 font-medium">Total Matches</div>
-              <svg className="w-6 h-6 text-[#FF6600]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-8 relative z-10 mb-8 sm:mb-12">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
+          <div className="bg-white rounded-xl shadow-lg p-4 sm:p-6 border-t-4 border-[#FF6600] transform hover:-translate-y-1 transition-all duration-300">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-0 mb-2 sm:mb-3">
+              <div className="text-xs sm:text-sm text-gray-600 font-medium">Total Matches</div>
+              <svg className="w-5 h-5 sm:w-6 sm:h-6 text-[#FF6600]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
               </svg>
             </div>
-            <div className="text-4xl font-bold text-[#1A1A1A]">{data.matches.length}</div>
+            <div className="text-2xl sm:text-4xl font-bold text-[#1A1A1A]">{data.matches.length}</div>
           </div>
           
-          <div className="bg-white rounded-xl shadow-lg p-6 border-t-4 border-[#FFB700] transform hover:-translate-y-1 transition-all duration-300">
-            <div className="flex items-center justify-between mb-3">
-              <div className="text-sm text-gray-600 font-medium">Completed</div>
-              <svg className="w-6 h-6 text-[#FFB700]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div className="bg-white rounded-xl shadow-lg p-4 sm:p-6 border-t-4 border-[#FFB700] transform hover:-translate-y-1 transition-all duration-300">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-0 mb-2 sm:mb-3">
+              <div className="text-xs sm:text-sm text-gray-600 font-medium">Completed</div>
+              <svg className="w-5 h-5 sm:w-6 sm:h-6 text-[#FFB700]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             </div>
-            <div className="text-4xl font-bold text-[#1A1A1A]">
+            <div className="text-2xl sm:text-4xl font-bold text-[#1A1A1A]">
               {data.matches.filter(m => m.status === 'COMPLETED').length}
             </div>
           </div>
           
-          <div className="bg-white rounded-xl shadow-lg p-6 border-t-4 border-[#CC2900] transform hover:-translate-y-1 transition-all duration-300">
-            <div className="flex items-center justify-between mb-3">
-              <div className="text-sm text-gray-600 font-medium">Scheduled</div>
-              <svg className="w-6 h-6 text-[#CC2900]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div className="bg-white rounded-xl shadow-lg p-4 sm:p-6 border-t-4 border-[#CC2900] transform hover:-translate-y-1 transition-all duration-300">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-0 mb-2 sm:mb-3">
+              <div className="text-xs sm:text-sm text-gray-600 font-medium">Scheduled</div>
+              <svg className="w-5 h-5 sm:w-6 sm:h-6 text-[#CC2900]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
               </svg>
             </div>
-            <div className="text-4xl font-bold text-[#1A1A1A]">
+            <div className="text-2xl sm:text-4xl font-bold text-[#1A1A1A]">
               {data.matches.filter(m => m.status === 'SCHEDULED').length}
             </div>
           </div>
           
-          <div className="bg-white rounded-xl shadow-lg p-6 border-t-4 border-[#FF6600] transform hover:-translate-y-1 transition-all duration-300">
-            <div className="flex items-center justify-between mb-3">
-              <div className="text-sm text-gray-600 font-medium">Stages</div>
-              <svg className="w-6 h-6 text-[#FF6600]" fill="currentColor" viewBox="0 0 24 24">
+          <div className="bg-white rounded-xl shadow-lg p-4 sm:p-6 border-t-4 border-[#FF6600] transform hover:-translate-y-1 transition-all duration-300">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-0 mb-2 sm:mb-3">
+              <div className="text-xs sm:text-sm text-gray-600 font-medium">Stages</div>
+              <svg className="w-5 h-5 sm:w-6 sm:h-6 text-[#FF6600]" fill="currentColor" viewBox="0 0 24 24">
                 <path d="M12 2L2 7v10c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V7l-10-5zm0 2.18l7 3.5v8.32c0 4.27-2.94 8.27-7 9.27-4.06-1-7-5-7-9.27V7.68l7-3.5z" />
               </svg>
             </div>
-            <div className="text-4xl font-bold text-[#1A1A1A]">
+            <div className="text-2xl sm:text-4xl font-bold text-[#1A1A1A]">
               {Object.keys(groupedMatches).length}
             </div>
           </div>
@@ -232,13 +232,13 @@ async function TournamentMatchesContent({ tournamentId }: { tournamentId: number
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-12">
         {Object.entries(groupedMatches).map(([stageName, matches]) => (
           <div key={stageName} className="mb-12">
-            <div className="mb-6">
-              <div className="flex items-center gap-3">
-                <div className="w-1 h-8 bg-gradient-to-b from-[#FF6600] to-[#CC2900] rounded-full"></div>
-                <h2 className="text-3xl font-bold text-[#1A1A1A]">
+            <div className="mb-4 sm:mb-6">
+              <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+                <div className="w-1 h-6 sm:h-8 bg-gradient-to-b from-[#FF6600] to-[#CC2900] rounded-full"></div>
+                <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-[#1A1A1A]">
                   {stageName}
                 </h2>
-                <span className="text-sm text-gray-600 font-medium">
+                <span className="text-xs sm:text-sm text-gray-600 font-medium">
                   ({matches.length} {matches.length === 1 ? 'match' : 'matches'})
                 </span>
               </div>
@@ -251,27 +251,41 @@ async function TournamentMatchesContent({ tournamentId }: { tournamentId: number
                   href={`/matches/${match.id}`}
                   className="bg-white rounded-xl shadow-md hover:shadow-xl transition-all duration-300 overflow-hidden border-2 border-transparent hover:border-[#FF6600] group"
                 >
-                  <div className="p-6">
-                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+                  <div className="p-4 sm:p-6">
+                    <div className="flex flex-col gap-4">
+                      {/* Match Info - Mobile First */}
+                      <div className="flex items-center justify-between gap-2">
+                        <div className={`px-3 py-1.5 rounded-lg text-xs sm:text-sm font-bold border-2 ${getStatusColor(match.status)}`}>
+                          {match.status.replace('_', ' ')}
+                        </div>
+                        <div className="text-xs sm:text-sm text-gray-600">
+                          {new Date(match.date).toLocaleDateString('en-US', {
+                            month: 'short',
+                            day: 'numeric',
+                            year: 'numeric'
+                          })}
+                        </div>
+                      </div>
+
                       {/* Players */}
-                      <div className="flex-1 flex items-center justify-between gap-4">
+                      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
                         {/* Player 1 */}
-                        <div className="flex items-center gap-3 flex-1">
+                        <div className="flex items-center gap-2 sm:gap-3 flex-1">
                           {match.player1.photo ? (
                             <img
                               src={match.player1.photo}
                               alt={match.player1.name}
-                              className="w-12 h-12 rounded-full object-cover border-2 border-[#FF6600]"
+                              className="w-10 h-10 sm:w-12 sm:h-12 rounded-full object-cover border-2 border-[#FF6600] flex-shrink-0"
                             />
                           ) : (
-                            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[#FF6600] to-[#CC2900] flex items-center justify-center">
-                              <span className="text-xl font-bold text-white">
+                            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-gradient-to-br from-[#FF6600] to-[#CC2900] flex items-center justify-center flex-shrink-0">
+                              <span className="text-base sm:text-xl font-bold text-white">
                                 {match.player1.name.charAt(0)}
                               </span>
                             </div>
                           )}
                           <div className="flex-1 min-w-0">
-                            <div className="font-bold text-[#1A1A1A] truncate group-hover:text-[#FF6600] transition-colors">
+                            <div className="font-bold text-sm sm:text-base text-[#1A1A1A] truncate group-hover:text-[#FF6600] transition-colors">
                               {match.player1.name}
                             </div>
                             {match.status === 'COMPLETED' && match.winner?.id === match.player1.id && (
@@ -279,36 +293,36 @@ async function TournamentMatchesContent({ tournamentId }: { tournamentId: number
                             )}
                           </div>
                           {match.player1Score !== null && (
-                            <div className="text-3xl font-bold text-[#FF6600]">
+                            <div className="text-2xl sm:text-3xl font-bold text-[#FF6600] flex-shrink-0">
                               {match.player1Score}
                             </div>
                           )}
                         </div>
 
                         {/* VS */}
-                        <div className="flex-shrink-0 px-4">
-                          <div className="text-2xl font-bold text-gray-400">VS</div>
+                        <div className="flex-shrink-0 text-center px-2 sm:px-4">
+                          <div className="text-lg sm:text-2xl font-bold text-gray-400">VS</div>
                         </div>
 
                         {/* Player 2 */}
-                        <div className="flex items-center gap-3 flex-1 flex-row-reverse">
+                        <div className="flex items-center gap-2 sm:gap-3 flex-1 flex-row-reverse">
                           {match.player2 ? (
                             <>
                               {match.player2.photo ? (
                                 <img
                                   src={match.player2.photo}
                                   alt={match.player2.name}
-                                  className="w-12 h-12 rounded-full object-cover border-2 border-[#FF6600]"
+                                  className="w-10 h-10 sm:w-12 sm:h-12 rounded-full object-cover border-2 border-[#FF6600] flex-shrink-0"
                                 />
                               ) : (
-                                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[#FF6600] to-[#CC2900] flex items-center justify-center">
-                                  <span className="text-xl font-bold text-white">
+                                <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-gradient-to-br from-[#FF6600] to-[#CC2900] flex items-center justify-center flex-shrink-0">
+                                  <span className="text-base sm:text-xl font-bold text-white">
                                     {match.player2.name.charAt(0)}
                                   </span>
                                 </div>
                               )}
                               <div className="flex-1 min-w-0 text-right">
-                                <div className="font-bold text-[#1A1A1A] truncate group-hover:text-[#FF6600] transition-colors">
+                                <div className="font-bold text-sm sm:text-base text-[#1A1A1A] truncate group-hover:text-[#FF6600] transition-colors">
                                   {match.player2.name}
                                 </div>
                                 {match.status === 'COMPLETED' && match.winner?.id === match.player2.id && (
@@ -316,30 +330,16 @@ async function TournamentMatchesContent({ tournamentId }: { tournamentId: number
                                 )}
                               </div>
                               {match.player2Score !== null && (
-                                <div className="text-3xl font-bold text-[#FF6600]">
+                                <div className="text-2xl sm:text-3xl font-bold text-[#FF6600] flex-shrink-0">
                                   {match.player2Score}
                                 </div>
                               )}
                             </>
                           ) : (
-                            <div className="flex-1 text-center text-gray-400 italic">
+                            <div className="flex-1 text-center text-sm sm:text-base text-gray-400 italic">
                               TBD
                             </div>
                           )}
-                        </div>
-                      </div>
-
-                      {/* Match Info */}
-                      <div className="flex flex-col items-end gap-2">
-                        <div className={`px-4 py-2 rounded-lg text-sm font-bold border-2 ${getStatusColor(match.status)}`}>
-                          {match.status.replace('_', ' ')}
-                        </div>
-                        <div className="text-sm text-gray-600">
-                          {new Date(match.date).toLocaleDateString('en-US', {
-                            month: 'short',
-                            day: 'numeric',
-                            year: 'numeric'
-                          })}
                         </div>
                       </div>
                     </div>

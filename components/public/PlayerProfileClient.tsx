@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { PublicCard, CardHeader, CardTitle, CardContent } from './PublicCard';
 import { RoleBadge, Badge } from './Badge';
@@ -37,15 +38,24 @@ interface PlayerProfileData {
   };
   recentMatches: Array<{
     id: number;
+    matchId: number;
     date: string;
     tournament: {
       id: number;
       name: string;
     };
+    stageName: string | null;
     outcome: 'WIN' | 'DRAW' | 'LOSS';
     goalsScored: number;
     goalsConceded: number;
     pointsEarned: number;
+    opponent: {
+      id: number;
+      name: string;
+      photo: string | null;
+      goalsScored: number;
+      goalsConceded: number;
+    } | null;
   }>;
   tournaments: Array<{
     id: number;
@@ -330,49 +340,75 @@ export default function PlayerProfileClient({ initialData }: PlayerProfileClient
                   key={match.id}
                   className="bg-white rounded-xl shadow-md hover:shadow-xl transition-all duration-300 overflow-hidden border-2 border-transparent hover:border-[#FF6600] group"
                 >
-                  <div className="flex flex-col sm:flex-row items-center gap-6 p-6">
-                    {/* Outcome Badge */}
-                    <div className="flex-shrink-0">
-                      <div className={`w-20 h-20 rounded-xl bg-gradient-to-br ${config.bgGradient} flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform`}>
-                        <span className="text-3xl font-bold text-white">
-                          {config.icon}
-                        </span>
+                  <Link href={`/matches/${match.matchId}`} className="block">
+                    <div className="flex flex-col p-6">
+                      {/* Tournament & Date */}
+                      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-0 mb-4">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className={`px-2 sm:px-3 py-1 rounded-full text-xs font-bold ${config.color} border`}>
+                            {config.label}
+                          </span>
+                          {match.stageName && (
+                            <span className="text-xs text-gray-500">{match.stageName}</span>
+                          )}
+                        </div>
+                        <div className="text-xs sm:text-sm text-gray-600">
+                          {new Date(match.date).toLocaleDateString('en-US', {
+                            month: 'short',
+                            day: 'numeric',
+                            year: 'numeric',
+                          })}
+                        </div>
                       </div>
-                    </div>
 
-                    {/* Match Details */}
-                    <div className="flex-1 text-center sm:text-left">
-                      <div className="font-bold text-xl text-[#1A1A1A] mb-2 group-hover:text-[#FF6600] transition-colors">
-                        {match.tournament.name}
-                      </div>
-                      <div className="flex items-center justify-center sm:justify-start gap-2 text-sm text-gray-600">
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                        </svg>
-                        {new Date(match.date).toLocaleDateString('en-US', {
-                          year: 'numeric',
-                          month: 'long',
-                          day: 'numeric',
-                        })}
-                      </div>
-                    </div>
+                      {/* Match Score */}
+                      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-3">
+                        {/* Current Player */}
+                        <div className="flex items-center gap-2 sm:gap-3 flex-1 w-full sm:w-auto">
+                          {player.photo ? (
+                            <img src={player.photo} alt={player.name} className="w-10 h-10 sm:w-12 sm:h-12 rounded-full object-cover border-2 border-[#FF6600] flex-shrink-0" />
+                          ) : (
+                            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-gradient-to-br from-[#FF6600] to-[#CC2900] flex items-center justify-center flex-shrink-0">
+                              <span className="text-base sm:text-lg font-bold text-white">{player.name.charAt(0)}</span>
+                            </div>
+                          )}
+                          <div className="text-left min-w-0 flex-1">
+                            <div className="font-bold text-sm sm:text-base text-[#1A1A1A] truncate">{player.name}</div>
+                            <div className="text-xs text-gray-500 truncate">{player.club?.name || 'Free Agent'}</div>
+                          </div>
+                        </div>
 
-                    {/* Match Stats */}
-                    <div className="flex gap-6">
-                      <div className="text-center">
-                        <div className="text-2xl font-bold text-[#FF6600] mb-1">{match.goalsScored}</div>
-                        <div className="text-xs text-gray-600 font-medium">Goals</div>
+                        {/* Score */}
+                        <div className="flex items-center gap-2 sm:gap-4 px-3 sm:px-6 flex-shrink-0">
+                          <div className="text-2xl sm:text-3xl font-bold text-[#FF6600]">{match.goalsScored}</div>
+                          <div className="text-xl sm:text-2xl font-bold text-gray-400">-</div>
+                          <div className="text-2xl sm:text-3xl font-bold text-[#CC2900]">{match.goalsConceded}</div>
+                        </div>
+
+                        {/* Opponent */}
+                        <div className="flex items-center gap-2 sm:gap-3 flex-1 justify-end w-full sm:w-auto">
+                          <div className="text-right min-w-0 flex-1">
+                            <div className="font-bold text-sm sm:text-base text-[#1A1A1A] truncate">{match.opponent?.name || 'Walkover'}</div>
+                            <div className="text-xs text-gray-500 truncate">Opponent</div>
+                          </div>
+                          {match.opponent?.photo ? (
+                            <img src={match.opponent.photo} alt={match.opponent.name} className="w-10 h-10 sm:w-12 sm:h-12 rounded-full object-cover border-2 border-gray-300 flex-shrink-0" />
+                          ) : (
+                            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-gray-200 flex items-center justify-center flex-shrink-0">
+                              <span className="text-base sm:text-lg font-bold text-gray-600">{match.opponent?.name.charAt(0) || '?'}</span>
+                            </div>
+                          )}
+                        </div>
                       </div>
-                      <div className="text-center">
-                        <div className="text-2xl font-bold text-[#CC2900] mb-1">{match.goalsConceded}</div>
-                        <div className="text-xs text-gray-600 font-medium">Conceded</div>
-                      </div>
-                      <div className="text-center">
-                        <div className="text-2xl font-bold text-[#FFB700] mb-1">{match.pointsEarned}</div>
-                        <div className="text-xs text-gray-600 font-medium">Points</div>
+
+                      {/* Tournament Name */}
+                      <div className="text-xs sm:text-sm text-gray-600 text-center pt-3 border-t border-gray-100">
+                        <span className="block sm:inline">{match.tournament.name}</span>
+                        <span className="hidden sm:inline"> • </span>
+                        <span className="block sm:inline mt-1 sm:mt-0">{match.pointsEarned} points earned</span>
                       </div>
                     </div>
-                  </div>
+                  </Link>
 
                   {/* Hover Effect Bar */}
                   <div className="h-1 bg-gradient-to-r from-[#FF6600] via-[#FFB700] to-[#CC2900] transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-left"></div>

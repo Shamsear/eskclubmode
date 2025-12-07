@@ -134,7 +134,7 @@ export default function PerformanceHeatmap({ matches }: PerformanceHeatmapProps)
               className={`aspect-square rounded ${getColor(cell.performance)} cursor-pointer transition-all hover:scale-110 hover:shadow-lg`}
               onMouseEnter={(e) => handleMouseEnter(cell, e)}
               onMouseLeave={handleMouseLeave}
-              aria-label={`Match on ${cell.date.toLocaleDateString()}: ${cell.outcome}, Performance ${cell.performance}%`}
+              aria-label={`Match on ${cell.date.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' })}: ${cell.outcome}, Performance ${cell.performance}%`}
             />
           ))}
         </div>

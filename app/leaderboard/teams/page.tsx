@@ -206,8 +206,8 @@ async function TeamsLeaderboardContent({ tournamentId }: { tournamentId?: string
         />
       </div>
 
-      {/* Leaderboard Table */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-12">
+      {/* Leaderboard - Desktop Table */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-12 hidden md:block">
         <div className="bg-white rounded-xl shadow-lg overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full">
@@ -273,6 +273,78 @@ async function TeamsLeaderboardContent({ tournamentId }: { tournamentId?: string
               </tbody>
             </table>
           </div>
+        </div>
+      </div>
+
+      {/* Leaderboard - Mobile Cards */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-12 md:hidden">
+        <div className="space-y-4">
+          {data.teams.map((item: TeamStats, index: number) => (
+            <Link
+              key={item.club.id}
+              href={`/clubs/${item.club.id}`}
+              className="bg-white rounded-xl shadow-md hover:shadow-lg transition-all overflow-hidden block"
+            >
+              <div className="p-4">
+                {/* Rank and Points Header */}
+                <div className="flex items-center justify-between mb-3">
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-lg flex-shrink-0 ${
+                    index === 0 ? 'bg-gradient-to-br from-yellow-400 to-yellow-600 text-white' :
+                    index === 1 ? 'bg-gradient-to-br from-gray-300 to-gray-500 text-white' :
+                    index === 2 ? 'bg-gradient-to-br from-orange-400 to-orange-600 text-white' :
+                    'bg-gray-100 text-gray-700'
+                  }`}>
+                    {index + 1}
+                  </div>
+                  <div className="text-right">
+                    <div className="text-2xl font-bold text-[#FF6600]">{item.stats.totalPoints}</div>
+                    <div className="text-xs text-gray-600">Points</div>
+                  </div>
+                </div>
+
+                {/* Team Info */}
+                <div className="flex items-center gap-3 mb-3">
+                  {item.club.logo ? (
+                    <img src={item.club.logo} alt={item.club.name} className="w-12 h-12 rounded-lg object-cover border-2 border-[#FF6600] flex-shrink-0" />
+                  ) : (
+                    <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-[#FF6600] to-[#CC2900] flex items-center justify-center flex-shrink-0">
+                      <span className="text-xl font-bold text-white">{item.club.name.charAt(0)}</span>
+                    </div>
+                  )}
+                  <div className="min-w-0 flex-1">
+                    <div className="font-bold text-[#1A1A1A] truncate">{item.club.name}</div>
+                    <div className="text-sm text-gray-600">{item.stats.totalPlayers} Players</div>
+                  </div>
+                </div>
+
+                {/* Stats Grid */}
+                <div className="grid grid-cols-3 gap-2 pt-3 border-t border-gray-100">
+                  <div className="text-center">
+                    <div className="text-xs text-gray-600 mb-1">Matches</div>
+                    <div className="font-bold text-[#1A1A1A]">{item.stats.totalMatches}</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-xs text-gray-600 mb-1">W/D/L</div>
+                    <div className="text-xs font-semibold">
+                      <span className="text-green-600">{item.stats.totalWins}</span>/
+                      <span className="text-yellow-600">{item.stats.totalDraws}</span>/
+                      <span className="text-red-600">{item.stats.totalLosses}</span>
+                    </div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-xs text-gray-600 mb-1">Win Rate</div>
+                    <div className="font-bold text-[#FFB700]">{item.stats.winRate.toFixed(1)}%</div>
+                  </div>
+                </div>
+
+                {/* Goals */}
+                <div className="mt-2 pt-2 border-t border-gray-100 text-center">
+                  <span className="text-xs text-gray-600">Goals: </span>
+                  <span className="font-semibold text-sm">{item.stats.totalGoalsScored} - {item.stats.totalGoalsConceded}</span>
+                </div>
+              </div>
+            </Link>
+          ))}
         </div>
       </div>
     </div>
