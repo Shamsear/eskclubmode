@@ -8,7 +8,8 @@ export default function middleware(req: NextRequest) {
   // Allow public API routes without authentication
   if (pathname.startsWith('/api/public') || 
       pathname.startsWith('/api/auth') || 
-      pathname.startsWith('/api/imagekit-auth')) {
+      pathname.startsWith('/api/imagekit-auth') ||
+      pathname === '/api/matches') {
     console.log('[Middleware] Allowing public API:', pathname);
     return NextResponse.next();
   }
