@@ -154,10 +154,10 @@ export default function TournamentDetailClient({
             
             {tournament.club && (
               <div 
-                onClick={() => router.push(`/clubs/${tournament.club.id}`)}
+                onClick={() => router.push(`/clubs/${tournament.club?.id}`)}
                 className="flex items-center gap-4 bg-white/10 backdrop-blur-sm px-6 py-4 rounded-xl border border-white/20 hover:bg-white/20 transition-all cursor-pointer group"
               >
-                {tournament.club.logo ? (
+                {tournament.club?.logo ? (
                   <div className="w-16 h-16 rounded-lg border-2 border-[#FF6600] overflow-hidden bg-white">
                     <OptimizedImage
                       src={tournament.club.logo}
@@ -170,14 +170,14 @@ export default function TournamentDetailClient({
                 ) : (
                   <div className="w-16 h-16 rounded-lg bg-gradient-to-br from-[#FF6600] to-[#CC2900] flex items-center justify-center">
                     <span className="text-2xl font-bold text-white">
-                      {tournament.club.name.charAt(0)}
+                      {tournament.club?.name.charAt(0)}
                     </span>
                   </div>
                 )}
                 <div>
                   <p className="text-xs text-white/70 mb-1">Organized by</p>
                   <p className="text-lg font-bold text-white group-hover:text-[#FFB700] transition-colors">
-                    {tournament.club.name}
+                    {tournament.club?.name}
                   </p>
                 </div>
               </div>

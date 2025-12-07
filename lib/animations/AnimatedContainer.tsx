@@ -51,7 +51,7 @@ export function AnimatedContainer({
       animate={variantConfig.animate}
       exit={variantConfig.exit}
       transition={{
-        ...variantConfig.transition,
+        ...('transition' in variantConfig ? variantConfig.transition : {}),
         delay,
       }}
       className={className}
