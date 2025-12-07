@@ -2,6 +2,7 @@ import { Suspense } from 'react';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import TournamentFilter from '@/components/leaderboard/TournamentFilter';
+import { prisma } from '@/lib/prisma';
 
 interface PageProps {
   searchParams: Promise<{ tournament?: string }>;
@@ -31,17 +32,81 @@ interface PlayerStats {
 }
 
 async function getPlayersLeaderboard(tournamentId?: string) {
-  const baseUrl = process.env.VERCEL_URL 
-    ? `https://${process.env.VERCEL_URL}`
-    : process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
-  const url = tournamentId 
-    ? `${baseUrl}/api/public/leaderboard/players?tournament=${tournamentId}`
-    : `${baseUrl}/api/public/leaderboard/players`;
-  
   try {
-    const response = await fetch(url, { cache: 'no-store' });
-    if (!response.ok) return null;
-    return await response.json();
+    const where = tournamentId ? { match: { tournamentId: parseInt(tournamentId) } } : {};
+
+    const results = await prisma.matchResult.groupBy({
+      by: ['playerId'],
+      where,
+      _sum: {
+        pointsEarned: true,
+        goalsScored: true,
+        goalsConceded: true,
+      },
+      _count: {
+        id: true,
+      },
+    });
+
+    const playerStats = await Promise.all(
+      results.map(async (result) => {
+        const player = await prisma.player.findUnique({
+          where: { id: result.playerId },
+          include: {
+            club: {
+              select: {
+                id: true,
+                name: true,
+                logo: true,
+              },
+            },
+          },
+        });
+
+        if (!player) return null;
+
+        const outcomes = await prisma.matchResult.groupBy({
+          by: ['outcome'],
+          where: {
+            playerId: result.playerId,
+            ...(tournamentId ? { match: { tournamentId: parseInt(tournamentId) } } : {}),
+          },
+          _count: {
+            id: true,
+          },
+        });
+
+        const wins = outcomes.find(o => o.outcome === 'WIN')?._count.id || 0;
+        const draws = outcomes.find(o => o.outcome === 'DRAW')?._count.id || 0;
+        const losses = outcomes.find(o => o.outcome === 'LOSS')?._count.id || 0;
+        const totalMatches = result._count.id;
+        const winRate = totalMatches > 0 ? (wins / totalMatches) * 100 : 0;
+
+        return {
+          player: {
+            id: player.id,
+            name: player.name,
+            photo: player.photo,
+            club: player.club,
+          },
+          stats: {
+            totalMatches,
+            totalWins: wins,
+            totalDraws: draws,
+            totalLosses: losses,
+            totalGoalsScored: result._sum.goalsScored || 0,
+            totalGoalsConceded: result._sum.goalsConceded || 0,
+            totalPoints: result._sum.pointsEarned || 0,
+            winRate,
+          },
+        };
+      })
+    );
+
+    const filteredStats = playerStats.filter(s => s !== null);
+    const sortedStats = filteredStats.sort((a, b) => b!.stats.totalPoints - a!.stats.totalPoints);
+
+    return { players: sortedStats };
   } catch (error) {
     console.error('Error fetching players leaderboard:', error);
     return null;
@@ -49,15 +114,19 @@ async function getPlayersLeaderboard(tournamentId?: string) {
 }
 
 async function getTournaments() {
-  const baseUrl = process.env.VERCEL_URL 
-    ? `https://${process.env.VERCEL_URL}`
-    : process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
   try {
-    const response = await fetch(`${baseUrl}/api/public/tournaments`, { cache: 'no-store' });
-    if (!response.ok) return [];
-    const data = await response.json();
-    return data.tournaments || [];
+    const tournaments = await prisma.tournament.findMany({
+      select: {
+        id: true,
+        name: true,
+      },
+      orderBy: {
+        startDate: 'desc',
+      },
+    });
+    return tournaments;
   } catch (error) {
+    console.error('Error fetching tournaments:', error);
     return [];
   }
 }
@@ -217,6 +286,9 @@ async function PlayersLeaderboardContent({ tournamentId }: { tournamentId?: stri
     </div>
   );
 }
+
+// Revalidate every 5 minutes
+export const revalidate = 300;
 
 export default async function PlayersLeaderboardPage({ searchParams }: PageProps) {
   const params = await searchParams;

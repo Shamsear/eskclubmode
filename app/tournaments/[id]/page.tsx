@@ -118,6 +118,9 @@ async function getTournamentData(id: number) {
   }
 }
 
+// Revalidate every 5 minutes
+export const revalidate = 300;
+
 export default async function TournamentDetailPage({ params }: PageProps) {
   const { id } = await params;
   const tournamentId = parseInt(id);

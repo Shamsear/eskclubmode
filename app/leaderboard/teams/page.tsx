@@ -2,6 +2,7 @@ import { Suspense } from 'react';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import TournamentFilter from '@/components/leaderboard/TournamentFilter';
+import { prisma } from '@/lib/prisma';
 
 interface PageProps {
   searchParams: Promise<{ tournament?: string }>;
@@ -27,17 +28,78 @@ interface TeamStats {
 }
 
 async function getTeamsLeaderboard(tournamentId?: string) {
-  const baseUrl = process.env.VERCEL_URL 
-    ? `https://${process.env.VERCEL_URL}`
-    : process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
-  const url = tournamentId 
-    ? `${baseUrl}/api/public/leaderboard/teams?tournament=${tournamentId}`
-    : `${baseUrl}/api/public/leaderboard/teams`;
-  
   try {
-    const response = await fetch(url, { cache: 'no-store' });
-    if (!response.ok) return null;
-    return await response.json();
+    const where = tournamentId ? { match: { tournamentId: parseInt(tournamentId) } } : {};
+
+    const clubs = await prisma.club.findMany({
+      include: {
+        players: {
+          include: {
+            matchResults: {
+              where,
+            },
+          },
+        },
+      },
+    });
+
+    const teamStats = clubs.map(club => {
+      const allResults = club.players.flatMap(player => player.matchResults);
+      
+      if (allResults.length === 0) {
+        return {
+          club: {
+            id: club.id,
+            name: club.name,
+            logo: club.logo,
+          },
+          stats: {
+            totalPlayers: club.players.length,
+            totalMatches: 0,
+            totalWins: 0,
+            totalDraws: 0,
+            totalLosses: 0,
+            totalGoalsScored: 0,
+            totalGoalsConceded: 0,
+            totalPoints: 0,
+            winRate: 0,
+          },
+        };
+      }
+
+      const totalMatches = allResults.length;
+      const totalWins = allResults.filter(r => r.outcome === 'WIN').length;
+      const totalDraws = allResults.filter(r => r.outcome === 'DRAW').length;
+      const totalLosses = allResults.filter(r => r.outcome === 'LOSS').length;
+      const totalGoalsScored = allResults.reduce((sum, r) => sum + r.goalsScored, 0);
+      const totalGoalsConceded = allResults.reduce((sum, r) => sum + r.goalsConceded, 0);
+      const totalPoints = allResults.reduce((sum, r) => sum + r.pointsEarned, 0);
+      const winRate = totalMatches > 0 ? (totalWins / totalMatches) * 100 : 0;
+
+      return {
+        club: {
+          id: club.id,
+          name: club.name,
+          logo: club.logo,
+        },
+        stats: {
+          totalPlayers: club.players.length,
+          totalMatches,
+          totalWins,
+          totalDraws,
+          totalLosses,
+          totalGoalsScored,
+          totalGoalsConceded,
+          totalPoints,
+          winRate,
+        },
+      };
+    });
+
+    const filteredStats = teamStats.filter(team => team.stats.totalMatches > 0);
+    const sortedStats = filteredStats.sort((a, b) => b.stats.totalPoints - a.stats.totalPoints);
+
+    return { teams: sortedStats };
   } catch (error) {
     console.error('Error fetching teams leaderboard:', error);
     return null;
@@ -45,15 +107,19 @@ async function getTeamsLeaderboard(tournamentId?: string) {
 }
 
 async function getTournaments() {
-  const baseUrl = process.env.VERCEL_URL 
-    ? `https://${process.env.VERCEL_URL}`
-    : process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
   try {
-    const response = await fetch(`${baseUrl}/api/public/tournaments`, { cache: 'no-store' });
-    if (!response.ok) return [];
-    const data = await response.json();
-    return data.tournaments || [];
+    const tournaments = await prisma.tournament.findMany({
+      select: {
+        id: true,
+        name: true,
+      },
+      orderBy: {
+        startDate: 'desc',
+      },
+    });
+    return tournaments;
   } catch (error) {
+    console.error('Error fetching tournaments:', error);
     return [];
   }
 }
@@ -212,6 +278,9 @@ async function TeamsLeaderboardContent({ tournamentId }: { tournamentId?: string
     </div>
   );
 }
+
+// Revalidate every 5 minutes
+export const revalidate = 300;
 
 export default async function TeamsLeaderboardPage({ searchParams }: PageProps) {
   const params = await searchParams;

@@ -8,71 +8,84 @@ interface PageProps {
 
 async function getPlayerData(id: number) {
   try {
-    const player = await prisma.player.findUnique({
-      where: { id },
-      include: {
-        club: {
-          select: {
-            id: true,
-            name: true,
-            logo: true,
+    // Fetch player data and recent matches in parallel
+    const [player, recentMatches, tournamentStats, roles] = await Promise.all([
+      prisma.player.findUnique({
+        where: { id },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          phone: true,
+          place: true,
+          dateOfBirth: true,
+          photo: true,
+          club: {
+            select: {
+              id: true,
+              name: true,
+              logo: true,
+            },
           },
         },
-        matchResults: {
-          include: {
-            match: {
-              select: {
-                id: true,
-                matchDate: true,
-                stageName: true,
-                tournament: {
-                  select: {
-                    id: true,
-                    name: true,
-                  },
+      }),
+      // Fetch only recent 10 matches
+      prisma.matchResult.findMany({
+        where: { playerId: id },
+        include: {
+          match: {
+            select: {
+              id: true,
+              matchDate: true,
+              stageName: true,
+              tournament: {
+                select: {
+                  id: true,
+                  name: true,
                 },
               },
             },
           },
-          orderBy: {
-            match: {
-              matchDate: 'desc',
-            },
-          },
-          take: 10,
         },
-        tournamentStats: {
-          include: {
-            tournament: {
-              select: {
-                id: true,
-                name: true,
-                startDate: true,
-              },
-            },
+        orderBy: {
+          match: {
+            matchDate: 'desc',
           },
         },
-      },
-    });
+        take: 10,
+      }),
+      // Fetch tournament stats
+      prisma.tournamentPlayerStats.findMany({
+        where: { playerId: id },
+        include: {
+          tournament: {
+            select: {
+              id: true,
+              name: true,
+              startDate: true,
+            },
+          },
+        },
+      }),
+      // Fetch player roles
+      prisma.playerRole.findMany({
+        where: { playerId: id },
+        select: { role: true },
+      }),
+    ]);
 
     if (!player) {
       return null;
     }
 
-    // Calculate overall stats
-    const totalMatches = player.matchResults.length;
-    const totalWins = player.matchResults.filter(r => r.outcome === 'WIN').length;
-    const totalDraws = player.matchResults.filter(r => r.outcome === 'DRAW').length;
-    const totalLosses = player.matchResults.filter(r => r.outcome === 'LOSS').length;
-    const totalGoalsScored = player.matchResults.reduce((sum, r) => sum + r.goalsScored, 0);
-    const totalGoalsConceded = player.matchResults.reduce((sum, r) => sum + r.goalsConceded, 0);
-    const totalPoints = player.matchResults.reduce((sum, r) => sum + r.pointsEarned, 0);
-
-    // Get player roles
-    const roles = await prisma.playerRole.findMany({
-      where: { playerId: id },
-      select: { role: true },
-    });
+    // Calculate overall stats from tournament stats (more efficient)
+    const totalMatches = tournamentStats.reduce((sum, stat) => sum + stat.matchesPlayed, 0);
+    const totalWins = tournamentStats.reduce((sum, stat) => sum + stat.wins, 0);
+    const totalDraws = tournamentStats.reduce((sum, stat) => sum + stat.draws, 0);
+    const totalLosses = tournamentStats.reduce((sum, stat) => sum + stat.losses, 0);
+    const totalGoalsScored = tournamentStats.reduce((sum, stat) => sum + stat.goalsScored, 0);
+    const totalGoalsConceded = tournamentStats.reduce((sum, stat) => sum + stat.goalsConceded, 0);
+    const totalPoints = tournamentStats.reduce((sum, stat) => sum + stat.totalPoints, 0);
 
     return {
       player: {
@@ -87,7 +100,7 @@ async function getPlayerData(id: number) {
         roles: roles.map(r => r.role as 'PLAYER' | 'CAPTAIN' | 'MENTOR' | 'MANAGER'),
       },
       stats: {
-        totalTournaments: player.tournamentStats.length,
+        totalTournaments: tournamentStats.length,
         totalMatches,
         totalWins,
         totalDraws,
@@ -97,7 +110,7 @@ async function getPlayerData(id: number) {
         totalPoints,
         winRate: totalMatches > 0 ? (totalWins / totalMatches) * 100 : 0,
       },
-      recentMatches: player.matchResults.slice(0, 10).map(result => ({
+      recentMatches: recentMatches.map(result => ({
         id: result.id,
         date: result.match.matchDate.toISOString(),
         tournament: result.match.tournament,
@@ -106,7 +119,7 @@ async function getPlayerData(id: number) {
         goalsConceded: result.goalsConceded,
         pointsEarned: result.pointsEarned,
       })),
-      tournaments: player.tournamentStats.map(stat => ({
+      tournaments: tournamentStats.map(stat => ({
         id: stat.tournament.id,
         name: stat.tournament.name,
         startDate: stat.tournament.startDate?.toISOString() || new Date().toISOString(),
@@ -119,6 +132,9 @@ async function getPlayerData(id: number) {
     return null;
   }
 }
+
+// Revalidate every 5 minutes
+export const revalidate = 300;
 
 export default async function PlayerProfilePage({ params }: PageProps) {
   const { id } = await params;
