@@ -83,7 +83,7 @@ async function getPlayerData(id: number) {
         place: player.place,
         dateOfBirth: player.dateOfBirth?.toISOString() || null,
         photo: player.photo,
-        club: player.club,
+        club: player.club || { id: 0, name: 'Free Agent', logo: null },
         roles: roles.map(r => r.role as 'PLAYER' | 'CAPTAIN' | 'MENTOR' | 'MANAGER'),
       },
       stats: {
