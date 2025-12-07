@@ -16,14 +16,17 @@ interface FilterSectionProps {
 
 function FilterSection({ title, children, defaultExpanded = true }: FilterSectionProps) {
   const [isExpanded, setIsExpanded] = useState(defaultExpanded);
+  const sectionId = `filter-section-${title.replace(/\s+/g, '-').toLowerCase()}`;
 
   return (
     <div className="border-b border-gray-200 last:border-b-0">
       <button
         onClick={() => setIsExpanded(!isExpanded)}
-        className="w-full px-4 py-3 flex items-center justify-between hover:bg-gray-50 transition-colors"
+        className="w-full px-4 py-3 flex items-center justify-between hover:bg-gray-50 transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-inset"
         type="button"
         aria-expanded={isExpanded}
+        aria-controls={sectionId}
+        aria-label={`${isExpanded ? 'Collapse' : 'Expand'} ${title} filters`}
       >
         <span className="text-sm font-semibold text-gray-900">{title}</span>
         <svg
@@ -39,7 +42,8 @@ function FilterSection({ title, children, defaultExpanded = true }: FilterSectio
         </svg>
       </button>
       {isExpanded && (
-        <div className="px-4 pb-4 animate-in slide-in-from-top-2 duration-200">
+        <div id={sectionId} className="px-4 pb-4 animate-in slide-in-from-top-2 duration-200" role="group" aria-labelledby={`${sectionId}-label`}>
+          <span id={`${sectionId}-label`} className="sr-only">{title} filter options</span>
           {children}
         </div>
       )}
@@ -118,7 +122,7 @@ export function FilterPanel({
   const activeFilterCount = getActiveFilterCount();
 
   return (
-    <div className={`bg-white rounded-lg border border-gray-200 overflow-hidden ${className}`}>
+    <div className={`bg-white rounded-lg border border-gray-200 overflow-hidden ${className}`} role="region" aria-label="Filter panel">
       {/* Header */}
       <div className="bg-gradient-to-r from-gray-50 to-white px-4 py-3 border-b border-gray-200">
         <div className="flex items-center justify-between">
@@ -139,7 +143,7 @@ export function FilterPanel({
             </svg>
             <h3 className="text-sm font-bold text-gray-900">Filters</h3>
             {activeFilterCount > 0 && (
-              <span className="px-2 py-0.5 bg-primary-100 text-primary-700 text-xs font-semibold rounded-full">
+              <span className="px-2 py-0.5 bg-primary-100 text-primary-700 text-xs font-semibold rounded-full" role="status" aria-label={`${activeFilterCount} active filters`}>
                 {activeFilterCount}
               </span>
             )}
@@ -147,13 +151,14 @@ export function FilterPanel({
           {activeFilterCount > 0 && (
             <button
               onClick={handleClearFilters}
-              className="text-xs font-medium text-red-600 hover:text-red-700 transition-colors flex items-center gap-1"
+              className="text-xs font-medium text-red-600 hover:text-red-700 transition-colors flex items-center gap-1 min-h-[44px] min-w-[44px] lg:min-h-[32px] lg:min-w-[32px] justify-center focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 rounded-lg"
               aria-label="Clear all filters"
+              type="button"
             >
-              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
-              Clear All
+              <span className="hidden sm:inline">Clear All</span>
             </button>
           )}
         </div>

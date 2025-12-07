@@ -14,7 +14,12 @@
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:headed": "playwright test --headed",
-    "test:e2e:debug": "playwright test --debug"
+    "test:e2e:debug": "playwright test --debug",
+    "test:visual": "playwright test e2e/visual-regression.spec.ts",
+    "test:visual:update": "playwright test e2e/visual-regression.spec.ts --update-snapshots",
+    "audit:performance": "ts-node scripts/performance-audit.ts",
+    "lighthouse": "npm run build && npm run start & sleep 5 && lhci autorun --config=lighthouse.config.js",
+    "analyze": "ANALYZE=true npm run build"
   },
   "prisma": {
     "seed": "ts-node --compiler-options {\"module\":\"CommonJS\"} prisma/seed.ts"
@@ -25,12 +30,14 @@
     "axios": "^1.7.9",
     "bcryptjs": "^2.4.3",
     "d3": "^7.9.0",
+    "framer-motion": "^12.23.25",
     "imagekit": "^6.0.0",
     "imagekitio-react": "^4.3.0",
     "next": "^16.0.7",
     "next-auth": "^4.24.11",
     "react": "^19.2.1",
     "react-dom": "^19.2.1",
+    "swr": "^2.3.7",
     "zod": "^3.24.1"
   },
   "devDependencies": {

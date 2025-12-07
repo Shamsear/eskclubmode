@@ -103,18 +103,18 @@ export default function PlayerListingClient() {
   return (
     <div className="space-y-6">
       {/* Search Bar */}
-      <div className="bg-white rounded-lg border border-gray-200 p-4 shadow-sm">
+      <div className="bg-white rounded-xl border-2 border-gray-200 p-4 sm:p-5">
         <div className="relative">
           <input
             type="text"
             placeholder="Search players by name, email, or place..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full px-4 py-3 pl-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full px-4 py-3 pl-11 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-[#FF6600] focus:border-[#FFB700] transition-colors text-[#1A1A1A] placeholder-gray-400"
             aria-label="Search players"
           />
           <svg
-            className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400"
+            className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-[#FF6600]"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -132,40 +132,40 @@ export default function PlayerListingClient() {
 
       {/* Results Count */}
       {data && !loading && (
-        <div className="text-sm text-gray-600">
-          Showing {data.players.length} of {data.pagination.total} players
+        <div className="flex items-center justify-between">
+          <div className="text-sm text-[#1A1A1A]">
+            Showing <span className="font-semibold">{data.players.length}</span> of <span className="font-semibold">{data.pagination.total}</span> players
+          </div>
         </div>
       )}
 
       {/* Player Grid */}
       {loading ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
           {[...Array(8)].map((_, i) => (
             <PlayerProfileSkeleton key={i} />
           ))}
         </div>
       ) : data && data.players.length > 0 ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
           {data.players.map((player) => (
-            <PublicCard
+            <div
               key={player.id}
-              hover
-              padding="none"
               onClick={() => handlePlayerClick(player.id)}
-              className="overflow-hidden"
+              className="group bg-white rounded-xl border-2 border-gray-200 hover:border-[#FFB700] transition-all duration-300 overflow-hidden cursor-pointer hover:scale-105 hover:-translate-y-1"
             >
               {/* Player Photo */}
-              <div className="aspect-square bg-gradient-to-br from-blue-50 to-blue-100 relative overflow-hidden">
+              <div className="aspect-square bg-gradient-to-br from-[#FFB700]/10 to-[#FF6600]/10 relative overflow-hidden">
                 {player.photo ? (
                   <img
                     src={player.photo}
                     alt={player.name}
-                    className="w-full h-full object-cover"
+                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
                   />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center">
                     <svg
-                      className="w-24 h-24 text-blue-300"
+                      className="w-24 h-24 text-[#FF6600]/30"
                       fill="currentColor"
                       viewBox="0 0 24 24"
                       aria-hidden="true"
@@ -174,21 +174,29 @@ export default function PlayerListingClient() {
                     </svg>
                   </div>
                 )}
+                {/* Overlay on hover */}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
               </div>
 
               {/* Player Info */}
               <div className="p-4 space-y-3">
                 <div>
-                  <h3 className="font-semibold text-lg text-gray-900 truncate">
+                  <h3 className="font-bold text-lg text-[#1A1A1A] group-hover:text-[#FF6600] transition-colors truncate">
                     {player.name}
                   </h3>
                   {player.place && (
-                    <p className="text-sm text-gray-600 truncate">{player.place}</p>
+                    <p className="text-sm text-gray-600 truncate flex items-center gap-1">
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                      </svg>
+                      {player.place}
+                    </p>
                   )}
                 </div>
 
                 {/* Club */}
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 p-2 bg-[#E4E5E7] rounded-lg">
                   {player.club.logo ? (
                     <img
                       src={player.club.logo}
@@ -196,13 +204,13 @@ export default function PlayerListingClient() {
                       className="w-6 h-6 rounded-full object-cover"
                     />
                   ) : (
-                    <div className="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center">
-                      <span className="text-xs text-gray-500">
+                    <div className="w-6 h-6 rounded-full bg-[#FF6600] flex items-center justify-center">
+                      <span className="text-xs text-white font-bold">
                         {player.club.name.charAt(0)}
                       </span>
                     </div>
                   )}
-                  <span className="text-sm text-gray-700 truncate">
+                  <span className="text-sm text-[#1A1A1A] font-medium truncate">
                     {player.club.name}
                   </span>
                 </div>
@@ -215,28 +223,28 @@ export default function PlayerListingClient() {
                 </div>
 
                 {/* Stats */}
-                <div className="grid grid-cols-3 gap-2 pt-3 border-t border-gray-100">
+                <div className="grid grid-cols-3 gap-2 pt-3 border-t-2 border-[#FFB700]/20">
                   <div className="text-center">
-                    <div className="text-lg font-bold text-gray-900">
+                    <div className="text-lg font-bold text-[#1A1A1A]">
                       {player.stats.totalMatches}
                     </div>
                     <div className="text-xs text-gray-600">Matches</div>
                   </div>
                   <div className="text-center">
-                    <div className="text-lg font-bold text-gray-900">
+                    <div className="text-lg font-bold text-[#FF6600]">
                       {player.stats.totalPoints}
                     </div>
                     <div className="text-xs text-gray-600">Points</div>
                   </div>
                   <div className="text-center">
-                    <div className="text-lg font-bold text-gray-900">
+                    <div className="text-lg font-bold text-[#1A1A1A]">
                       {player.stats.winRate.toFixed(0)}%
                     </div>
                     <div className="text-xs text-gray-600">Win Rate</div>
                   </div>
                 </div>
               </div>
-            </PublicCard>
+            </div>
           ))}
         </div>
       ) : (

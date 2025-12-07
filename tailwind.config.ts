@@ -7,6 +7,15 @@ const config: Config = {
     "./app/**/*.{js,ts,jsx,tsx,mdx}",
   ],
   theme: {
+    screens: {
+      'xs': '320px',   // Small mobile
+      'sm': '640px',   // Mobile
+      'md': '768px',   // Tablet
+      'lg': '1024px',  // Desktop
+      'xl': '1280px',  // Large desktop
+      '2xl': '1536px', // Extra large desktop
+      '3xl': '1920px', // Ultra-wide
+    },
     extend: {
       colors: {
         background: "var(--background)",
@@ -118,6 +127,15 @@ const config: Config = {
       },
       transitionTimingFunction: {
         'spring': 'cubic-bezier(0.34, 1.56, 0.64, 1)',
+      },
+      maxWidth: {
+        'container': '1600px', // Max width for ultra-wide displays
+      },
+      minHeight: {
+        'touch-target': '44px', // Minimum touch target size
+      },
+      minWidth: {
+        'touch-target': '44px', // Minimum touch target size
       },
     },
   },

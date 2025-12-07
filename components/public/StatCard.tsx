@@ -135,32 +135,40 @@ export function StatCard({
     return () => clearTimeout(timer);
   }, [value]);
 
+  const trendLabel = trend ? ` (${trend === 'up' ? 'increasing' : trend === 'down' ? 'decreasing' : 'stable'})` : '';
+  
   return (
     <div
       className={`
         relative overflow-hidden rounded-lg border-2 p-6
         transition-all duration-300 hover:shadow-lg
+        focus-within:ring-2 focus-within:ring-primary-500 focus-within:ring-offset-2
         ${colors.bg} ${colors.border}
         ${isPulsing ? 'animate-pulse' : ''}
         ${className}
       `}
       role="article"
-      aria-label={`${label}: ${formatValue(value, format)}`}
+      aria-label={`${label}: ${formatValue(value, format)}${trendLabel}`}
     >
       <div className="flex items-start justify-between">
         <div className="flex-1">
-          <p className="text-sm font-medium text-gray-600 mb-2">{label}</p>
+          <p className="text-sm font-medium text-gray-600 mb-2" id={`stat-label-${label.replace(/\s+/g, '-')}`}>
+            {label}
+          </p>
           <div className="flex items-baseline gap-2">
             <p
               className={`text-3xl font-bold ${colors.text}`}
               aria-live="polite"
+              aria-atomic="true"
+              aria-describedby={`stat-label-${label.replace(/\s+/g, '-')}`}
             >
               {formatValue(animatedValue, format)}
             </p>
             {trend && (
               <span
                 className={`text-lg font-semibold ${trendStyles[trend].color}`}
-                aria-label={`Trend: ${trend}`}
+                role="img"
+                aria-label={`Trend: ${trend === 'up' ? 'increasing' : trend === 'down' ? 'decreasing' : 'stable'}`}
               >
                 {trendStyles[trend].icon}
               </span>

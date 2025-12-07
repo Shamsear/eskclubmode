@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect } from 'react';
+import { useFocusTrap } from '@/lib/hooks/useFocusTrap';
 
 interface ModalProps {
   isOpen: boolean;
@@ -26,6 +27,9 @@ export function Modal({
   size = 'md',
   showCloseButton = true,
 }: ModalProps) {
+  // Implement focus trapping for accessibility
+  const modalRef = useFocusTrap(isOpen);
+
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && isOpen) {
@@ -55,6 +59,7 @@ export function Modal({
       aria-labelledby={title ? 'modal-title' : undefined}
     >
       <div
+        ref={modalRef as React.RefObject<HTMLDivElement>}
         className={`relative bg-white rounded-lg shadow-xl w-full ${sizeStyles[size]} max-h-[90vh] overflow-y-auto`}
         onClick={(e) => e.stopPropagation()}
       >
@@ -68,7 +73,7 @@ export function Modal({
             {showCloseButton && (
               <button
                 onClick={onClose}
-                className="text-gray-400 hover:text-gray-600 transition-colors"
+                className="min-h-[44px] min-w-[44px] lg:min-h-[40px] lg:min-w-[40px] flex items-center justify-center text-gray-400 hover:text-gray-600 transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 rounded-lg"
                 aria-label="Close modal"
               >
                 <svg
@@ -79,6 +84,7 @@ export function Modal({
                   strokeWidth="2"
                   viewBox="0 0 24 24"
                   stroke="currentColor"
+                  aria-hidden="true"
                 >
                   <path d="M6 18L18 6M6 6l12 12" />
                 </svg>

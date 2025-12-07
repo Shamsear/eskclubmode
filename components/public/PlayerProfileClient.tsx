@@ -1,10 +1,12 @@
 'use client';
 
 import React from 'react';
+import { useRouter } from 'next/navigation';
 import { PublicCard, CardHeader, CardTitle, CardContent } from './PublicCard';
 import { RoleBadge, Badge } from './Badge';
 import { StatCard } from './StatCard';
 import PerformanceHeatmap from './PerformanceHeatmap';
+import { OptimizedImage } from '@/components/ui/OptimizedImage';
 
 interface PlayerProfileData {
   player: {
@@ -59,264 +61,294 @@ interface PlayerProfileClientProps {
 }
 
 export default function PlayerProfileClient({ initialData }: PlayerProfileClientProps) {
+  const router = useRouter();
   const { player, stats, recentMatches, tournaments } = initialData;
 
   const outcomeConfig = {
     WIN: {
-      color: 'bg-green-100 text-green-800 border-green-200',
+      color: 'bg-green-50 text-green-700 border-green-200',
+      bgGradient: 'from-green-500 to-emerald-600',
       icon: '✓',
       label: 'Win',
     },
     DRAW: {
-      color: 'bg-yellow-100 text-yellow-800 border-yellow-200',
+      color: 'bg-yellow-50 text-yellow-700 border-yellow-200',
+      bgGradient: 'from-yellow-500 to-amber-600',
       icon: '=',
       label: 'Draw',
     },
     LOSS: {
-      color: 'bg-red-100 text-red-800 border-red-200',
+      color: 'bg-red-50 text-red-700 border-red-200',
+      bgGradient: 'from-red-500 to-rose-600',
       icon: '✗',
       label: 'Loss',
     },
   };
 
+  const goalDifference = stats.totalGoalsScored - stats.totalGoalsConceded;
+
   return (
-    <div className="space-y-6 sm:space-y-8">
-      {/* Player Header */}
-      <PublicCard variant="elevated" padding="lg">
-        <div className="flex flex-col sm:flex-row gap-6">
-          {/* Player Photo */}
-          <div className="flex-shrink-0">
-            <div className="w-32 h-32 sm:w-40 sm:h-40 rounded-full bg-gradient-to-br from-blue-50 to-blue-100 overflow-hidden mx-auto sm:mx-0">
+    <div className="bg-[#E4E5E7] min-h-screen">
+      {/* Hero Section with Player Info */}
+      <div className="relative bg-gradient-to-br from-[#1A1A1A] via-[#2D2D2D] to-[#1A1A1A] text-white overflow-hidden">
+        {/* Animated Background Pattern */}
+        <div className="absolute inset-0 opacity-5">
+          <div className="absolute inset-0" style={{
+            backgroundImage: 'radial-gradient(circle at 2px 2px, white 1px, transparent 0)',
+            backgroundSize: '40px 40px'
+          }}></div>
+        </div>
+        
+        {/* Orange Gradient Overlay */}
+        <div className="absolute inset-0 bg-gradient-to-r from-[#FF6600]/20 via-transparent to-[#CC2900]/20"></div>
+        
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16">
+          <div className="flex flex-col md:flex-row items-center md:items-start gap-8">
+            {/* Player Photo */}
+            <div className="flex-shrink-0">
               {player.photo ? (
-                <img
-                  src={player.photo}
-                  alt={player.name}
-                  className="w-full h-full object-cover"
-                />
+                <div className="w-40 h-40 sm:w-48 sm:h-48 rounded-2xl border-4 border-[#FF6600] overflow-hidden shadow-2xl bg-white transform hover:scale-105 transition-transform duration-300">
+                  <OptimizedImage
+                    src={player.photo}
+                    alt={player.name}
+                    width={192}
+                    height={192}
+                    className="w-full h-full object-cover"
+                  />
+                </div>
               ) : (
-                <div className="w-full h-full flex items-center justify-center">
-                  <svg
-                    className="w-20 h-20 text-blue-300"
-                    fill="currentColor"
-                    viewBox="0 0 24 24"
-                    aria-hidden="true"
-                  >
-                    <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
-                  </svg>
+                <div className="w-40 h-40 sm:w-48 sm:h-48 rounded-2xl bg-gradient-to-br from-[#FF6600] to-[#CC2900] border-4 border-[#FFB700] flex items-center justify-center shadow-2xl transform hover:scale-105 transition-transform duration-300">
+                  <span className="text-7xl sm:text-8xl font-bold text-white">
+                    {player.name.charAt(0).toUpperCase()}
+                  </span>
                 </div>
               )}
             </div>
-          </div>
 
-          {/* Player Info */}
-          <div className="flex-1 space-y-4">
-            <div>
-              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
+            {/* Player Info */}
+            <div className="flex-1 text-center md:text-left">
+              <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold mb-4 bg-gradient-to-r from-white to-[#FFB700] bg-clip-text text-transparent">
                 {player.name}
               </h1>
-              <div className="flex flex-wrap gap-2 mb-3">
+              
+              {/* Roles */}
+              <div className="flex flex-wrap items-center justify-center md:justify-start gap-2 mb-6">
                 {player.roles.map((role) => (
                   <RoleBadge key={role} role={role} size="md" />
                 ))}
               </div>
-            </div>
+              
+              {/* Contact & Location */}
+              <div className="flex flex-wrap items-center justify-center md:justify-start gap-4 mb-6">
+                {player.place && (
+                  <div className="flex items-center gap-2 bg-white/10 backdrop-blur-sm px-4 py-2 rounded-lg border border-white/20">
+                    <svg className="w-5 h-5 text-[#FF6600]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                    <span className="text-white/90">{player.place}</span>
+                  </div>
+                )}
+                {player.phone && (
+                  <div className="flex items-center gap-2 bg-white/10 backdrop-blur-sm px-4 py-2 rounded-lg border border-white/20">
+                    <svg className="w-5 h-5 text-[#FFB700]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                    </svg>
+                    <span className="text-white/90">{player.phone}</span>
+                  </div>
+                )}
+              </div>
 
-            {/* Contact & Location */}
-            <div className="space-y-2 text-sm text-gray-600">
-              {player.place && (
-                <div className="flex items-center gap-2">
-                  <svg
-                    className="w-4 h-4 text-gray-400"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                    aria-hidden="true"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
+              {/* Club Badge */}
+              <div 
+                onClick={() => router.push(`/clubs/${player.club.id}`)}
+                className="inline-flex items-center gap-3 bg-white/10 backdrop-blur-sm px-5 py-3 rounded-xl border border-white/20 hover:bg-white/20 transition-all cursor-pointer group"
+              >
+                {player.club.logo ? (
+                  <div className="w-12 h-12 rounded-lg border-2 border-[#FF6600] overflow-hidden bg-white">
+                    <OptimizedImage
+                      src={player.club.logo}
+                      alt={player.club.name}
+                      width={48}
+                      height={48}
+                      className="w-full h-full object-cover"
                     />
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
-                    />
-                  </svg>
-                  <span>{player.place}</span>
+                  </div>
+                ) : (
+                  <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-[#FF6600] to-[#CC2900] flex items-center justify-center">
+                    <span className="text-xl font-bold text-white">
+                      {player.club.name.charAt(0)}
+                    </span>
+                  </div>
+                )}
+                <div className="text-left">
+                  <div className="text-xs text-white/70">Playing for</div>
+                  <div className="font-bold text-white group-hover:text-[#FFB700] transition-colors">{player.club.name}</div>
                 </div>
-              )}
-              {player.phone && (
-                <div className="flex items-center gap-2">
-                  <svg
-                    className="w-4 h-4 text-gray-400"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                    aria-hidden="true"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"
-                    />
-                  </svg>
-                  <span>{player.phone}</span>
-                </div>
-              )}
-            </div>
-
-            {/* Club */}
-            <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-              {player.club.logo ? (
-                <img
-                  src={player.club.logo}
-                  alt={player.club.name}
-                  className="w-10 h-10 rounded-full object-cover"
-                />
-              ) : (
-                <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center">
-                  <span className="text-sm font-medium text-gray-500">
-                    {player.club.name.charAt(0)}
-                  </span>
-                </div>
-              )}
-              <div>
-                <div className="text-xs text-gray-500">Club</div>
-                <div className="font-medium text-gray-900">{player.club.name}</div>
               </div>
             </div>
           </div>
         </div>
-      </PublicCard>
+      </div>
 
-      {/* Statistics Grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        <StatCard
-          label="Tournaments"
-          value={stats.totalTournaments}
-          color="primary"
-          icon={
-            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M12 2L2 7v10c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V7l-10-5z" />
-            </svg>
-          }
-        />
-        <StatCard
-          label="Matches"
-          value={stats.totalMatches}
-          color="neutral"
-          icon={
-            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z" />
-            </svg>
-          }
-        />
-        <StatCard
-          label="Total Points"
-          value={stats.totalPoints}
-          color="success"
-          icon={
-            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" />
-            </svg>
-          }
-        />
-        <StatCard
-          label="Win Rate"
-          value={stats.winRate}
-          format="percentage"
-          color="warning"
-          icon={
-            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z" />
-            </svg>
-          }
-        />
+      {/* Stats Section */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-8 relative z-10">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {/* Tournaments */}
+          <div className="bg-white rounded-xl shadow-lg p-6 text-center border-t-4 border-[#FF6600] transform hover:-translate-y-1 transition-all duration-300">
+            <div className="w-12 h-12 bg-gradient-to-br from-[#FF6600] to-[#CC2900] rounded-lg flex items-center justify-center mx-auto mb-3">
+              <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M12 2L2 7v10c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V7l-10-5zm0 2.18l7 3.5v8.32c0 4.27-2.94 8.27-7 9.27-4.06-1-7-5-7-9.27V7.68l7-3.5z" />
+              </svg>
+            </div>
+            <div className="text-3xl font-bold text-[#1A1A1A] mb-1">
+              {stats.totalTournaments}
+            </div>
+            <div className="text-sm text-gray-600 font-medium">Tournaments</div>
+          </div>
+
+          {/* Matches */}
+          <div className="bg-white rounded-xl shadow-lg p-6 text-center border-t-4 border-[#FFB700] transform hover:-translate-y-1 transition-all duration-300">
+            <div className="w-12 h-12 bg-gradient-to-br from-[#FFB700] to-[#FF6600] rounded-lg flex items-center justify-center mx-auto mb-3">
+              <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-13h2v6h-2zm0 8h2v2h-2z" />
+              </svg>
+            </div>
+            <div className="text-3xl font-bold text-[#1A1A1A] mb-1">
+              {stats.totalMatches}
+            </div>
+            <div className="text-sm text-gray-600 font-medium">Matches</div>
+          </div>
+
+          {/* Total Points */}
+          <div className="bg-white rounded-xl shadow-lg p-6 text-center border-t-4 border-[#CC2900] transform hover:-translate-y-1 transition-all duration-300">
+            <div className="w-12 h-12 bg-gradient-to-br from-[#CC2900] to-[#FF6600] rounded-lg flex items-center justify-center mx-auto mb-3">
+              <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21 12 17.27z" />
+              </svg>
+            </div>
+            <div className="text-3xl font-bold text-[#1A1A1A] mb-1">
+              {stats.totalPoints}
+            </div>
+            <div className="text-sm text-gray-600 font-medium">Total Points</div>
+          </div>
+
+          {/* Win Rate */}
+          <div className="bg-white rounded-xl shadow-lg p-6 text-center border-t-4 border-[#FF6600] transform hover:-translate-y-1 transition-all duration-300">
+            <div className="w-12 h-12 bg-gradient-to-br from-[#FF6600] to-[#FFB700] rounded-lg flex items-center justify-center mx-auto mb-3">
+              <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <div className="text-3xl font-bold text-[#1A1A1A] mb-1">
+              {stats.winRate.toFixed(1)}%
+            </div>
+            <div className="text-sm text-gray-600 font-medium">Win Rate</div>
+          </div>
+        </div>
       </div>
 
       {/* Performance Stats */}
-      <PublicCard variant="default" padding="lg">
-        <CardHeader>
-          <CardTitle>Performance Statistics</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-6">
-            <div>
-              <div className="text-3xl font-bold text-green-600">{stats.totalWins}</div>
-              <div className="text-sm text-gray-600">Wins</div>
-            </div>
-            <div>
-              <div className="text-3xl font-bold text-yellow-600">{stats.totalDraws}</div>
-              <div className="text-sm text-gray-600">Draws</div>
-            </div>
-            <div>
-              <div className="text-3xl font-bold text-red-600">{stats.totalLosses}</div>
-              <div className="text-sm text-gray-600">Losses</div>
-            </div>
-            <div>
-              <div className="text-3xl font-bold text-blue-600">{stats.totalGoalsScored}</div>
-              <div className="text-sm text-gray-600">Goals Scored</div>
-            </div>
-            <div>
-              <div className="text-3xl font-bold text-purple-600">{stats.totalGoalsConceded}</div>
-              <div className="text-sm text-gray-600">Goals Conceded</div>
-            </div>
-            <div>
-              <div className="text-3xl font-bold text-indigo-600">
-                {stats.totalGoalsScored - stats.totalGoalsConceded > 0 ? '+' : ''}
-                {stats.totalGoalsScored - stats.totalGoalsConceded}
-              </div>
-              <div className="text-sm text-gray-600">Goal Difference</div>
-            </div>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <div className="mb-8">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="w-1 h-8 bg-gradient-to-b from-[#FF6600] to-[#CC2900] rounded-full"></div>
+            <h2 className="text-3xl font-bold text-[#1A1A1A]">
+              Performance Statistics
+            </h2>
           </div>
-        </CardContent>
-      </PublicCard>
+          <p className="text-gray-600 ml-7">
+            Detailed breakdown of match performance
+          </p>
+        </div>
 
-      {/* Performance Heatmap */}
-      <PublicCard variant="default" padding="lg">
-        <CardHeader>
-          <CardTitle>Performance Heatmap</CardTitle>
-        </CardHeader>
-        <CardContent>
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 mb-12">
+          {/* Wins */}
+          <div className="bg-white rounded-xl shadow-md p-6 text-center border-l-4 border-green-500 hover:shadow-lg transition-shadow">
+            <div className="text-4xl font-bold text-green-600 mb-2">{stats.totalWins}</div>
+            <div className="text-sm text-gray-600 font-medium">Wins</div>
+          </div>
+
+          {/* Draws */}
+          <div className="bg-white rounded-xl shadow-md p-6 text-center border-l-4 border-yellow-500 hover:shadow-lg transition-shadow">
+            <div className="text-4xl font-bold text-yellow-600 mb-2">{stats.totalDraws}</div>
+            <div className="text-sm text-gray-600 font-medium">Draws</div>
+          </div>
+
+          {/* Losses */}
+          <div className="bg-white rounded-xl shadow-md p-6 text-center border-l-4 border-red-500 hover:shadow-lg transition-shadow">
+            <div className="text-4xl font-bold text-red-600 mb-2">{stats.totalLosses}</div>
+            <div className="text-sm text-gray-600 font-medium">Losses</div>
+          </div>
+
+          {/* Goals Scored */}
+          <div className="bg-white rounded-xl shadow-md p-6 text-center border-l-4 border-[#FF6600] hover:shadow-lg transition-shadow">
+            <div className="text-4xl font-bold text-[#FF6600] mb-2">{stats.totalGoalsScored}</div>
+            <div className="text-sm text-gray-600 font-medium">Goals Scored</div>
+          </div>
+
+          {/* Goals Conceded */}
+          <div className="bg-white rounded-xl shadow-md p-6 text-center border-l-4 border-[#CC2900] hover:shadow-lg transition-shadow">
+            <div className="text-4xl font-bold text-[#CC2900] mb-2">{stats.totalGoalsConceded}</div>
+            <div className="text-sm text-gray-600 font-medium">Goals Conceded</div>
+          </div>
+
+          {/* Goal Difference */}
+          <div className="bg-white rounded-xl shadow-md p-6 text-center border-l-4 border-[#FFB700] hover:shadow-lg transition-shadow">
+            <div className={`text-4xl font-bold mb-2 ${goalDifference >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+              {goalDifference > 0 ? '+' : ''}{goalDifference}
+            </div>
+            <div className="text-sm text-gray-600 font-medium">Goal Diff</div>
+          </div>
+        </div>
+
+        {/* Performance Heatmap */}
+        <div className="bg-white rounded-xl shadow-lg p-6 sm:p-8 mb-12">
+          <div className="mb-6">
+            <h3 className="text-2xl font-bold text-[#1A1A1A] mb-2">Performance Heatmap</h3>
+            <p className="text-gray-600">Visual representation of recent performance</p>
+          </div>
           <PerformanceHeatmap matches={recentMatches} />
-        </CardContent>
-      </PublicCard>
+        </div>
 
-      {/* Match History Timeline */}
-      <PublicCard variant="default" padding="lg">
-        <CardHeader>
-          <CardTitle>Recent Match History</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {recentMatches.length > 0 ? (
-            <div className="space-y-4">
-              {recentMatches.map((match) => {
-                const config = outcomeConfig[match.outcome];
-                return (
-                  <div
-                    key={match.id}
-                    className="flex flex-col sm:flex-row sm:items-center gap-4 p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
-                  >
+        {/* Match History Timeline */}
+        <div className="mb-8">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="w-1 h-8 bg-gradient-to-b from-[#FF6600] to-[#CC2900] rounded-full"></div>
+            <h2 className="text-3xl font-bold text-[#1A1A1A]">
+              Recent Match History
+            </h2>
+          </div>
+        </div>
+
+        {recentMatches.length > 0 ? (
+          <div className="grid gap-4 mb-12">
+            {recentMatches.map((match) => {
+              const config = outcomeConfig[match.outcome];
+              return (
+                <div
+                  key={match.id}
+                  className="bg-white rounded-xl shadow-md hover:shadow-xl transition-all duration-300 overflow-hidden border-2 border-transparent hover:border-[#FF6600] group"
+                >
+                  <div className="flex flex-col sm:flex-row items-center gap-6 p-6">
                     {/* Outcome Badge */}
                     <div className="flex-shrink-0">
-                      <span
-                        className={`inline-flex items-center justify-center w-16 h-16 rounded-full border-2 font-bold text-lg ${config.color}`}
-                        aria-label={`Match outcome: ${config.label}`}
-                      >
-                        {config.icon}
-                      </span>
+                      <div className={`w-20 h-20 rounded-xl bg-gradient-to-br ${config.bgGradient} flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform`}>
+                        <span className="text-3xl font-bold text-white">
+                          {config.icon}
+                        </span>
+                      </div>
                     </div>
 
                     {/* Match Details */}
-                    <div className="flex-1 space-y-2">
-                      <div className="font-medium text-gray-900">
+                    <div className="flex-1 text-center sm:text-left">
+                      <div className="font-bold text-xl text-[#1A1A1A] mb-2 group-hover:text-[#FF6600] transition-colors">
                         {match.tournament.name}
                       </div>
-                      <div className="text-sm text-gray-600">
+                      <div className="flex items-center justify-center sm:justify-start gap-2 text-sm text-gray-600">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
                         {new Date(match.date).toLocaleDateString('en-US', {
                           year: 'numeric',
                           month: 'long',
@@ -326,74 +358,114 @@ export default function PlayerProfileClient({ initialData }: PlayerProfileClient
                     </div>
 
                     {/* Match Stats */}
-                    <div className="flex gap-6 text-sm">
+                    <div className="flex gap-6">
                       <div className="text-center">
-                        <div className="font-bold text-gray-900">{match.goalsScored}</div>
-                        <div className="text-gray-600">Goals</div>
+                        <div className="text-2xl font-bold text-[#FF6600] mb-1">{match.goalsScored}</div>
+                        <div className="text-xs text-gray-600 font-medium">Goals</div>
                       </div>
                       <div className="text-center">
-                        <div className="font-bold text-gray-900">{match.goalsConceded}</div>
-                        <div className="text-gray-600">Conceded</div>
+                        <div className="text-2xl font-bold text-[#CC2900] mb-1">{match.goalsConceded}</div>
+                        <div className="text-xs text-gray-600 font-medium">Conceded</div>
                       </div>
                       <div className="text-center">
-                        <div className="font-bold text-blue-600">{match.pointsEarned}</div>
-                        <div className="text-gray-600">Points</div>
+                        <div className="text-2xl font-bold text-[#FFB700] mb-1">{match.pointsEarned}</div>
+                        <div className="text-xs text-gray-600 font-medium">Points</div>
                       </div>
                     </div>
                   </div>
-                );
-              })}
-            </div>
-          ) : (
-            <div className="text-center py-8 text-gray-500">
-              No match history available
-            </div>
-          )}
-        </CardContent>
-      </PublicCard>
 
-      {/* Tournament Participation */}
-      <PublicCard variant="default" padding="lg">
-        <CardHeader>
-          <CardTitle>Tournament Participation</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {tournaments.length > 0 ? (
-            <div className="space-y-3">
-              {tournaments.map((tournament) => (
-                <div
-                  key={tournament.id}
-                  className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
-                >
-                  <div className="flex-1">
-                    <div className="font-medium text-gray-900">{tournament.name}</div>
-                    <div className="text-sm text-gray-600">
-                      Started {new Date(tournament.startDate).toLocaleDateString()}
+                  {/* Hover Effect Bar */}
+                  <div className="h-1 bg-gradient-to-r from-[#FF6600] via-[#FFB700] to-[#CC2900] transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-left"></div>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="bg-white rounded-xl shadow-lg border-2 border-dashed border-gray-300 text-center py-16 mb-12">
+            <div className="w-24 h-24 bg-gradient-to-br from-[#FF6600]/10 to-[#CC2900]/10 rounded-full flex items-center justify-center mx-auto mb-6">
+              <svg className="w-12 h-12 text-[#FF6600]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+              </svg>
+            </div>
+            <h3 className="text-2xl font-bold text-[#1A1A1A] mb-2">
+              No Match History
+            </h3>
+            <p className="text-gray-600">
+              No recent matches to display
+            </p>
+          </div>
+        )}
+
+        {/* Tournament Participation */}
+        <div className="mb-8">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="w-1 h-8 bg-gradient-to-b from-[#FF6600] to-[#CC2900] rounded-full"></div>
+            <h2 className="text-3xl font-bold text-[#1A1A1A]">
+              Tournament Participation
+            </h2>
+          </div>
+        </div>
+
+        {tournaments.length > 0 ? (
+          <div className="grid gap-4">
+            {tournaments.map((tournament) => (
+              <div
+                key={tournament.id}
+                onClick={() => router.push(`/tournaments/${tournament.id}`)}
+                className="bg-white rounded-xl shadow-md hover:shadow-xl transition-all duration-300 overflow-hidden cursor-pointer border-2 border-transparent hover:border-[#FF6600] group"
+              >
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-6 p-6">
+                  <div className="flex-1 text-center sm:text-left">
+                    <div className="font-bold text-xl text-[#1A1A1A] mb-2 group-hover:text-[#FF6600] transition-colors">
+                      {tournament.name}
+                    </div>
+                    <div className="flex items-center justify-center sm:justify-start gap-2 text-sm text-gray-600">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
+                      Started {new Date(tournament.startDate).toLocaleDateString('en-US', {
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric',
+                      })}
                     </div>
                   </div>
-                  <div className="flex items-center gap-4">
+
+                  <div className="flex items-center gap-6">
                     {tournament.rank && (
-                      <Badge variant="primary" size="md">
-                        Rank #{tournament.rank}
-                      </Badge>
-                    )}
-                    <div className="text-right">
-                      <div className="text-lg font-bold text-blue-600">
-                        {tournament.totalPoints}
+                      <div className="bg-gradient-to-br from-[#FFB700] to-[#FF6600] text-white px-6 py-3 rounded-xl shadow-lg">
+                        <div className="text-xs font-medium mb-1">Rank</div>
+                        <div className="text-2xl font-bold">#{tournament.rank}</div>
                       </div>
-                      <div className="text-xs text-gray-600">Points</div>
+                    )}
+                    <div className="text-center bg-gradient-to-br from-[#FF6600] to-[#CC2900] text-white px-6 py-3 rounded-xl shadow-lg">
+                      <div className="text-xs font-medium mb-1">Points</div>
+                      <div className="text-2xl font-bold">{tournament.totalPoints}</div>
                     </div>
                   </div>
                 </div>
-              ))}
+
+                {/* Hover Effect Bar */}
+                <div className="h-1 bg-gradient-to-r from-[#FF6600] via-[#FFB700] to-[#CC2900] transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-left"></div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="bg-white rounded-xl shadow-lg border-2 border-dashed border-gray-300 text-center py-16">
+            <div className="w-24 h-24 bg-gradient-to-br from-[#FF6600]/10 to-[#CC2900]/10 rounded-full flex items-center justify-center mx-auto mb-6">
+              <svg className="w-12 h-12 text-[#FF6600]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 2L2 7v10c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V7l-10-5z" />
+              </svg>
             </div>
-          ) : (
-            <div className="text-center py-8 text-gray-500">
-              No tournament participation yet
-            </div>
-          )}
-        </CardContent>
-      </PublicCard>
+            <h3 className="text-2xl font-bold text-[#1A1A1A] mb-2">
+              No Tournament Participation
+            </h3>
+            <p className="text-gray-600">
+              This player hasn't participated in any tournaments yet
+            </p>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

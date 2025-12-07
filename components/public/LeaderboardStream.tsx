@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Badge } from './Badge';
+import { RankAnimation, StaggerContainer, StaggerItem, AnimatedCounter } from '@/lib/animations';
 
 interface Player {
   id: number;
@@ -74,7 +75,7 @@ function RankBadge({ rank }: { rank: number }) {
 
 function StatDisplay({ label, value, className = '' }: { label: string; value: number | string; className?: string }) {
   return (
-    <div className={`text-center ${className}`}>
+    <div className={`text-center min-w-[60px] ${className}`}>
       <div className="text-xs text-gray-500 mb-1">{label}</div>
       <div className="text-sm sm:text-base font-semibold text-gray-900">{value}</div>
     </div>
@@ -95,10 +96,10 @@ function LeaderboardRow({ entry, isExpanded, onToggle }: {
         transition-all duration-300 hover:shadow-md
       "
     >
-      {/* Main Row */}
+      {/* Main Row - Touch optimized */}
       <button
         onClick={onToggle}
-        className="w-full p-4 flex items-center gap-3 sm:gap-4 text-left hover:bg-gray-50 transition-colors"
+        className="w-full min-h-[44px] p-3 sm:p-4 flex items-center gap-3 sm:gap-4 text-left hover:bg-gray-50 transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-inset"
         aria-expanded={isExpanded}
         aria-label={`${player.name} - Rank ${rank}, ${stats.totalPoints} points. Click to ${isExpanded ? 'collapse' : 'expand'} details`}
       >
@@ -137,8 +138,8 @@ function LeaderboardRow({ entry, isExpanded, onToggle }: {
           )}
         </div>
 
-        {/* Key Stats - Desktop */}
-        <div className="hidden md:flex items-center gap-6">
+        {/* Key Stats - Responsive visibility */}
+        <div className="hidden md:flex items-center gap-3 lg:gap-6">
           <StatDisplay label="MP" value={stats.matchesPlayed} />
           <StatDisplay label="W" value={stats.wins} className="text-green-600" />
           <StatDisplay label="D" value={stats.draws} className="text-gray-600" />
@@ -149,7 +150,7 @@ function LeaderboardRow({ entry, isExpanded, onToggle }: {
         {/* Points Badge */}
         <div className="flex items-center gap-2">
           <Badge variant="primary" size="lg" className="font-bold">
-            {stats.totalPoints} pts
+            <AnimatedCounter value={stats.totalPoints} format={(v) => `${Math.round(v)} pts`} />
           </Badge>
           <svg
             className={`w-5 h-5 text-gray-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
@@ -166,11 +167,11 @@ function LeaderboardRow({ entry, isExpanded, onToggle }: {
       {/* Expanded Details */}
       {isExpanded && (
         <div
-          className="px-4 pb-4 pt-2 border-t border-gray-200 bg-gray-50 animate-slideDown"
+          className="px-3 sm:px-4 pb-3 sm:pb-4 pt-2 border-t border-gray-200 bg-gray-50"
           role="region"
           aria-label="Detailed statistics"
         >
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-4 xl:grid-cols-8 gap-3 sm:gap-4">
             <div className="bg-white rounded-lg p-3 border border-gray-200">
               <div className="text-xs text-gray-500 mb-1">Matches Played</div>
               <div className="text-xl font-bold text-gray-900">{stats.matchesPlayed}</div>
@@ -268,31 +269,20 @@ export default function LeaderboardStream({ tournament, rankings }: LeaderboardS
   }
 
   return (
-    <div className="space-y-3">
-      {rankings.map((entry) => (
-        <LeaderboardRow
-          key={entry.player.id}
-          entry={entry}
-          isExpanded={expandedRows.has(entry.rank)}
-          onToggle={() => toggleRow(entry.rank)}
-        />
-      ))}
-
-      <style jsx>{`
-        @keyframes slideDown {
-          from {
-            opacity: 0;
-            max-height: 0;
-          }
-          to {
-            opacity: 1;
-            max-height: 500px;
-          }
-        }
-        .animate-slideDown {
-          animation: slideDown 0.3s ease-out;
-        }
-      `}</style>
-    </div>
+    <StaggerContainer speed="fast">
+      <div className="space-y-3">
+        {rankings.map((entry) => (
+          <StaggerItem key={entry.player.id}>
+            <RankAnimation currentRank={entry.rank}>
+              <LeaderboardRow
+                entry={entry}
+                isExpanded={expandedRows.has(entry.rank)}
+                onToggle={() => toggleRow(entry.rank)}
+              />
+            </RankAnimation>
+          </StaggerItem>
+        ))}
+      </div>
+    </StaggerContainer>
   );
 }

@@ -89,50 +89,45 @@ export default function ClubListingClient() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
-      {/* Header */}
-      <div className="mb-8 sm:mb-12">
-        <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-900 mb-3 sm:mb-4">
-          Club Universe
-        </h1>
-        <p className="text-base sm:text-lg text-gray-600 max-w-2xl">
-          Explore clubs through immersive 3D cards and discover their achievements
-        </p>
-      </div>
-
+    <div className="space-y-6">
       {/* Search Bar */}
-      <div className="mb-6 sm:mb-8">
-        <div className="relative max-w-md">
+      <div className="bg-white rounded-xl border-2 border-gray-200 p-4 sm:p-5">
+        <div className="relative">
           <input
             type="text"
-            placeholder="Search clubs..."
+            placeholder="Search clubs by name or description..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full px-4 py-3 pl-12 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+            className="w-full px-4 py-3 pl-11 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-[#FF6600] focus:border-[#FFB700] transition-colors text-[#1A1A1A] placeholder-gray-400"
             aria-label="Search clubs"
           />
-          <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">
-            <svg
-              className="w-5 h-5"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-              aria-hidden="true"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-              />
-            </svg>
-          </div>
+          <svg
+            className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-[#FF6600]"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+            aria-hidden="true"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+            />
+          </svg>
         </div>
       </div>
 
+      {/* Results Count */}
+      {!loading && filteredClubs.length > 0 && (
+        <div className="text-sm text-[#1A1A1A]">
+          Showing <span className="font-semibold">{filteredClubs.length}</span> {filteredClubs.length === 1 ? 'club' : 'clubs'}
+        </div>
+      )}
+
       {/* Loading State */}
       {loading && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
           {[...Array(6)].map((_, i) => (
             <PublicSkeletons.ClubCard key={i} />
           ))}
@@ -142,33 +137,33 @@ export default function ClubListingClient() {
       {/* Clubs Grid */}
       {!loading && filteredClubs.length > 0 && (
         <>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
             {filteredClubs.map((club, index) => (
               <div
                 key={club.id}
+                onClick={() => handleClubClick(club.id)}
+                className="group bg-white rounded-xl border-2 border-gray-200 hover:border-[#FFB700] transition-all duration-300 overflow-hidden cursor-pointer hover:scale-105 hover:-translate-y-1"
                 style={{
-                  animationDelay: `${index * 100}ms`,
-                  animation: 'fadeInUp 0.6s ease-out forwards',
+                  animationDelay: `${index * 50}ms`,
+                  animation: 'fadeInUp 0.5s ease-out forwards',
                   opacity: 0,
                 }}
               >
-                <Card3D
-                  onClick={() => handleClubClick(club.id)}
-                  className="h-full"
-                >
                 <div className="p-6">
                   {/* Club Logo */}
                   <div className="flex justify-center mb-4">
                     {club.logo ? (
-                      <OptimizedImage
-                        src={club.logo}
-                        alt={`${club.name} logo`}
-                        width={80}
-                        height={80}
-                        className="rounded-full object-cover"
-                      />
+                      <div className="w-20 h-20 rounded-full overflow-hidden border-2 border-[#FFB700] group-hover:scale-110 transition-transform duration-300">
+                        <OptimizedImage
+                          src={club.logo}
+                          alt={`${club.name} logo`}
+                          width={80}
+                          height={80}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
                     ) : (
-                      <div className="w-20 h-20 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
+                      <div className="w-20 h-20 rounded-full bg-[#FF6600] flex items-center justify-center border-2 border-[#FFB700] group-hover:scale-110 transition-transform duration-300">
                         <span className="text-3xl font-bold text-white">
                           {club.name.charAt(0).toUpperCase()}
                         </span>
@@ -177,31 +172,31 @@ export default function ClubListingClient() {
                   </div>
 
                   {/* Club Name */}
-                  <h3 className="text-xl font-bold text-gray-900 text-center mb-2">
+                  <h3 className="text-xl font-bold text-[#1A1A1A] group-hover:text-[#FF6600] transition-colors text-center mb-2">
                     {club.name}
                   </h3>
 
                   {/* Club Description */}
                   {club.description && (
-                    <p className="text-sm text-gray-600 text-center mb-4 line-clamp-2">
+                    <p className="text-sm text-gray-600 text-center mb-4 line-clamp-2 min-h-[40px]">
                       {club.description}
                     </p>
                   )}
 
                   {/* Stats */}
-                  <div className="flex justify-around items-center py-4 border-t border-b border-gray-200 my-4">
+                  <div className="flex justify-around items-center py-4 border-t-2 border-b-2 border-[#FFB700]/20 my-4">
                     <div className="text-center">
-                      <p className="text-2xl font-bold text-blue-600">
+                      <p className="text-2xl font-bold text-[#FF6600]">
                         {club.playerCount}
                       </p>
-                      <p className="text-xs text-gray-500 mt-1">Players</p>
+                      <p className="text-xs text-gray-600 mt-1 font-medium">Players</p>
                     </div>
-                    <div className="w-px h-12 bg-gray-200" />
+                    <div className="w-px h-12 bg-[#FFB700]/30" />
                     <div className="text-center">
-                      <p className="text-2xl font-bold text-purple-600">
+                      <p className="text-2xl font-bold text-[#FF6600]">
                         {club.tournamentCount}
                       </p>
-                      <p className="text-xs text-gray-500 mt-1">Tournaments</p>
+                      <p className="text-xs text-gray-600 mt-1 font-medium">Tournaments</p>
                     </div>
                   </div>
 
@@ -219,29 +214,28 @@ export default function ClubListingClient() {
                     </div>
                   )}
                 </div>
-              </Card3D>
               </div>
             ))}
           </div>
 
           {/* Pagination */}
           {totalPages > 1 && (
-            <div className="mt-8 sm:mt-12 flex justify-center gap-2">
+            <div className="mt-10 flex justify-center items-center gap-2">
               <button
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
                 disabled={page === 1}
-                className="px-4 py-2 rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="px-4 py-2 rounded-lg border-2 border-gray-200 bg-white text-[#1A1A1A] hover:border-[#FFB700] hover:bg-[#FFB700]/5 disabled:opacity-50 disabled:cursor-not-allowed transition-all font-medium"
                 aria-label="Previous page"
               >
                 Previous
               </button>
-              <span className="px-4 py-2 text-gray-700">
+              <span className="px-4 py-2 text-[#1A1A1A] font-semibold">
                 Page {page} of {totalPages}
               </span>
               <button
                 onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                 disabled={page === totalPages}
-                className="px-4 py-2 rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="px-4 py-2 rounded-lg border-2 border-gray-200 bg-white text-[#1A1A1A] hover:border-[#FFB700] hover:bg-[#FFB700]/5 disabled:opacity-50 disabled:cursor-not-allowed transition-all font-medium"
                 aria-label="Next page"
               >
                 Next
@@ -253,9 +247,13 @@ export default function ClubListingClient() {
 
       {/* Empty State */}
       {!loading && filteredClubs.length === 0 && (
-        <div className="text-center py-12">
-          <div className="text-6xl mb-4">🏢</div>
-          <h3 className="text-xl font-semibold text-gray-900 mb-2">
+        <div className="bg-white rounded-xl border-2 border-gray-200 p-12 text-center">
+          <div className="w-20 h-20 bg-[#FFB700]/10 rounded-full flex items-center justify-center mx-auto mb-4">
+            <svg className="w-10 h-10 text-[#FF6600]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+            </svg>
+          </div>
+          <h3 className="text-xl font-bold text-[#1A1A1A] mb-2">
             No clubs found
           </h3>
           <p className="text-gray-600 mb-6">
@@ -266,7 +264,7 @@ export default function ClubListingClient() {
           {searchQuery && (
             <button
               onClick={() => setSearchQuery('')}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              className="px-6 py-3 bg-[#FF6600] text-white rounded-lg hover:bg-[#CC2900] transition-colors font-semibold border-t-2 border-[#FFB700]"
             >
               Clear Search
             </button>

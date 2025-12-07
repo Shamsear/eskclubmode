@@ -1,6 +1,8 @@
 'use client';
 
 import React from 'react';
+import { motion } from 'framer-motion';
+import { hoverVariants, prefersReducedMotion } from '@/lib/animations';
 
 export type CardVariant = 'default' | 'elevated' | 'outlined' | 'glass';
 export type CardPadding = 'none' | 'sm' | 'md' | 'lg';
@@ -36,19 +38,21 @@ export function PublicCard({
   className = '',
   onClick,
 }: PublicCardProps) {
-  const hoverStyles = hover
-    ? 'transition-all duration-300 hover:shadow-xl hover:-translate-y-1 cursor-pointer'
-    : '';
-  
   const clickableStyles = onClick ? 'cursor-pointer' : '';
+  const shouldAnimate = !prefersReducedMotion();
+
+  const Component = hover && shouldAnimate ? motion.div : 'div';
+  const animationProps = hover && shouldAnimate ? hoverVariants.lift : {};
 
   return (
-    <div
+    <Component
       className={`
         rounded-lg overflow-hidden
         ${variantStyles[variant]}
         ${paddingStyles[padding]}
-        ${hoverStyles}
+        ${hover && !shouldAnimate ? 'transition-all duration-300 hover:shadow-xl hover:-translate-y-1' : ''}
+        ${hover ? 'cursor-pointer' : ''}
+        ${onClick ? 'focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2' : ''}
         ${clickableStyles}
         ${className}
       `}
@@ -65,9 +69,10 @@ export function PublicCard({
             }
           : undefined
       }
+      {...animationProps}
     >
       {children}
-    </div>
+    </Component>
   );
 }
 
@@ -129,8 +134,11 @@ interface Card3DProps {
 
 export function Card3D({ children, className = '', onClick }: Card3DProps) {
   const [rotation, setRotation] = React.useState({ x: 0, y: 0 });
+  const shouldAnimate = !prefersReducedMotion();
 
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!shouldAnimate) return;
+    
     const card = e.currentTarget;
     const rect = card.getBoundingClientRect();
     const x = e.clientX - rect.left;
@@ -149,17 +157,22 @@ export function Card3D({ children, className = '', onClick }: Card3DProps) {
     setRotation({ x: 0, y: 0 });
   };
 
+  const Component = shouldAnimate ? motion.div : 'div';
+
   return (
-    <div
+    <Component
       className={`
         relative rounded-lg overflow-hidden
         bg-white border border-gray-200 shadow-lg
         transition-all duration-300 ease-out
         hover:shadow-2xl cursor-pointer
+        focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2
         ${className}
       `}
       style={{
-        transform: `perspective(1000px) rotateX(${rotation.x}deg) rotateY(${rotation.y}deg) scale(${rotation.x || rotation.y ? 1.05 : 1})`,
+        transform: shouldAnimate 
+          ? `perspective(1000px) rotateX(${rotation.x}deg) rotateY(${rotation.y}deg) scale(${rotation.x || rotation.y ? 1.05 : 1})`
+          : undefined,
       }}
       onMouseMove={handleMouseMove}
       onMouseLeave={handleMouseLeave}
@@ -172,8 +185,9 @@ export function Card3D({ children, className = '', onClick }: Card3DProps) {
           onClick();
         }
       }}
+      aria-label="Interactive 3D card"
     >
       {children}
-    </div>
+    </Component>
   );
 }

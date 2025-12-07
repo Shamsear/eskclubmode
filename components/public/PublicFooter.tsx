@@ -25,24 +25,24 @@ export default function PublicFooter() {
   };
 
   return (
-    <footer className="bg-white border-t border-gray-200 mt-auto">
+    <footer className="bg-[#1A1A1A] border-t-2 border-[#FFB700] mt-auto">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
           {/* Brand Section */}
           <div className="col-span-1 md:col-span-2 lg:col-span-1">
             <Link href="/" className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 bg-gradient-to-br from-primary-500 to-primary-700 rounded-xl shadow-lg flex items-center justify-center">
+              <div className="w-10 h-10 bg-white/10 rounded-lg border border-[#FFB700]/30 flex items-center justify-center hover:bg-white/20 transition-colors">
                 <img
                   src="/logo.png"
                   alt="Eskimos Logo"
                   className="w-full h-full object-contain p-1"
                 />
               </div>
-              <span className="text-xl font-bold bg-gradient-to-r from-primary-600 to-primary-800 bg-clip-text text-transparent">
+              <span className="text-xl font-bold bg-gradient-to-r from-[#FFB700] to-[#FF6600] bg-clip-text text-transparent">
                 Eskimos
               </span>
             </Link>
-            <p className="text-sm text-gray-600 mb-4">
+            <p className="text-sm text-[#E4E5E7] mb-4">
               Experience sports data like never before. Immersive visualizations, real-time statistics, and engaging storytelling.
             </p>
             <div className="flex gap-3">
@@ -50,11 +50,11 @@ export default function PublicFooter() {
                 <a
                   key={social.label}
                   href={social.href}
-                  className="w-9 h-9 rounded-lg bg-gray-100 hover:bg-primary-50 flex items-center justify-center transition-all group"
+                  className="w-9 h-9 rounded-lg bg-[#FF6600]/20 hover:bg-[#FF6600] flex items-center justify-center transition-colors group border border-[#FFB700]/30"
                   aria-label={social.label}
                 >
                   <svg
-                    className="w-4 h-4 text-gray-600 group-hover:text-primary-600 transition-colors"
+                    className="w-4 h-4 text-[#FFB700] group-hover:text-white transition-colors"
                     fill="currentColor"
                     viewBox="0 0 24 24"
                   >
@@ -78,13 +78,13 @@ export default function PublicFooter() {
 
           {/* Platform Links */}
           <div>
-            <h3 className="text-sm font-semibold text-gray-900 mb-4">Platform</h3>
+            <h3 className="text-sm font-semibold text-white mb-4 border-b border-[#FFB700]/30 pb-2">Platform</h3>
             <ul className="space-y-3">
               {footerLinks.platform.map((link) => (
                 <li key={link.label}>
                   <Link
                     href={link.href}
-                    className="text-sm text-gray-600 hover:text-primary-600 transition-colors"
+                    className="text-sm text-[#E4E5E7] hover:text-[#FFB700] transition-colors"
                   >
                     {link.label}
                   </Link>
@@ -95,13 +95,13 @@ export default function PublicFooter() {
 
           {/* Company Links */}
           <div>
-            <h3 className="text-sm font-semibold text-gray-900 mb-4">Company</h3>
+            <h3 className="text-sm font-semibold text-white mb-4 border-b border-[#FFB700]/30 pb-2">Company</h3>
             <ul className="space-y-3">
               {footerLinks.company.map((link) => (
                 <li key={link.label}>
                   <Link
                     href={link.href}
-                    className="text-sm text-gray-600 hover:text-primary-600 transition-colors"
+                    className="text-sm text-[#E4E5E7] hover:text-[#FFB700] transition-colors"
                   >
                     {link.label}
                   </Link>
@@ -112,20 +112,20 @@ export default function PublicFooter() {
 
           {/* Newsletter */}
           <div>
-            <h3 className="text-sm font-semibold text-gray-900 mb-4">Stay Updated</h3>
-            <p className="text-sm text-gray-600 mb-4">
+            <h3 className="text-sm font-semibold text-white mb-4 border-b border-[#FFB700]/30 pb-2">Stay Updated</h3>
+            <p className="text-sm text-[#E4E5E7] mb-4">
               Get the latest tournament updates and highlights.
             </p>
             <form className="flex flex-col gap-2">
               <input
                 type="email"
                 placeholder="Enter your email"
-                className="px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm"
+                className="px-4 py-2 rounded-lg border border-[#FFB700]/30 bg-[#1A1A1A] text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#FF6600] focus:border-[#FFB700] text-sm"
                 aria-label="Email address"
               />
               <button
                 type="submit"
-                className="px-4 py-2 rounded-lg bg-primary-600 hover:bg-primary-700 text-white text-sm font-medium transition-all"
+                className="px-4 py-2 rounded-lg bg-[#FF6600] hover:bg-[#CC2900] text-white text-sm font-medium transition-colors border-t-2 border-[#FFB700]"
               >
                 Subscribe
               </button>
@@ -134,27 +134,27 @@ export default function PublicFooter() {
         </div>
 
         {/* Bottom Bar */}
-        <div className="mt-12 pt-8 border-t border-gray-200">
+        <div className="mt-12 pt-8 border-t border-[#FFB700]/30">
           <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
-            <p className="text-sm text-gray-600">
+            <p className="text-sm text-[#E4E5E7]">
               © {currentYear} Eskimos Sports Platform. All rights reserved.
             </p>
             <div className="flex gap-6">
               <Link
                 href="/privacy"
-                className="text-sm text-gray-600 hover:text-primary-600 transition-colors"
+                className="text-sm text-[#E4E5E7] hover:text-[#FFB700] transition-colors"
               >
                 Privacy
               </Link>
               <Link
                 href="/terms"
-                className="text-sm text-gray-600 hover:text-primary-600 transition-colors"
+                className="text-sm text-[#E4E5E7] hover:text-[#FFB700] transition-colors"
               >
                 Terms
               </Link>
               <Link
                 href="/cookies"
-                className="text-sm text-gray-600 hover:text-primary-600 transition-colors"
+                className="text-sm text-[#E4E5E7] hover:text-[#FFB700] transition-colors"
               >
                 Cookies
               </Link>

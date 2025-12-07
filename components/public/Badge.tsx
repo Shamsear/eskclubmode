@@ -45,6 +45,7 @@ export function Badge({
         ${className}
       `}
       role="status"
+      aria-label={typeof children === 'string' ? children : undefined}
     >
       {icon && <span className="flex-shrink-0" aria-hidden="true">{icon}</span>}
       <span>{children}</span>

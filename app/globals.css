@@ -56,6 +56,28 @@ body {
     text-wrap: balance;
   }
   
+  /* Smooth layout transitions for breakpoint changes */
+  .smooth-layout-transition {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  
+  /* Prevent layout shift during transitions */
+  .prevent-layout-shift {
+    contain: layout;
+  }
+  
+  /* Touch-friendly tap highlight */
+  .touch-highlight {
+    -webkit-tap-highlight-color: rgba(59, 130, 246, 0.1);
+  }
+  
+  /* Disable text selection on touch targets */
+  .touch-target {
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+  }
+  
   @keyframes slide-in {
     from {
       transform: translateX(100%);
@@ -99,5 +121,39 @@ body {
     left: 50%;
     transform: translateX(-50%);
     top: 1rem;
+  }
+  
+  /* Respect reduced motion preferences */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+  
+  /* Optimize for touch devices */
+  @media (hover: none) and (pointer: coarse) {
+    /* Increase touch target sizes */
+    button,
+    a,
+    input[type="button"],
+    input[type="submit"] {
+      min-height: 44px;
+      min-width: 44px;
+    }
+  }
+  
+  /* Optimize for pointer devices */
+  @media (hover: hover) and (pointer: fine) {
+    /* Smaller targets acceptable for mouse */
+    button,
+    a {
+      min-height: 32px;
+      min-width: 32px;
+    }
   }
 }

@@ -260,11 +260,11 @@ export function ClubsList() {
       </div>
 
       {paginatedClubs.length === 0 ? (
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-12">
+        <div className="bg-white rounded-lg border border-gray-200 p-12">
           <div className="text-center max-w-md mx-auto">
-            <div className="w-16 h-16 bg-gradient-to-br from-emerald-100 to-teal-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+            <div className="w-16 h-16 bg-[#FFB700]/20 rounded-lg flex items-center justify-center mx-auto mb-4 border-t-2 border-[#FFB700]">
               <svg
-                className="w-8 h-8 text-emerald-600"
+                className="w-8 h-8 text-[#FF6600]"
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
@@ -277,7 +277,7 @@ export function ClubsList() {
                 />
               </svg>
             </div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">
+            <h3 className="text-lg font-semibold text-[#1A1A1A] mb-2">
               {clubs.length === 0 ? 'No clubs yet' : 'No clubs match your filters'}
             </h3>
             <p className="text-gray-600 mb-6">
@@ -287,7 +287,7 @@ export function ClubsList() {
             </p>
             {clubs.length === 0 && (
               <Link href="/dashboard/clubs/new">
-                <button className="inline-flex items-center px-5 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded-xl hover:from-emerald-700 hover:to-teal-700 transition-all shadow-lg hover:shadow-xl font-medium">
+                <button className="inline-flex items-center px-5 py-2.5 bg-[#FF6600] text-white rounded-lg hover:bg-[#CC2900] transition-colors font-medium border-t-2 border-[#FFB700]">
                   <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                   </svg>
@@ -301,12 +301,12 @@ export function ClubsList() {
         <>
           <div className="space-y-3" role="list" aria-label="Clubs list">
             {paginatedClubs.map((club) => (
-              <div key={club.id} className="group bg-white rounded-xl shadow-sm border border-gray-200 hover:shadow-md hover:border-emerald-300 transition-all duration-200 overflow-hidden">
+              <div key={club.id} className="bg-white rounded-lg border border-gray-200 hover:border-[#FFB700] transition-colors overflow-hidden">
                 <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4 p-3 sm:p-4">
                   {/* Logo - Left Side - Clickable */}
                   <Link href={`/dashboard/clubs/${club.id}`} className="flex-shrink-0">
                     {club.logo ? (
-                      <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-lg overflow-hidden bg-gradient-to-br from-emerald-50 to-teal-50 flex items-center justify-center p-2">
+                      <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-lg overflow-hidden bg-[#E4E5E7] flex items-center justify-center p-2">
                         <OptimizedImage
                           src={club.logo}
                           alt={`${club.name} logo`}
@@ -317,7 +317,7 @@ export function ClubsList() {
                         />
                       </div>
                     ) : (
-                      <div className="w-14 h-14 sm:w-16 sm:h-16 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-lg flex items-center justify-center shadow-md">
+                      <div className="w-14 h-14 sm:w-16 sm:h-16 bg-[#FF6600] rounded-lg flex items-center justify-center border-t-2 border-[#FFB700]">
                         <span className="text-white font-bold text-xl sm:text-2xl">
                           {club.name.charAt(0).toUpperCase()}
                         </span>
@@ -327,7 +327,7 @@ export function ClubsList() {
 
                   {/* Club Info - Center - Clickable */}
                   <Link href={`/dashboard/clubs/${club.id}`} className="flex-1 min-w-0">
-                    <h3 className="text-sm sm:text-base font-bold text-gray-900 mb-1 group-hover:text-emerald-600 transition-colors truncate">
+                    <h3 className="text-sm sm:text-base font-bold text-[#1A1A1A] mb-1 truncate hover:text-[#FF6600] transition-colors">
                       {club.name}
                     </h3>
                     {club.description && (

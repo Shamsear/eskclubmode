@@ -1,5 +1,8 @@
 import { notFound } from 'next/navigation';
+import { Suspense } from 'react';
 import { MatchTheater } from '@/components/public/MatchTheater';
+import { PublicSkeletons } from '@/components/public/PublicSkeletons';
+import { PerformanceMonitor } from '@/components/public/PerformanceMonitor';
 
 interface MatchDetailPageProps {
   params: Promise<{
@@ -12,7 +15,8 @@ async function getMatchData(id: string) {
   
   try {
     const res = await fetch(`${baseUrl}/api/public/matches/${id}`, {
-      cache: 'no-store',
+      // Use revalidation instead of no-store for better performance
+      next: { revalidate: 60 }, // Revalidate every 60 seconds
     });
 
     if (!res.ok) {
@@ -37,7 +41,14 @@ export default async function MatchDetailPage({ params }: MatchDetailPageProps) 
     notFound();
   }
 
-  return <MatchTheater data={data} />;
+  return (
+    <>
+      <PerformanceMonitor pageName={`match-${id}`} />
+      <Suspense fallback={<PublicSkeletons.MatchTheater />}>
+        <MatchTheater data={data} />
+      </Suspense>
+    </>
+  );
 }
 
 export async function generateMetadata({ params }: MatchDetailPageProps) {
