@@ -16,7 +16,7 @@ async function getMatchData(id: string) {
     : process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
   
   try {
-    const res = await fetch(`${baseUrl}/api/public/matches/${id}`, {
+    const res = await fetch(`${baseUrl}/api/matches/${id}`, {
       // Use revalidation instead of no-store for better performance
       next: { revalidate: 60 }, // Revalidate every 60 seconds
     });
