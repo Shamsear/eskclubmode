@@ -18,7 +18,7 @@ interface Match {
     id: number;
     name: string;
     photo: string | null;
-  };
+  } | null;
   player2: {
     id: number;
     name: string;
@@ -351,30 +351,38 @@ async function TournamentMatchesContent({ tournamentId }: { tournamentId: number
                       <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
                         {/* Player 1 */}
                         <div className="flex items-center gap-2 sm:gap-3 flex-1">
-                          {match.player1.photo ? (
-                            <img
-                              src={match.player1.photo}
-                              alt={match.player1.name}
-                              className="w-10 h-10 sm:w-12 sm:h-12 rounded-full object-cover border-2 border-[#FF6600] flex-shrink-0"
-                            />
+                          {match.player1 ? (
+                            <>
+                              {match.player1.photo ? (
+                                <img
+                                  src={match.player1.photo}
+                                  alt={match.player1.name}
+                                  className="w-10 h-10 sm:w-12 sm:h-12 rounded-full object-cover border-2 border-[#FF6600] flex-shrink-0"
+                                />
+                              ) : (
+                                <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-gradient-to-br from-[#FF6600] to-[#CC2900] flex items-center justify-center flex-shrink-0">
+                                  <span className="text-base sm:text-xl font-bold text-white">
+                                    {match.player1.name.charAt(0)}
+                                  </span>
+                                </div>
+                              )}
+                              <div className="flex-1 min-w-0">
+                                <div className="font-bold text-sm sm:text-base text-[#1A1A1A] truncate group-hover:text-[#FF6600] transition-colors">
+                                  {match.player1.name}
+                                </div>
+                                {match.status === 'COMPLETED' && match.winner?.id === match.player1.id && (
+                                  <div className="text-xs text-green-600 font-semibold">Winner</div>
+                                )}
+                              </div>
+                              {match.player1Score !== null && (
+                                <div className="text-2xl sm:text-3xl font-bold text-[#FF6600] flex-shrink-0">
+                                  {match.player1Score}
+                                </div>
+                              )}
+                            </>
                           ) : (
-                            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-gradient-to-br from-[#FF6600] to-[#CC2900] flex items-center justify-center flex-shrink-0">
-                              <span className="text-base sm:text-xl font-bold text-white">
-                                {match.player1.name.charAt(0)}
-                              </span>
-                            </div>
-                          )}
-                          <div className="flex-1 min-w-0">
-                            <div className="font-bold text-sm sm:text-base text-[#1A1A1A] truncate group-hover:text-[#FF6600] transition-colors">
-                              {match.player1.name}
-                            </div>
-                            {match.status === 'COMPLETED' && match.winner?.id === match.player1.id && (
-                              <div className="text-xs text-green-600 font-semibold">Winner</div>
-                            )}
-                          </div>
-                          {match.player1Score !== null && (
-                            <div className="text-2xl sm:text-3xl font-bold text-[#FF6600] flex-shrink-0">
-                              {match.player1Score}
+                            <div className="flex-1 text-center text-sm sm:text-base text-gray-400 italic">
+                              TBD
                             </div>
                           )}
                         </div>
