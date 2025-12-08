@@ -64,41 +64,34 @@ async function getMatchData(id: string) {
     }
 
     // Transform to expected format
-    const player1Result = match.results[0];
-    const player2Result = match.results[1];
-
     return {
       match: {
         id: match.id,
         date: match.matchDate.toISOString(),
-        stage: match.stage ? match.stage.stageName : match.stageName,
+        stageName: match.stage ? match.stage.stageName : match.stageName,
         tournament: {
           id: match.tournament.id,
           name: match.tournament.name,
         },
-        player1: player1Result ? {
-          id: player1Result.player.id,
-          name: player1Result.player.name,
-          photo: player1Result.player.photo,
-          club: player1Result.player.club,
-          score: player1Result.goalsScored,
-          outcome: player1Result.outcome,
-          pointsEarned: player1Result.pointsEarned,
-        } : null,
-        player2: player2Result ? {
-          id: player2Result.player.id,
-          name: player2Result.player.name,
-          photo: player2Result.player.photo,
-          club: player2Result.player.club,
-          score: player2Result.goalsScored,
-          outcome: player2Result.outcome,
-          pointsEarned: player2Result.pointsEarned,
-        } : null,
-        isWalkover: match.walkoverWinnerId !== null,
-        walkoverWinner: match.walkoverWinnerId ? 
-          (match.walkoverWinnerId === player1Result?.playerId ? player1Result?.player : player2Result?.player) : 
-          null,
       },
+      results: match.results.map(result => ({
+        player: {
+          id: result.player.id,
+          name: result.player.name,
+          photo: result.player.photo,
+          club: result.player.club || {
+            id: 0,
+            name: 'Free Agent',
+            logo: null,
+          },
+        },
+        outcome: result.outcome as 'WIN' | 'DRAW' | 'LOSS',
+        goalsScored: result.goalsScored,
+        goalsConceded: result.goalsConceded,
+        pointsEarned: result.pointsEarned,
+        basePoints: result.basePoints,
+        conditionalPoints: result.conditionalPoints,
+      })),
     };
   } catch (error) {
     console.error('Error fetching match data:', error);
