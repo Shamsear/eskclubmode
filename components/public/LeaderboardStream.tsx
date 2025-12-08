@@ -123,7 +123,7 @@ function LeaderboardRow({ entry, isExpanded, onToggle }: {
         </div>
 
         {/* Player Info */}
-        <div className="flex-1 min-w-0">
+        <div className="flex-1 min-w-0 mr-2">
           <Link
             href={`/players/${player.id}`}
             className="font-semibold text-gray-900 hover:text-primary-600 transition-colors block truncate"
@@ -139,7 +139,7 @@ function LeaderboardRow({ entry, isExpanded, onToggle }: {
         </div>
 
         {/* Key Stats - Responsive visibility */}
-        <div className="hidden md:flex items-center gap-3 lg:gap-6">
+        <div className="hidden md:flex items-center gap-3 lg:gap-6 flex-shrink-0">
           <StatDisplay label="MP" value={stats.matchesPlayed} />
           <StatDisplay label="W" value={stats.wins} className="text-green-600" />
           <StatDisplay label="D" value={stats.draws} className="text-gray-600" />
@@ -148,7 +148,7 @@ function LeaderboardRow({ entry, isExpanded, onToggle }: {
         </div>
 
         {/* Points Badge */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-shrink-0">
           <Badge variant="primary" size="lg" className="font-bold">
             <AnimatedCounter value={stats.totalPoints} format={(v) => `${Math.round(v)} pts`} />
           </Badge>

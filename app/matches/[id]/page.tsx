@@ -3,6 +3,7 @@ import { Suspense } from 'react';
 import { MatchTheater } from '@/components/public/MatchTheater';
 import { PublicSkeletons } from '@/components/public/PublicSkeletons';
 import { PerformanceMonitor } from '@/components/public/PerformanceMonitor';
+import { prisma } from '@/lib/prisma';
 
 interface MatchDetailPageProps {
   params: Promise<{
@@ -11,29 +12,102 @@ interface MatchDetailPageProps {
 }
 
 async function getMatchData(id: string) {
-  const baseUrl = process.env.VERCEL_URL 
-    ? `https://${process.env.VERCEL_URL}`
-    : process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
-  
   try {
-    const res = await fetch(`${baseUrl}/api/matches/${id}`, {
-      // Use revalidation instead of no-store for better performance
-      next: { revalidate: 60 }, // Revalidate every 60 seconds
-    });
-
-    if (!res.ok) {
-      if (res.status === 404) {
-        return null;
-      }
-      throw new Error('Failed to fetch match data');
+    const matchId = parseInt(id);
+    
+    if (isNaN(matchId)) {
+      return null;
     }
 
-    return res.json();
+    const match = await prisma.match.findUnique({
+      where: { id: matchId },
+      include: {
+        tournament: {
+          select: {
+            id: true,
+            name: true,
+            startDate: true,
+          },
+        },
+        stage: {
+          select: {
+            id: true,
+            stageName: true,
+          },
+        },
+        results: {
+          include: {
+            player: {
+              select: {
+                id: true,
+                name: true,
+                photo: true,
+                club: {
+                  select: {
+                    id: true,
+                    name: true,
+                    logo: true,
+                  },
+                },
+              },
+            },
+          },
+          orderBy: {
+            id: 'asc',
+          },
+        },
+      },
+    });
+
+    if (!match) {
+      return null;
+    }
+
+    // Transform to expected format
+    const player1Result = match.results[0];
+    const player2Result = match.results[1];
+
+    return {
+      match: {
+        id: match.id,
+        date: match.matchDate.toISOString(),
+        stage: match.stage ? match.stage.stageName : match.stageName,
+        tournament: {
+          id: match.tournament.id,
+          name: match.tournament.name,
+        },
+        player1: player1Result ? {
+          id: player1Result.player.id,
+          name: player1Result.player.name,
+          photo: player1Result.player.photo,
+          club: player1Result.player.club,
+          score: player1Result.goalsScored,
+          outcome: player1Result.outcome,
+          pointsEarned: player1Result.pointsEarned,
+        } : null,
+        player2: player2Result ? {
+          id: player2Result.player.id,
+          name: player2Result.player.name,
+          photo: player2Result.player.photo,
+          club: player2Result.player.club,
+          score: player2Result.goalsScored,
+          outcome: player2Result.outcome,
+          pointsEarned: player2Result.pointsEarned,
+        } : null,
+        isWalkover: match.walkoverWinnerId !== null,
+        walkoverWinner: match.walkoverWinnerId ? 
+          (match.walkoverWinnerId === player1Result?.playerId ? player1Result?.player : player2Result?.player) : 
+          null,
+      },
+    };
   } catch (error) {
     console.error('Error fetching match data:', error);
-    throw error;
+    return null;
   }
 }
+
+// Revalidate every 60 seconds
+export const revalidate = 60;
 
 export default async function MatchDetailPage({ params }: MatchDetailPageProps) {
   const { id } = await params;
