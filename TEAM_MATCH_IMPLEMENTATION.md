@@ -146,21 +146,50 @@ Check the browser console (F12) for detailed error logs. Common issues:
    - Error: "Player(s) [names] are not participants in this tournament"
    - Solution: Add players to tournament participants first
 
+9. **Match Display Components (MatchTheater)**
+   - Updated `components/public/MatchTheater.tsx` to handle both singles and doubles matches
+   - Added conditional rendering based on `isTeamMatch` flag
+   - Created `TeamPerformanceCard` component for displaying team results
+   - Shows club logo, both team members, and team statistics
+   - Updated hero section to show "Doubles Match" and "2v2 Format" badge for team matches
+   - Updated stats section to calculate totals correctly for both match types
+   - Purple theme for team cards to distinguish from singles (orange theme)
+
+10. **Match Display Components (MatchList)**
+    - Already supports doubles matches with 2v2 display
+    - Shows team compositions with club logos
+    - Displays both players for each team
+    - Visual distinction with purple theme for doubles
+
+11. **Tournament Statistics**
+    - Updated `app/tournaments/[id]/page.tsx` to calculate total goals from both singles and doubles matches
+    - Aggregates goals from both `matchResult` and `teamMatchResult` tables
+    - Correctly displays total goals for mixed or doubles-only tournaments
+    - Fixed completed matches count to check both `results` and `teamResults` based on match type
+    - Now correctly shows progress for doubles tournaments
+
+12. **Tournament Leaderboard**
+    - Already supports team leaderboards for doubles tournaments
+    - Shows team composition with both players
+    - Displays club logo and team stats
+    - Updated stat cards to show "Total Teams" instead of "Total Players" for doubles
+    - Updated "Current Leader" to show team name for doubles tournaments
+
 ### 📋 Next Steps (If Needed)
 
-1. **Match Display Components**
-   - Update match list/detail views to show team compositions for doubles
-   - Display team names and both players for each team
-
-2. **Club Statistics**
+1. **Club Statistics**
    - Implement club statistics calculation for team matches
    - Aggregate team match results for club leaderboards
+   - Add club leaderboard page showing team match performance
 
-3. **Testing**
+2. **Testing**
    - End-to-end testing of creating doubles matches
    - End-to-end testing of editing doubles matches
    - Verify statistics are NOT updated for doubles matches
    - Test bulk upload with doubles format
+   - Test public match display for both singles and doubles
+   - Test tournament stats display for doubles tournaments
+   - Test leaderboard display for team rankings
 
 ## Key Design Decisions
 
@@ -248,6 +277,12 @@ Check the browser console (F12) for detailed error logs. Common issues:
 
 ### Pages
 - `app/dashboard/tournaments/[id]/matches/[matchId]/edit/page.tsx` - Fetches and converts team results
+- `app/matches/[id]/page.tsx` - Already fetches both results and teamResults
+- `app/tournaments/[id]/page.tsx` - Updated to aggregate goals from both singles and doubles matches
+- `app/tournaments/[id]/leaderboard/page.tsx` - Already supports team leaderboards, updated stat labels
 
 ### Components
 - `components/MatchResultForm.tsx` - Already had doubles support with proper goals batching and player filtering
+- `components/MatchList.tsx` - Already had doubles support with 2v2 display
+- `components/public/MatchTheater.tsx` - Added doubles support with TeamPerformanceCard component
+- `components/public/LeaderboardStream.tsx` - Already supports team display

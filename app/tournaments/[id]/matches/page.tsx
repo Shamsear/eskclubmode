@@ -14,6 +14,39 @@ interface Match {
     id: number;
     name: string;
   };
+  isTeamMatch?: boolean;
+  team1?: {
+    clubId: number;
+    clubName: string;
+    clubLogo: string | null;
+    playerA: {
+      id: number;
+      name: string;
+      photo: string | null;
+    } | null;
+    playerB: {
+      id: number;
+      name: string;
+      photo: string | null;
+    } | null;
+    score: number;
+  } | null;
+  team2?: {
+    clubId: number;
+    clubName: string;
+    clubLogo: string | null;
+    playerA: {
+      id: number;
+      name: string;
+      photo: string | null;
+    } | null;
+    playerB: {
+      id: number;
+      name: string;
+      photo: string | null;
+    } | null;
+    score: number;
+  } | null;
   player1: {
     id: number;
     name: string;
@@ -83,6 +116,34 @@ async function getTournamentMatches(id: number): Promise<TournamentMatchesData |
             id: 'asc',
           },
         },
+        teamResults: {
+          include: {
+            club: {
+              select: {
+                id: true,
+                name: true,
+                logo: true,
+              },
+            },
+            playerA: {
+              select: {
+                id: true,
+                name: true,
+                photo: true,
+              },
+            },
+            playerB: {
+              select: {
+                id: true,
+                name: true,
+                photo: true,
+              },
+            },
+          },
+          orderBy: {
+            teamPosition: 'asc',
+          },
+        },
       },
       orderBy: [
         { matchDate: 'asc' },
@@ -91,20 +152,81 @@ async function getTournamentMatches(id: number): Promise<TournamentMatchesData |
 
     // Transform matches to the expected format
     const transformedMatches = matches.map((match) => {
+      // Check if it's a team match (doubles)
+      if (match.isTeamMatch && match.teamResults.length > 0) {
+        const team1 = match.teamResults[0];
+        const team2 = match.teamResults[1];
+
+        // Determine status
+        let status: 'SCHEDULED' | 'COMPLETED' | 'CANCELLED' = 'SCHEDULED';
+
+        if (team1 && team2 && team1.outcome && team2.outcome) {
+          status = 'COMPLETED';
+        } else if (match.walkoverWinnerId !== null && match.walkoverWinnerId !== undefined) {
+          status = 'CANCELLED';
+        }
+
+        // Determine winner (for team matches, we'll show the club that won)
+        let winner = null;
+        if (status === 'COMPLETED' && team1 && team2) {
+          if (team1.outcome === 'WIN') {
+            winner = { id: team1.clubId, name: team1.club?.name || 'Team 1' };
+          } else if (team2.outcome === 'WIN') {
+            winner = { id: team2.clubId, name: team2.club?.name || 'Team 2' };
+          }
+        }
+
+        return {
+          id: match.id,
+          date: match.matchDate.toISOString(),
+          stage: match.stage ? {
+            id: match.stage.id,
+            name: match.stage.stageName,
+          } : {
+            id: 0,
+            name: match.stageName || 'General',
+          },
+          isTeamMatch: true,
+          team1: team1 ? {
+            clubId: team1.clubId,
+            clubName: team1.club?.name || 'Team 1',
+            clubLogo: team1.club?.logo,
+            playerA: team1.playerA,
+            playerB: team1.playerB,
+            score: team1.goalsScored,
+          } : null,
+          team2: team2 ? {
+            clubId: team2.clubId,
+            clubName: team2.club?.name || 'Team 2',
+            clubLogo: team2.club?.logo,
+            playerA: team2.playerA,
+            playerB: team2.playerB,
+            score: team2.goalsScored,
+          } : null,
+          player1: null,
+          player2: null,
+          player1Score: null,
+          player2Score: null,
+          winner,
+          status,
+        };
+      }
+
+      // Singles match
       const player1Result = match.results[0];
       const player2Result = match.results[1];
-      
+
       // Determine status based on results
       let status: 'SCHEDULED' | 'COMPLETED' | 'CANCELLED' = 'SCHEDULED';
-      
+
       // Match is completed if both players have results with outcome set
-      if (player1Result && player2Result && 
-          player1Result.outcome && player2Result.outcome) {
+      if (player1Result && player2Result &&
+        player1Result.outcome && player2Result.outcome) {
         status = 'COMPLETED';
       } else if (match.walkoverWinnerId !== null && match.walkoverWinnerId !== undefined) {
         status = 'CANCELLED';
       }
-      
+
       // Determine winner
       let winner = null;
       if (status === 'COMPLETED' && player1Result && player2Result) {
@@ -130,6 +252,9 @@ async function getTournamentMatches(id: number): Promise<TournamentMatchesData |
           id: 0,
           name: match.stageName || 'General',
         },
+        isTeamMatch: false,
+        team1: null,
+        team2: null,
         player1: player1Result ? player1Result.player : null,
         player2: player2Result ? player2Result.player : null,
         player1Score: player1Result ? player1Result.goalsScored : null,
@@ -158,16 +283,11 @@ async function TournamentMatchesContent({ tournamentId }: { tournamentId: number
 
   const getStatusColor = (status: Match['status']) => {
     switch (status) {
-      case 'COMPLETED':
-        return 'bg-green-500/20 text-green-700 border-green-400';
-      case 'IN_PROGRESS':
-        return 'bg-blue-500/20 text-blue-700 border-blue-400';
-      case 'SCHEDULED':
-        return 'bg-yellow-500/20 text-yellow-700 border-yellow-400';
-      case 'CANCELLED':
-        return 'bg-red-500/20 text-red-700 border-red-400';
-      default:
-        return 'bg-gray-500/20 text-gray-700 border-gray-400';
+      case 'COMPLETED': return 'bg-green-500/15 text-green-400 border-green-500/40';
+      case 'IN_PROGRESS': return 'bg-blue-500/15 text-blue-400 border-blue-500/40';
+      case 'SCHEDULED': return 'bg-yellow-500/15 text-yellow-400 border-yellow-500/40';
+      case 'CANCELLED': return 'bg-red-500/15 text-red-400 border-red-500/40';
+      default: return 'bg-[#1A1A1A] text-[#707070] border-[#333]';
     }
   };
 
@@ -181,280 +301,164 @@ async function TournamentMatchesContent({ tournamentId }: { tournamentId: number
   }, {} as Record<string, Match[]>);
 
   return (
-    <div className="min-h-screen bg-[#E4E5E7]">
-      {/* Breadcrumb */}
-      <div className="bg-white border-b border-gray-200">
-        <nav className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 text-sm" aria-label="Breadcrumb">
-          <ol className="flex items-center gap-2 text-gray-600">
-            <li>
-              <Link href="/tournaments" className="hover:text-[#FF6600] transition-colors font-medium">
-                Tournaments
-              </Link>
-            </li>
-            <li aria-hidden="true">
-              <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-              </svg>
-            </li>
-            <li>
-              <Link href={`/tournaments/${data.tournament.id}`} className="hover:text-[#FF6600] transition-colors font-medium">
-                {data.tournament.name}
-              </Link>
-            </li>
-            <li aria-hidden="true">
-              <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-              </svg>
-            </li>
-            <li className="text-[#1A1A1A] font-semibold">Matches</li>
+    <div className="min-h-screen bg-[#0D0D0D]">
+
+      {/* Hero */}
+      <div className="relative overflow-hidden py-12 sm:py-16" style={{ background: "linear-gradient(180deg,#0D0D0D 0%,#110800 100%)" }}>
+        <div className="absolute inset-0 pointer-events-none" style={{ backgroundImage: "radial-gradient(circle, rgba(255,183,0,0.12) 1px, transparent 1px)", backgroundSize: "36px 36px" }} />
+        <div className="absolute top-0 right-0 w-64 h-64 rounded-full opacity-15 blur-3xl pointer-events-none" style={{ background: "radial-gradient(circle,#FF6600,transparent)" }} />
+        <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[#FF6600] to-transparent opacity-60" />
+
+        {/* Breadcrumb */}
+        <nav className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-6" aria-label="Breadcrumb">
+          <ol className="flex items-center gap-2 text-xs text-[#555]">
+            <li><Link href="/tournaments" className="hover:text-[#FFB700] transition-colors">Tournaments</Link></li>
+            <li><span className="text-[#333]">/</span></li>
+            <li><Link href={`/tournaments/${data.tournament.id}`} className="hover:text-[#FFB700] transition-colors">{data.tournament.name}</Link></li>
+            <li><span className="text-[#333]">/</span></li>
+            <li className="text-[#FFB700] font-semibold">Matches</li>
           </ol>
         </nav>
-      </div>
 
-      {/* Hero Section */}
-      <div className="relative bg-gradient-to-br from-[#1A1A1A] via-[#2D2D2D] to-[#1A1A1A] text-white overflow-hidden">
-        {/* Animated Background Pattern */}
-        <div className="absolute inset-0 opacity-5">
-          <div className="absolute inset-0" style={{
-            backgroundImage: 'radial-gradient(circle at 2px 2px, white 1px, transparent 0)',
-            backgroundSize: '40px 40px'
-          }}></div>
-        </div>
-        
-        {/* Orange Gradient Overlay */}
-        <div className="absolute inset-0 bg-gradient-to-r from-[#FF6600]/20 via-transparent to-[#CC2900]/20"></div>
-        
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 lg:py-16">
-          <div className="flex flex-col gap-4 sm:gap-6">
-            <div className="flex-1">
-              <div className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4">
-                <div className="w-12 h-12 sm:w-16 sm:h-16 bg-gradient-to-br from-[#FFB700] to-[#FF6600] rounded-xl flex items-center justify-center shadow-lg flex-shrink-0">
-                  <svg className="w-6 h-6 sm:w-8 sm:h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                  </svg>
-                </div>
-                <div className="min-w-0 flex-1">
-                  <h1 className="text-2xl sm:text-4xl lg:text-6xl font-bold bg-gradient-to-r from-white to-[#FFB700] bg-clip-text text-transparent">
-                    All Matches
-                  </h1>
-                </div>
-              </div>
-              <p className="text-sm sm:text-base lg:text-lg text-gray-300 max-w-2xl">
-                {data.tournament.name}
-              </p>
-            </div>
-
-            <Link
-              href={`/tournaments/${data.tournament.id}`}
-              className="inline-flex items-center justify-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 bg-white/10 backdrop-blur-sm border-2 border-white/20 rounded-xl text-white text-sm sm:text-base font-bold hover:bg-white/20 transition-all group"
-            >
-              <svg className="w-4 h-4 sm:w-5 sm:h-5 group-hover:-translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-              </svg>
-              Back to Tournament
-            </Link>
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6">
+          <div>
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full mb-4 border border-[#FFB700]/25 text-xs font-bold tracking-widest uppercase text-[#FFB700]" style={{ background: "rgba(255,183,0,0.08)" }}>📋 Match Schedule</div>
+            <h1 className="text-3xl sm:text-4xl font-black text-white mb-2 font-['Outfit',sans-serif]">
+              All <span style={{ background: "linear-gradient(135deg,#FFB700,#FF6600)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>Matches</span>
+            </h1>
+            <p className="text-[#707070] text-sm">{data.tournament.name}</p>
           </div>
+          <Link href={`/tournaments/${data.tournament.id}`}
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl border border-[#1E1E1E] text-[#A0A0A0] hover:text-white hover:border-[#FF6600]/40 text-sm font-medium transition-all flex-shrink-0"
+            style={{ background: '#111' }}>
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
+            Back to Tournament
+          </Link>
         </div>
       </div>
 
-      {/* Stats Section */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-8 relative z-10 mb-8 sm:mb-12">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
-          <div className="bg-white rounded-xl shadow-lg p-4 sm:p-6 border-t-4 border-[#FF6600] transform hover:-translate-y-1 transition-all duration-300">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-0 mb-2 sm:mb-3">
-              <div className="text-xs sm:text-sm text-gray-600 font-medium">Total Matches</div>
-              <svg className="w-5 h-5 sm:w-6 sm:h-6 text-[#FF6600]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-              </svg>
+      {/* Stats */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-6 relative z-10 mb-10">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          {[
+            { label: 'Total Matches', value: data.matches.length, color: '#FF6600' },
+            { label: 'Completed', value: data.matches.filter((m: Match) => m.status === 'COMPLETED').length, color: '#22C55E' },
+            { label: 'Scheduled', value: data.matches.filter((m: Match) => m.status === 'SCHEDULED').length, color: '#FFB700' },
+            { label: 'Stages', value: Object.keys(groupedMatches).length, color: '#A78BFA' },
+          ].map(({ label, value, color }) => (
+            <div key={label} className="rounded-2xl border border-[#1E1E1E] p-4 sm:p-5 hover:-translate-y-0.5 transition-all" style={{ background: '#111' }}>
+              <div className="text-xs text-[#555] font-medium uppercase tracking-widest mb-2">{label}</div>
+              <div className="text-3xl font-black" style={{ color }}>{value}</div>
             </div>
-            <div className="text-2xl sm:text-4xl font-bold text-[#1A1A1A]">{data.matches.length}</div>
-          </div>
-          
-          <div className="bg-white rounded-xl shadow-lg p-4 sm:p-6 border-t-4 border-[#FFB700] transform hover:-translate-y-1 transition-all duration-300">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-0 mb-2 sm:mb-3">
-              <div className="text-xs sm:text-sm text-gray-600 font-medium">Completed</div>
-              <svg className="w-5 h-5 sm:w-6 sm:h-6 text-[#FFB700]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-            </div>
-            <div className="text-2xl sm:text-4xl font-bold text-[#1A1A1A]">
-              {data.matches.filter(m => m.status === 'COMPLETED').length}
-            </div>
-          </div>
-          
-          <div className="bg-white rounded-xl shadow-lg p-4 sm:p-6 border-t-4 border-[#CC2900] transform hover:-translate-y-1 transition-all duration-300">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-0 mb-2 sm:mb-3">
-              <div className="text-xs sm:text-sm text-gray-600 font-medium">Scheduled</div>
-              <svg className="w-5 h-5 sm:w-6 sm:h-6 text-[#CC2900]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-              </svg>
-            </div>
-            <div className="text-2xl sm:text-4xl font-bold text-[#1A1A1A]">
-              {data.matches.filter(m => m.status === 'SCHEDULED').length}
-            </div>
-          </div>
-          
-          <div className="bg-white rounded-xl shadow-lg p-4 sm:p-6 border-t-4 border-[#FF6600] transform hover:-translate-y-1 transition-all duration-300">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-0 mb-2 sm:mb-3">
-              <div className="text-xs sm:text-sm text-gray-600 font-medium">Stages</div>
-              <svg className="w-5 h-5 sm:w-6 sm:h-6 text-[#FF6600]" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M12 2L2 7v10c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V7l-10-5zm0 2.18l7 3.5v8.32c0 4.27-2.94 8.27-7 9.27-4.06-1-7-5-7-9.27V7.68l7-3.5z" />
-              </svg>
-            </div>
-            <div className="text-2xl sm:text-4xl font-bold text-[#1A1A1A]">
-              {Object.keys(groupedMatches).length}
-            </div>
-          </div>
+          ))}
         </div>
       </div>
 
       {/* Matches by Stage */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-12">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-16">
         {Object.entries(groupedMatches).map(([stageName, matches]) => (
           <div key={stageName} className="mb-12">
-            <div className="mb-4 sm:mb-6">
-              <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
-                <div className="w-1 h-6 sm:h-8 bg-gradient-to-b from-[#FF6600] to-[#CC2900] rounded-full"></div>
-                <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-[#1A1A1A]">
-                  {stageName}
-                </h2>
-                <span className="text-xs sm:text-sm text-gray-600 font-medium">
-                  ({matches.length} {matches.length === 1 ? 'match' : 'matches'})
-                </span>
+            <div className="mb-5">
+              <div className="flex items-center gap-3 flex-wrap">
+                <div className="w-1 h-8 rounded-full" style={{ background: "linear-gradient(180deg,#FF6600,#CC2900)" }} />
+                <h2 className="text-xl sm:text-2xl font-black text-white font-['Outfit',sans-serif]">{stageName}</h2>
+                <span className="text-xs text-[#555] font-medium">({matches.length} {matches.length === 1 ? 'match' : 'matches'})</span>
               </div>
             </div>
 
-            <div className="grid gap-4">
+            <div className="grid gap-3">
               {matches.map((match) => (
-                <Link
-                  key={match.id}
-                  href={`/matches/${match.id}`}
-                  className="bg-white rounded-xl shadow-md hover:shadow-xl transition-all duration-300 overflow-hidden border-2 border-transparent hover:border-[#FF6600] group"
+                <Link key={match.id} href={`/matches/${match.id}`}
+                  className="block rounded-2xl border border-[#1E1E1E] hover:border-[#FF6600]/40 transition-all duration-200 overflow-hidden group"
+                  style={{ background: '#111' }}
                 >
-                  <div className="p-4 sm:p-6">
+                  <div className="p-4 sm:p-5">
                     <div className="flex flex-col gap-4">
-                      {/* Match Info - Mobile First */}
+                      {/* Match header */}
                       <div className="flex items-center justify-between gap-2">
-                        <div className={`px-3 py-1.5 rounded-lg text-xs sm:text-sm font-bold border-2 ${getStatusColor(match.status)}`}>
-                          {match.status.replace('_', ' ')}
+                        <div className="flex items-center gap-2">
+                          <div className={`px-2.5 py-1 rounded-lg text-xs font-bold border ${getStatusColor(match.status)}`}>
+                            {match.status.replace('_', ' ')}
+                          </div>
+                          {match.isTeamMatch && (
+                            <div className="px-2.5 py-1 rounded-lg text-xs font-bold border" style={{ background: 'rgba(167,139,250,0.1)', color: '#A78BFA', borderColor: 'rgba(167,139,250,0.3)' }}>DOUBLES</div>
+                          )}
                         </div>
-                        <div className="text-xs sm:text-sm text-gray-600">
-                          {new Date(match.date).toLocaleDateString('en-US', {
-                            month: 'short',
-                            day: 'numeric',
-                            year: 'numeric'
-                          })}
+                        <div className="text-xs text-[#555]">
+                          {new Date(match.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                         </div>
                       </div>
 
-                      {/* Players */}
-                      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-                        {/* Player 1 */}
-                        <div className="flex items-center gap-2 sm:gap-3 flex-1">
-                          {match.player1 ? (
-                            <>
-                              {match.player1.photo ? (
-                                <img
-                                  src={match.player1.photo}
-                                  alt={match.player1.name}
-                                  className="w-10 h-10 sm:w-12 sm:h-12 rounded-full object-cover border-2 border-[#FF6600] flex-shrink-0"
-                                />
-                              ) : (
-                                <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-gradient-to-br from-[#FF6600] to-[#CC2900] flex items-center justify-center flex-shrink-0">
-                                  <span className="text-base sm:text-xl font-bold text-white">
-                                    {match.player1.name.charAt(0)}
-                                  </span>
-                                </div>
-                              )}
-                              <div className="flex-1 min-w-0">
-                                <div className="font-bold text-sm sm:text-base text-[#1A1A1A] truncate group-hover:text-[#FF6600] transition-colors">
-                                  {match.player1.name}
-                                </div>
-                                {match.status === 'COMPLETED' && match.winner?.id === match.player1.id && (
-                                  <div className="text-xs text-green-600 font-semibold">Winner</div>
-                                )}
+                      {/* Team Match Display */}
+                      {match.isTeamMatch && match.team1 && match.team2 ? (
+                        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+                          {[match.team1, match.team2].map((team, ti) => team && (
+                            <div key={ti} className="flex-1 rounded-xl p-3 border border-[#2A1A3A]" style={{ background: 'rgba(167,139,250,0.06)' }}>
+                              <div className="flex items-center gap-2 mb-2">
+                                {team.clubLogo && <img src={team.clubLogo} alt={team.clubName} className="w-6 h-6 object-contain" />}
+                                <div className="font-bold text-sm text-white">{team.clubName}</div>
+                                {team.score !== null && <div className="ml-auto text-xl font-black text-[#A78BFA]">{team.score}</div>}
                               </div>
-                              {match.player1Score !== null && (
-                                <div className="text-2xl sm:text-3xl font-bold text-[#FF6600] flex-shrink-0">
-                                  {match.player1Score}
-                                </div>
-                              )}
-                            </>
-                          ) : (
-                            <div className="flex-1 text-center text-sm sm:text-base text-gray-400 italic">
-                              TBD
-                            </div>
-                          )}
-                        </div>
-
-                        {/* VS */}
-                        <div className="flex-shrink-0 text-center px-2 sm:px-4">
-                          <div className="text-lg sm:text-2xl font-bold text-gray-400">VS</div>
-                        </div>
-
-                        {/* Player 2 */}
-                        <div className="flex items-center gap-2 sm:gap-3 flex-1 flex-row-reverse">
-                          {match.player2 ? (
-                            <>
-                              {match.player2.photo ? (
-                                <img
-                                  src={match.player2.photo}
-                                  alt={match.player2.name}
-                                  className="w-10 h-10 sm:w-12 sm:h-12 rounded-full object-cover border-2 border-[#FF6600] flex-shrink-0"
-                                />
-                              ) : (
-                                <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-gradient-to-br from-[#FF6600] to-[#CC2900] flex items-center justify-center flex-shrink-0">
-                                  <span className="text-base sm:text-xl font-bold text-white">
-                                    {match.player2.name.charAt(0)}
-                                  </span>
-                                </div>
-                              )}
-                              <div className="flex-1 min-w-0 text-right">
-                                <div className="font-bold text-sm sm:text-base text-[#1A1A1A] truncate group-hover:text-[#FF6600] transition-colors">
-                                  {match.player2.name}
-                                </div>
-                                {match.status === 'COMPLETED' && match.winner?.id === match.player2.id && (
-                                  <div className="text-xs text-green-600 font-semibold">Winner</div>
-                                )}
+                              <div className="space-y-1">
+                                {[team.playerA, team.playerB].filter(Boolean).map((p, pi) => p && (
+                                  <div key={pi} className="flex items-center gap-2">
+                                    {p.photo ? <img src={p.photo} alt={p.name} className="w-5 h-5 rounded-full object-cover" /> : <div className="w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold text-white" style={{ background: "linear-gradient(135deg,#A78BFA,#7C3AED)" }}>{p.name.charAt(0)}</div>}
+                                    <span className="text-xs text-[#A0A0A0]">{p.name}</span>
+                                  </div>
+                                ))}
                               </div>
-                              {match.player2Score !== null && (
-                                <div className="text-2xl sm:text-3xl font-bold text-[#FF6600] flex-shrink-0">
-                                  {match.player2Score}
-                                </div>
-                              )}
-                            </>
-                          ) : (
-                            <div className="flex-1 text-center text-sm sm:text-base text-gray-400 italic">
-                              TBD
+                              {match.status === 'COMPLETED' && match.winner?.id === team.clubId && <div className="mt-1.5 text-xs text-green-400 font-semibold">✓ Winner</div>}
                             </div>
-                          )}
+                          ))}
+                          <div className="flex-shrink-0 text-center px-2"><div className="text-lg font-black text-[#333]">VS</div></div>
                         </div>
-                      </div>
+                      ) : (
+                        /* Singles Match */
+                        <div className="flex items-center gap-3">
+                          {/* Player 1 */}
+                          <div className="flex items-center gap-2 sm:gap-3 flex-1">
+                            {match.player1 ? (
+                              <>
+                                {match.player1.photo ? <img src={match.player1.photo} alt={match.player1.name} className="w-10 h-10 rounded-full object-cover border border-[#FF6600]/50 flex-shrink-0" /> : <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 text-white font-black" style={{ background: "linear-gradient(135deg,#FF6600,#CC2900)" }}>{match.player1.name.charAt(0)}</div>}
+                                <div className="flex-1 min-w-0">
+                                  <div className="font-bold text-sm text-white truncate group-hover:text-[#FFB700] transition-colors">{match.player1.name}</div>
+                                  {match.status === 'COMPLETED' && match.winner?.id === match.player1.id && <div className="text-xs text-green-400 font-semibold">✓ Winner</div>}
+                                </div>
+                                {match.player1Score !== null && <div className="text-2xl font-black text-[#FF6600] flex-shrink-0">{match.player1Score}</div>}
+                              </>
+                            ) : <div className="flex-1 text-xs text-[#555] italic">TBD</div>}
+                          </div>
+                          <div className="flex-shrink-0 text-[#333] font-black text-lg">VS</div>
+                          {/* Player 2 */}
+                          <div className="flex items-center gap-2 sm:gap-3 flex-1 flex-row-reverse">
+                            {match.player2 ? (
+                              <>
+                                {match.player2.photo ? <img src={match.player2.photo} alt={match.player2.name} className="w-10 h-10 rounded-full object-cover border border-[#FF6600]/50 flex-shrink-0" /> : <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 text-white font-black" style={{ background: "linear-gradient(135deg,#FF6600,#CC2900)" }}>{match.player2.name.charAt(0)}</div>}
+                                <div className="flex-1 min-w-0 text-right">
+                                  <div className="font-bold text-sm text-white truncate group-hover:text-[#FFB700] transition-colors">{match.player2.name}</div>
+                                  {match.status === 'COMPLETED' && match.winner?.id === match.player2.id && <div className="text-xs text-green-400 font-semibold">✓ Winner</div>}
+                                </div>
+                                {match.player2Score !== null && <div className="text-2xl font-black text-[#FF6600] flex-shrink-0">{match.player2Score}</div>}
+                              </>
+                            ) : <div className="flex-1 text-xs text-[#555] italic text-right">TBD</div>}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
 
-                  {/* Hover Effect Bar */}
-                  <div className="h-1 bg-gradient-to-r from-[#FF6600] via-[#FFB700] to-[#CC2900] transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-left"></div>
+                  <div className="h-px bg-gradient-to-r from-transparent via-[#FF6600] to-transparent transform scale-x-0 group-hover:scale-x-100 transition-transform duration-500 origin-left" />
                 </Link>
               ))}
             </div>
           </div>
         ))}
 
-        {/* Empty State */}
         {data.matches.length === 0 && (
-          <div className="bg-white rounded-xl shadow-lg border-2 border-dashed border-gray-300 text-center py-16">
-            <div className="w-24 h-24 bg-gradient-to-br from-[#FF6600]/10 to-[#CC2900]/10 rounded-full flex items-center justify-center mx-auto mb-6">
-              <svg className="w-12 h-12 text-[#FF6600]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-              </svg>
-            </div>
-            <h3 className="text-2xl font-bold text-[#1A1A1A] mb-2">
-              No Matches Yet
-            </h3>
-            <p className="text-gray-600">
-              Matches will appear here once they are scheduled
-            </p>
+          <div className="rounded-2xl border border-dashed border-[#1E1E1E] text-center py-16" style={{ background: '#111' }}>
+            <div className="text-4xl mb-4">📋</div>
+            <h3 className="text-xl font-black text-white mb-2">No Matches Yet</h3>
+            <p className="text-[#555] text-sm">Matches will appear here once they are scheduled</p>
           </div>
         )}
       </div>
@@ -472,28 +476,10 @@ export default async function TournamentMatchesPage({ params }: PageProps) {
 
   return (
     <Suspense fallback={
-      <div className="min-h-screen bg-[#E4E5E7]">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="animate-pulse space-y-6">
-            <div className="h-12 bg-gray-300 rounded-lg w-1/3"></div>
-            <div className="grid gap-4">
-              {[...Array(5)].map((_, i) => (
-                <div key={i} className="bg-white rounded-xl p-6">
-                  <div className="flex items-center justify-between gap-4">
-                    <div className="flex items-center gap-3 flex-1">
-                      <div className="w-12 h-12 bg-gray-300 rounded-full"></div>
-                      <div className="h-4 bg-gray-300 rounded w-32"></div>
-                    </div>
-                    <div className="text-2xl font-bold text-gray-300">VS</div>
-                    <div className="flex items-center gap-3 flex-1 flex-row-reverse">
-                      <div className="w-12 h-12 bg-gray-300 rounded-full"></div>
-                      <div className="h-4 bg-gray-300 rounded w-32"></div>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
+      <div className="min-h-screen bg-[#0D0D0D] flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-12 h-12 rounded-full border-2 border-[#FF6600] border-t-transparent animate-spin mx-auto mb-4" />
+          <p className="text-[#707070] text-sm">Loading matches…</p>
         </div>
       </div>
     }>

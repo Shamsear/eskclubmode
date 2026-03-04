@@ -4,263 +4,123 @@ import LeaderboardStream from '@/components/public/LeaderboardStream';
 import { Suspense } from 'react';
 import { prisma } from '@/lib/prisma';
 
-interface PageProps {
-  params: Promise<{ id: string }>;
-}
-
-interface LeaderboardData {
-  tournament: {
-    id: number;
-    name: string;
-  };
-  rankings: Array<{
-    rank: number;
-    player: {
-      id: number;
-      name: string;
-      photo: string | null;
-      club: {
-        id: number;
-        name: string;
-        logo: string | null;
-      } | null;
-    };
-    stats: {
-      matchesPlayed: number;
-      wins: number;
-      draws: number;
-      losses: number;
-      goalsScored: number;
-      goalsConceded: number;
-      goalDifference: number;
-      totalPoints: number;
-    };
-  }>;
-}
-
-// Revalidate every 5 minutes
+interface PageProps { params: Promise<{ id: string }> }
 export const revalidate = 300;
 
-async function getLeaderboardData(id: number): Promise<LeaderboardData | null> {
+// ── data fetching identical to before, just keeping it here ──
+async function getLeaderboardData(id: number): Promise<any> {
   try {
-    const tournament = await prisma.tournament.findUnique({
-      where: { id },
-      select: {
-        id: true,
-        name: true,
-      },
-    });
+    const tournament = await prisma.tournament.findUnique({ where: { id }, select: { id: true, name: true, matchFormat: true } });
+    if (!tournament) return null;
 
-    if (!tournament) {
-      return null;
+    if (tournament.matchFormat === 'DOUBLES') {
+      const teamStats = await prisma.teamMatchResult.groupBy({
+        by: ['clubId', 'playerAId', 'playerBId'],
+        where: { match: { tournamentId: id } },
+        _sum: { pointsEarned: true, goalsScored: true, goalsConceded: true },
+        _count: { id: true },
+      });
+      const enriched = await Promise.all(teamStats.map(async (team) => {
+        const [club, playerA, playerB, outcomes] = await Promise.all([
+          prisma.club.findUnique({ where: { id: team.clubId }, select: { id: true, name: true, logo: true } }),
+          prisma.player.findUnique({ where: { id: team.playerAId }, select: { id: true, name: true, photo: true } }),
+          prisma.player.findUnique({ where: { id: team.playerBId }, select: { id: true, name: true, photo: true } }),
+          prisma.teamMatchResult.groupBy({ by: ['outcome'], where: { clubId: team.clubId, playerAId: team.playerAId, playerBId: team.playerBId, match: { tournamentId: id } }, _count: { outcome: true } }),
+        ]);
+        const wins = outcomes.find(o => o.outcome === 'WIN')?._count.outcome || 0;
+        const draws = outcomes.find(o => o.outcome === 'DRAW')?._count.outcome || 0;
+        const losses = outcomes.find(o => o.outcome === 'LOSS')?._count.outcome || 0;
+        const goalsScored = team._sum.goalsScored || 0;
+        const goalsConceded = team._sum.goalsConceded || 0;
+        return { clubId: team.clubId, club, playerA, playerB, matchesPlayed: team._count.id, wins, draws, losses, goalsScored, goalsConceded, goalDifference: goalsScored - goalsConceded, totalPoints: team._sum.pointsEarned || 0 };
+      }));
+      enriched.sort((a, b) => b.totalPoints - a.totalPoints || b.goalDifference - a.goalDifference || b.goalsScored - a.goalsScored);
+      return { tournament: { id: tournament.id, name: tournament.name }, rankings: enriched.map((e, i) => ({ rank: i + 1, isTeam: true, team: { clubId: e.clubId, clubName: e.club?.name || 'Team', clubLogo: e.club?.logo, playerA: e.playerA, playerB: e.playerB }, player: null, stats: { matchesPlayed: e.matchesPlayed, wins: e.wins, draws: e.draws, losses: e.losses, goalsScored: e.goalsScored, goalsConceded: e.goalsConceded, goalDifference: e.goalDifference, totalPoints: e.totalPoints } })) };
     }
 
-    const stats = await prisma.tournamentPlayerStats.findMany({
-      where: { tournamentId: id },
-      include: {
-        player: {
-          select: {
-            id: true,
-            name: true,
-            photo: true,
-            club: {
-              select: {
-                id: true,
-                name: true,
-                logo: true,
-              },
-            },
-          },
-        },
-      },
-      orderBy: [
-        { totalPoints: "desc" },
-        { goalsScored: "desc" },
-        { goalsConceded: "asc" },
-      ],
-    });
+    const stats = await prisma.tournamentPlayerStats.findMany({ where: { tournamentId: id }, include: { player: { select: { id: true, name: true, photo: true, club: { select: { id: true, name: true, logo: true } } } } }, orderBy: [{ totalPoints: 'desc' }, { goalsScored: 'desc' }, { goalsConceded: 'asc' }] });
+    const withDiff = stats.map(e => ({ ...e, goalDifference: e.goalsScored - e.goalsConceded }));
+    withDiff.sort((a, b) => b.totalPoints - a.totalPoints || b.goalDifference - a.goalDifference || b.goalsScored - a.goalsScored);
+    return { tournament, rankings: withDiff.map((e, i) => ({ rank: i + 1, isTeam: false, team: null, player: { id: e.player.id, name: e.player.name, photo: e.player.photo, club: e.player.club }, stats: { matchesPlayed: e.matchesPlayed, wins: e.wins, draws: e.draws, losses: e.losses, goalsScored: e.goalsScored, goalsConceded: e.goalsConceded, goalDifference: e.goalDifference, totalPoints: e.totalPoints } })) };
+  } catch (e) { console.error(e); return null; }
+}
 
-    const leaderboardWithGoalDiff = stats.map((entry) => ({
-      ...entry,
-      goalDifference: entry.goalsScored - entry.goalsConceded,
-    }));
-
-    leaderboardWithGoalDiff.sort((a, b) => {
-      if (b.totalPoints !== a.totalPoints) {
-        return b.totalPoints - a.totalPoints;
-      }
-      if (b.goalDifference !== a.goalDifference) {
-        return b.goalDifference - a.goalDifference;
-      }
-      return b.goalsScored - a.goalsScored;
-    });
-
-    const rankings = leaderboardWithGoalDiff.map((entry, index) => ({
-      rank: index + 1,
-      player: {
-        id: entry.player.id,
-        name: entry.player.name,
-        photo: entry.player.photo,
-        club: entry.player.club,
-      },
-      stats: {
-        matchesPlayed: entry.matchesPlayed,
-        wins: entry.wins,
-        draws: entry.draws,
-        losses: entry.losses,
-        goalsScored: entry.goalsScored,
-        goalsConceded: entry.goalsConceded,
-        goalDifference: entry.goalDifference,
-        totalPoints: entry.totalPoints,
-      },
-    }));
-
-    return {
-      tournament,
-      rankings,
-    };
-  } catch (error) {
-    console.error('Error fetching leaderboard:', error);
-    return null;
-  }
+/* ──────── Dark stat card ──────── */
+function DStat({ label, value, icon }: { label: string; value: React.ReactNode; icon: React.ReactNode }) {
+  return (
+    <div className="rounded-2xl border border-[#1E1E1E] p-5 hover:-translate-y-1 transition-all duration-300" style={{ background: '#111' }}>
+      <div className="flex items-center justify-between mb-3">
+        <span className="text-xs text-[#555] font-medium uppercase tracking-widest">{label}</span>
+        {icon}
+      </div>
+      <div className="text-3xl font-black text-white">{value}</div>
+    </div>
+  );
 }
 
 async function LeaderboardContent({ tournamentId }: { tournamentId: number }) {
   const data = await getLeaderboardData(tournamentId);
+  if (!data) notFound();
 
-  if (!data) {
-    notFound();
-  }
+  const totalGoals = data.rankings.reduce((s: number, r: any) => s + r.stats.goalsScored, 0);
+  const totalMatches = Math.round(data.rankings.reduce((s: number, r: any) => s + r.stats.matchesPlayed, 0) / 2);
+  const leader = data.rankings[0]?.isTeam ? data.rankings[0]?.team?.clubName : data.rankings[0]?.player?.name;
 
   return (
-    <div className="min-h-screen bg-[#E4E5E7]">
-      {/* Breadcrumb */}
-      <div className="bg-white border-b border-gray-200">
-        <nav className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 text-sm" aria-label="Breadcrumb">
-          <ol className="flex items-center gap-2 text-gray-600">
-            <li>
-              <Link href="/tournaments" className="hover:text-[#FF6600] transition-colors font-medium">
-                Tournaments
-              </Link>
-            </li>
-            <li aria-hidden="true">
-              <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-              </svg>
-            </li>
-            <li>
-              <Link href={`/tournaments/${data.tournament.id}`} className="hover:text-[#FF6600] transition-colors font-medium">
-                {data.tournament.name}
-              </Link>
-            </li>
-            <li aria-hidden="true">
-              <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-              </svg>
-            </li>
-            <li className="text-[#1A1A1A] font-semibold">Leaderboard</li>
+    <div className="min-h-screen bg-[#0D0D0D]">
+      {/* Hero */}
+      <div className="relative overflow-hidden py-14 sm:py-20" style={{ background: "linear-gradient(180deg,#0D0D0D 0%,#110800 100%)" }}>
+        <div className="absolute inset-0 pointer-events-none" style={{ backgroundImage: "radial-gradient(circle, rgba(255,183,0,0.12) 1px, transparent 1px)", backgroundSize: "36px 36px" }} />
+        <div className="absolute top-0 right-0 w-80 h-80 rounded-full opacity-15 blur-3xl pointer-events-none" style={{ background: "radial-gradient(circle,#FF6600,transparent)" }} />
+        <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[#FF6600] to-transparent opacity-60" />
+
+        {/* Breadcrumb */}
+        <nav className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-6" aria-label="Breadcrumb">
+          <ol className="flex items-center gap-2 text-xs text-[#555]">
+            <li><Link href="/tournaments" className="hover:text-[#FFB700] transition-colors">Tournaments</Link></li>
+            <li><span className="text-[#333]">/</span></li>
+            <li><Link href={`/tournaments/${data.tournament.id}`} className="hover:text-[#FFB700] transition-colors">{data.tournament.name}</Link></li>
+            <li><span className="text-[#333]">/</span></li>
+            <li className="text-[#FFB700] font-semibold">Leaderboard</li>
           </ol>
         </nav>
-      </div>
 
-      {/* Hero Section */}
-      <div className="relative bg-gradient-to-br from-[#1A1A1A] via-[#2D2D2D] to-[#1A1A1A] text-white overflow-hidden">
-        {/* Animated Background Pattern */}
-        <div className="absolute inset-0 opacity-5">
-          <div className="absolute inset-0" style={{
-            backgroundImage: 'radial-gradient(circle at 2px 2px, white 1px, transparent 0)',
-            backgroundSize: '40px 40px'
-          }}></div>
-        </div>
-        
-        {/* Orange Gradient Overlay */}
-        <div className="absolute inset-0 bg-gradient-to-r from-[#FF6600]/20 via-transparent to-[#CC2900]/20"></div>
-        
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
-            <div className="flex-1">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-16 h-16 bg-gradient-to-br from-[#FFB700] to-[#FF6600] rounded-xl flex items-center justify-center shadow-lg">
-                  <svg className="w-8 h-8 text-white" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M12 2L2 7v10c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V7l-10-5zm0 2.18l7 3.5v8.32c0 4.27-2.94 8.27-7 9.27-4.06-1-7-5-7-9.27V7.68l7-3.5z" />
-                  </svg>
-                </div>
-                <div>
-                  <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold bg-gradient-to-r from-white to-[#FFB700] bg-clip-text text-transparent">
-                    Leaderboard
-                  </h1>
-                </div>
-              </div>
-              <p className="text-base sm:text-lg text-gray-300 max-w-2xl">
-                {data.tournament.name}
-              </p>
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+          <div>
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full mb-4 border border-[#FFB700]/25 text-xs font-bold tracking-widest uppercase text-[#FFB700]" style={{ background: "rgba(255,183,0,0.08)" }}>
+              🏆 Rankings
             </div>
-
-            <Link
-              href={`/tournaments/${data.tournament.id}`}
-              className="inline-flex items-center gap-2 px-6 py-3 bg-white/10 backdrop-blur-sm border-2 border-white/20 rounded-xl text-white font-bold hover:bg-white/20 transition-all group"
-            >
-              <svg className="w-5 h-5 group-hover:-translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-              </svg>
-              Back to Tournament
-            </Link>
+            <h1 className="text-4xl sm:text-5xl font-black text-white mb-2 font-['Outfit',sans-serif]">
+              <span style={{ background: "linear-gradient(135deg,#FFB700,#FF6600)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>Leaderboard</span>
+            </h1>
+            <p className="text-[#707070] text-sm">{data.tournament.name}</p>
           </div>
+          <Link href={`/tournaments/${data.tournament.id}`}
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl border border-[#1E1E1E] text-[#A0A0A0] hover:text-white hover:border-[#FF6600]/40 text-sm font-medium transition-all"
+            style={{ background: '#111' }}>
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
+            Back to Tournament
+          </Link>
         </div>
       </div>
 
-      {/* Stats Summary */}
+      {/* Stats */}
       {data.rankings.length > 0 && (
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-8 relative z-10 mb-12">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="bg-white rounded-xl shadow-lg p-6 border-t-4 border-[#FF6600] transform hover:-translate-y-1 transition-all duration-300">
-              <div className="flex items-center justify-between mb-3">
-                <div className="text-sm text-gray-600 font-medium">Total Players</div>
-                <svg className="w-6 h-6 text-[#FF6600]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                </svg>
-              </div>
-              <div className="text-4xl font-bold text-[#1A1A1A]">{data.rankings.length}</div>
-            </div>
-            
-            <div className="bg-white rounded-xl shadow-lg p-6 border-t-4 border-[#FFB700] transform hover:-translate-y-1 transition-all duration-300">
-              <div className="flex items-center justify-between mb-3">
-                <div className="text-sm text-gray-600 font-medium">Total Matches</div>
-                <svg className="w-6 h-6 text-[#FFB700]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                </svg>
-              </div>
-              <div className="text-4xl font-bold text-[#1A1A1A]">
-                {Math.round(data.rankings.reduce((sum, r) => sum + r.stats.matchesPlayed, 0) / 2)}
-              </div>
-            </div>
-            
-            <div className="bg-white rounded-xl shadow-lg p-6 border-t-4 border-[#CC2900] transform hover:-translate-y-1 transition-all duration-300">
-              <div className="flex items-center justify-between mb-3">
-                <div className="text-sm text-gray-600 font-medium">Total Goals</div>
-                <span className="text-3xl">⚽</span>
-              </div>
-              <div className="text-4xl font-bold text-[#1A1A1A]">
-                {data.rankings.reduce((sum, r) => sum + r.stats.goalsScored, 0)}
-              </div>
-            </div>
-            
-            <div className="bg-white rounded-xl shadow-lg p-6 border-t-4 border-[#FF6600] transform hover:-translate-y-1 transition-all duration-300">
-              <div className="flex items-center justify-between mb-3">
-                <div className="text-sm text-gray-600 font-medium">Current Leader</div>
-                <span className="text-3xl">🏆</span>
-              </div>
-              <div className="text-xl font-bold text-[#FF6600] truncate">
-                {data.rankings[0]?.player.name || 'N/A'}
-              </div>
-            </div>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <DStat label={data.rankings[0]?.isTeam ? 'Total Teams' : 'Total Players'} value={data.rankings.length}
+              icon={<svg className="w-5 h-5 text-[#FF6600]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" /></svg>} />
+            <DStat label="Total Matches" value={totalMatches}
+              icon={<svg className="w-5 h-5 text-[#FFB700]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>} />
+            <DStat label="Total Goals" value={totalGoals} icon={<span className="text-xl">⚽</span>} />
+            <DStat label="Current Leader" value={<span className="text-lg truncate" style={{ background: "linear-gradient(135deg,#FFB700,#FF6600)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>{leader || 'N/A'}</span>}
+              icon={<span className="text-xl">🏆</span>} />
           </div>
         </div>
       )}
 
-      {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        {/* Leaderboard */}
+      {/* Leaderboard Table */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-16">
         <LeaderboardStream tournament={data.tournament} rankings={data.rankings} />
       </div>
     </div>
@@ -270,30 +130,13 @@ async function LeaderboardContent({ tournamentId }: { tournamentId: number }) {
 export default async function LeaderboardPage({ params }: PageProps) {
   const { id } = await params;
   const tournamentId = parseInt(id);
-
-  if (isNaN(tournamentId)) {
-    notFound();
-  }
-
+  if (isNaN(tournamentId)) notFound();
   return (
     <Suspense fallback={
-      <div className="min-h-screen bg-[#E4E5E7]">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="animate-pulse space-y-6">
-            <div className="h-12 bg-gray-300 rounded-lg w-1/3"></div>
-            <div className="bg-white rounded-xl p-6 space-y-4">
-              {[...Array(10)].map((_, i) => (
-                <div key={i} className="flex items-center gap-4">
-                  <div className="w-12 h-12 bg-gray-300 rounded-full"></div>
-                  <div className="flex-1 space-y-2">
-                    <div className="h-4 bg-gray-300 rounded w-1/4"></div>
-                    <div className="h-3 bg-gray-200 rounded w-1/3"></div>
-                  </div>
-                  <div className="h-8 w-16 bg-gray-300 rounded"></div>
-                </div>
-              ))}
-            </div>
-          </div>
+      <div className="min-h-screen bg-[#0D0D0D] flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-12 h-12 rounded-full border-2 border-[#FF6600] border-t-transparent animate-spin mx-auto mb-4" />
+          <p className="text-[#707070] text-sm">Loading leaderboard…</p>
         </div>
       </div>
     }>

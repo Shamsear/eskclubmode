@@ -46,7 +46,13 @@ async function getTournamentData(id: number) {
             matchDate: true,
             stageId: true,
             stageName: true,
+            isTeamMatch: true,
             results: {
+              select: {
+                id: true,
+              },
+            },
+            teamResults: {
               select: {
                 id: true,
               },
@@ -67,10 +73,18 @@ async function getTournamentData(id: number) {
     }
 
     const completedMatches = tournament.matches.filter(
-      (match) => match.results.length > 0
+      (match) => {
+        // For team matches (doubles), check teamResults
+        if (match.isTeamMatch) {
+          return match.teamResults && match.teamResults.length > 0;
+        }
+        // For singles matches, check results
+        return match.results.length > 0;
+      }
     ).length;
 
-    const totalGoals = await prisma.matchResult.aggregate({
+    // Calculate total goals from both singles and doubles matches
+    const singlesGoals = await prisma.matchResult.aggregate({
       where: {
         match: {
           tournamentId: id,
@@ -80,6 +94,19 @@ async function getTournamentData(id: number) {
         goalsScored: true,
       },
     });
+
+    const doublesGoals = await prisma.teamMatchResult.aggregate({
+      where: {
+        match: {
+          tournamentId: id,
+        },
+      },
+      _sum: {
+        goalsScored: true,
+      },
+    });
+
+    const totalGoals = (singlesGoals._sum.goalsScored || 0) + (doublesGoals._sum.goalsScored || 0);
 
     const stages = tournament.pointSystemTemplate?.stagePoints.map((stage) => ({
       id: stage.id,
@@ -108,7 +135,7 @@ async function getTournamentData(id: number) {
       stats: {
         totalMatches: tournament._count.matches,
         completedMatches,
-        totalGoals: totalGoals._sum.goalsScored || 0,
+        totalGoals: totalGoals,
         participantCount: tournament._count.participants,
       },
     };

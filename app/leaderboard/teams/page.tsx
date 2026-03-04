@@ -22,18 +22,92 @@ interface TeamStats {
 async function getTeamsLeaderboard(tournamentId?: string) {
   try {
     const where = tournamentId ? { match: { tournamentId: parseInt(tournamentId) } } : {};
-    const clubs = await prisma.club.findMany({ include: { players: { include: { matchResults: { where } } } } });
-    const teamStats = clubs.map(club => {
-      const allResults = club.players.flatMap(p => p.matchResults);
-      if (!allResults.length) return { club: { id: club.id, name: club.name, logo: club.logo }, stats: { totalPlayers: club.players.length, totalMatches: 0, totalWins: 0, totalDraws: 0, totalLosses: 0, totalGoalsScored: 0, totalGoalsConceded: 0, totalPoints: 0, winRate: 0 } };
-      const totalMatches = allResults.length;
-      const totalWins = allResults.filter(r => r.outcome === 'WIN').length;
-      const totalDraws = allResults.filter(r => r.outcome === 'DRAW').length;
-      const totalLosses = allResults.filter(r => r.outcome === 'LOSS').length;
-      return { club: { id: club.id, name: club.name, logo: club.logo }, stats: { totalPlayers: club.players.length, totalMatches, totalWins, totalDraws, totalLosses, totalGoalsScored: allResults.reduce((s, r) => s + r.goalsScored, 0), totalGoalsConceded: allResults.reduce((s, r) => s + r.goalsConceded, 0), totalPoints: allResults.reduce((s, r) => s + r.pointsEarned, 0), winRate: totalMatches > 0 ? (totalWins / totalMatches) * 100 : 0 } };
+    
+    // Get clubs with both individual match results and team match results
+    const clubs = await prisma.club.findMany({ 
+      include: { 
+        players: { 
+          include: { 
+            matchResults: { where } 
+          } 
+        },
+        teamMatches: {
+          where: tournamentId ? { match: { tournamentId: parseInt(tournamentId) } } : {},
+        }
+      } 
     });
+    
+    const teamStats = clubs.map(club => {
+      // Get individual player results (singles matches)
+      const allResults = club.players.flatMap(p => p.matchResults);
+      
+      // Get team match results (doubles matches)
+      const teamResults = club.teamMatches;
+      
+      // Calculate stats from individual results
+      const individualMatches = allResults.length;
+      const individualWins = allResults.filter(r => r.outcome === 'WIN').length;
+      const individualDraws = allResults.filter(r => r.outcome === 'DRAW').length;
+      const individualLosses = allResults.filter(r => r.outcome === 'LOSS').length;
+      const individualGoalsScored = allResults.reduce((s, r) => s + r.goalsScored, 0);
+      const individualGoalsConceded = allResults.reduce((s, r) => s + r.goalsConceded, 0);
+      const individualPoints = allResults.reduce((s, r) => s + r.pointsEarned, 0);
+      
+      // Calculate stats from team results
+      const teamMatches = teamResults.length;
+      const teamWins = teamResults.filter(r => r.outcome === 'WIN').length;
+      const teamDraws = teamResults.filter(r => r.outcome === 'DRAW').length;
+      const teamLosses = teamResults.filter(r => r.outcome === 'LOSS').length;
+      const teamGoalsScored = teamResults.reduce((s, r) => s + r.goalsScored, 0);
+      const teamGoalsConceded = teamResults.reduce((s, r) => s + r.goalsConceded, 0);
+      const teamPoints = teamResults.reduce((s, r) => s + r.pointsEarned, 0);
+      
+      // Combine stats
+      const totalMatches = individualMatches + teamMatches;
+      const totalWins = individualWins + teamWins;
+      const totalDraws = individualDraws + teamDraws;
+      const totalLosses = individualLosses + teamLosses;
+      const totalGoalsScored = individualGoalsScored + teamGoalsScored;
+      const totalGoalsConceded = individualGoalsConceded + teamGoalsConceded;
+      const totalPoints = individualPoints + teamPoints;
+      
+      if (totalMatches === 0) {
+        return { 
+          club: { id: club.id, name: club.name, logo: club.logo }, 
+          stats: { 
+            totalPlayers: club.players.length, 
+            totalMatches: 0, 
+            totalWins: 0, 
+            totalDraws: 0, 
+            totalLosses: 0, 
+            totalGoalsScored: 0, 
+            totalGoalsConceded: 0, 
+            totalPoints: 0, 
+            winRate: 0 
+          } 
+        };
+      }
+      
+      return { 
+        club: { id: club.id, name: club.name, logo: club.logo }, 
+        stats: { 
+          totalPlayers: club.players.length, 
+          totalMatches, 
+          totalWins, 
+          totalDraws, 
+          totalLosses, 
+          totalGoalsScored, 
+          totalGoalsConceded, 
+          totalPoints, 
+          winRate: totalMatches > 0 ? (totalWins / totalMatches) * 100 : 0 
+        } 
+      };
+    });
+    
     return { teams: teamStats.filter(t => t.stats.totalMatches > 0).sort((a, b) => b.stats.totalPoints - a.stats.totalPoints) };
-  } catch { return null; }
+  } catch { 
+    return null; 
+  }
 }
 
 async function getTournaments() {
