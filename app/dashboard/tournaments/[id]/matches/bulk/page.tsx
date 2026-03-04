@@ -17,6 +17,7 @@ async function getTournamentWithParticipants(id: string) {
       select: {
         id: true,
         name: true,
+        matchFormat: true,
         pointsPerWin: true,
         pointsPerDraw: true,
         pointsPerLoss: true,
@@ -166,7 +167,8 @@ export default async function BulkAddMatchesPage({
       </div>
 
       <BulkMatchUpload 
-        tournamentId={tournament.id} 
+        tournamentId={tournament.id}
+        matchFormat={tournament.matchFormat}
         participants={tournament.participants}
         pointSystem={{
           pointsPerWin: tournament.pointsPerWin,

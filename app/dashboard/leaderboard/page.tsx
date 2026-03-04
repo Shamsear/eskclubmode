@@ -32,10 +32,11 @@ async function getClubLeaderboard() {
       },
     });
 
-    // Calculate club statistics
+    // Calculate club statistics with tournament breakdown
     const clubStats = clubs.map((club) => {
       const allStats = club.players.flatMap((player) => player.tournamentStats);
       
+      // Overall stats
       const totalPoints = allStats.reduce((sum, stat) => sum + stat.totalPoints, 0);
       const totalMatches = allStats.reduce((sum, stat) => sum + stat.matchesPlayed, 0);
       const totalWins = allStats.reduce((sum, stat) => sum + stat.wins, 0);
@@ -45,6 +46,30 @@ async function getClubLeaderboard() {
       const totalGoalsConceded = allStats.reduce((sum, stat) => sum + stat.goalsConceded, 0);
       const goalDifference = totalGoalsScored - totalGoalsConceded;
       const avgPointsPerMatch = totalMatches > 0 ? (totalPoints / totalMatches).toFixed(2) : '0.00';
+
+      // Tournament-specific stats
+      const tournamentStats: Record<number, any> = {};
+      allStats.forEach((stat) => {
+        const tournamentId = stat.tournament.id;
+        if (!tournamentStats[tournamentId]) {
+          tournamentStats[tournamentId] = {
+            totalPoints: 0,
+            totalMatches: 0,
+            totalWins: 0,
+            totalDraws: 0,
+            totalLosses: 0,
+            totalGoalsScored: 0,
+            totalGoalsConceded: 0,
+          };
+        }
+        tournamentStats[tournamentId].totalPoints += stat.totalPoints;
+        tournamentStats[tournamentId].totalMatches += stat.matchesPlayed;
+        tournamentStats[tournamentId].totalWins += stat.wins;
+        tournamentStats[tournamentId].totalDraws += stat.draws;
+        tournamentStats[tournamentId].totalLosses += stat.losses;
+        tournamentStats[tournamentId].totalGoalsScored += stat.goalsScored;
+        tournamentStats[tournamentId].totalGoalsConceded += stat.goalsConceded;
+      });
 
       return {
         id: club.id,
@@ -61,6 +86,7 @@ async function getClubLeaderboard() {
         avgPointsPerMatch: parseFloat(avgPointsPerMatch),
         playerCount: club._count.players,
         tournamentCount: club._count.tournaments,
+        tournamentStats,
       };
     });
 
@@ -94,7 +120,7 @@ export default async function ClubLeaderboardPage() {
   });
 
   return (
-    <div className="max-w-7xl mx-auto space-y-6">
+    <div className="w-full space-y-6">
       <Breadcrumb
         items={[
           { label: "Dashboard", href: "/dashboard" },
@@ -104,8 +130,8 @@ export default async function ClubLeaderboardPage() {
 
       {/* Header */}
       <div className="relative overflow-hidden bg-gradient-to-br from-emerald-600 via-teal-600 to-cyan-700 rounded-2xl p-6 sm:p-8 text-white shadow-xl">
-        <div className="absolute top-0 right-0 w-64 h-64 bg-white opacity-10 rounded-full -mr-32 -mt-32"></div>
-        <div className="absolute bottom-0 left-0 w-96 h-96 bg-white opacity-5 rounded-full -ml-48 -mb-48"></div>
+        <div className="absolute top-0 right-0 w-64 h-64 bg-white opacity-10 rounded-full translate-x-32 -translate-y-32"></div>
+        <div className="absolute bottom-0 left-0 w-96 h-96 bg-white opacity-5 rounded-full -translate-x-48 translate-y-48"></div>
         
         <div className="relative z-10">
           <div className="flex items-center gap-4 mb-4">
@@ -119,55 +145,6 @@ export default async function ClubLeaderboardPage() {
               <p className="text-emerald-100 mt-1">Rankings based on cumulative player performance</p>
             </div>
           </div>
-        </div>
-      </div>
-
-      {/* Stats Overview */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        <div className="bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl p-5 text-white shadow-lg">
-          <div className="w-10 h-10 bg-white bg-opacity-20 rounded-lg flex items-center justify-center mb-3">
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-            </svg>
-          </div>
-          <p className="text-2xl font-bold">{clubStats.length}</p>
-          <p className="text-sm text-white text-opacity-90">Total Clubs</p>
-        </div>
-
-        <div className="bg-gradient-to-br from-emerald-500 to-teal-600 rounded-xl p-5 text-white shadow-lg">
-          <div className="w-10 h-10 bg-white bg-opacity-20 rounded-lg flex items-center justify-center mb-3">
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-            </svg>
-          </div>
-          <p className="text-2xl font-bold">
-            {clubStats.reduce((sum, club) => sum + club.totalMatches, 0)}
-          </p>
-          <p className="text-sm text-white text-opacity-90">Total Matches</p>
-        </div>
-
-        <div className="bg-gradient-to-br from-purple-500 to-pink-600 rounded-xl p-5 text-white shadow-lg">
-          <div className="w-10 h-10 bg-white bg-opacity-20 rounded-lg flex items-center justify-center mb-3">
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-            </svg>
-          </div>
-          <p className="text-2xl font-bold">
-            {clubStats.reduce((sum, club) => sum + club.playerCount, 0)}
-          </p>
-          <p className="text-sm text-white text-opacity-90">Total Players</p>
-        </div>
-
-        <div className="bg-gradient-to-br from-orange-500 to-red-600 rounded-xl p-5 text-white shadow-lg">
-          <div className="w-10 h-10 bg-white bg-opacity-20 rounded-lg flex items-center justify-center mb-3">
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-            </svg>
-          </div>
-          <p className="text-2xl font-bold">
-            {clubStats.reduce((sum, club) => sum + club.totalGoalsScored, 0)}
-          </p>
-          <p className="text-sm text-white text-opacity-90">Total Goals</p>
         </div>
       </div>
 

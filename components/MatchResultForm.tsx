@@ -61,6 +61,7 @@ interface MatchResultFormProps {
   tournamentId: number | string;
   clubId?: number | string;
   matchId?: number | string;
+  matchFormat?: 'SINGLES' | 'DOUBLES';
   participants?: Participant[];
   initialData?: {
     id?: number;
@@ -106,6 +107,7 @@ export function MatchResultForm({
   tournamentId, 
   clubId,
   matchId,
+  matchFormat = 'SINGLES',
   participants: participantsProp, 
   initialData, 
   pointSystem,
@@ -159,10 +161,17 @@ export function MatchResultForm({
           goalsScored: r.goalsScored,
           goalsConceded: r.goalsConceded,
         }))
-      : [
-          { playerId: 0, outcome: '', goalsScored: 0, goalsConceded: 0 },
-          { playerId: 0, outcome: '', goalsScored: 0, goalsConceded: 0 }
-        ]
+      : matchFormat === 'DOUBLES'
+        ? [
+            { playerId: 0, outcome: '', goalsScored: 0, goalsConceded: 0 },
+            { playerId: 0, outcome: '', goalsScored: 0, goalsConceded: 0 },
+            { playerId: 0, outcome: '', goalsScored: 0, goalsConceded: 0 },
+            { playerId: 0, outcome: '', goalsScored: 0, goalsConceded: 0 }
+          ]
+        : [
+            { playerId: 0, outcome: '', goalsScored: 0, goalsConceded: 0 },
+            { playerId: 0, outcome: '', goalsScored: 0, goalsConceded: 0 }
+          ]
   );
 
   // Fetch participants if not provided
@@ -675,9 +684,13 @@ export function MatchResultForm({
             </svg>
           </div>
           <div>
-            <h3 id="player-results-heading" className="text-lg font-bold text-gray-900">Player Results</h3>
+            <h3 id="player-results-heading" className="text-lg font-bold text-gray-900">
+              {matchFormat === 'DOUBLES' ? 'Team Results' : 'Player Results'}
+            </h3>
             <p className="text-sm text-gray-600 mt-0.5">
-              Record the match result between two players (1v1)
+              {matchFormat === 'DOUBLES' 
+                ? 'Record the match result between two teams (2v2)'
+                : 'Record the match result between two players (1v1)'}
             </p>
           </div>
         </div>
@@ -692,7 +705,181 @@ export function MatchResultForm({
         )}
 
         <div className="space-y-6" role="list" aria-labelledby="player-results-heading">
-          {playerResults.map((result, index) => {
+          {matchFormat === 'DOUBLES' ? (
+            // Doubles format - show 2 teams of 2 players each
+            <>
+              {/* Team A */}
+              <div className="p-6 border-2 rounded-xl shadow-md border-blue-300 bg-gradient-to-br from-blue-50 to-indigo-50">
+                <div className="flex items-center gap-3 mb-5">
+                  <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-gradient-to-br from-blue-600 to-indigo-600">
+                    <span className="text-white font-bold text-lg">A</span>
+                  </div>
+                  <h4 className="text-lg font-bold text-gray-900">Team A</h4>
+                </div>
+                
+                <div className="space-y-4">
+                  {/* Player 1 */}
+                  <div>
+                    <label htmlFor="player-0" className="block text-sm font-medium text-gray-700 mb-1">
+                      Player 1 *
+                    </label>
+                    <select
+                      id="player-0"
+                      value={playerResults[0]?.playerId || 0}
+                      onChange={(e) => updatePlayerResult(0, 'playerId', parseInt(e.target.value))}
+                      className="block w-full px-3 py-2.5 min-h-[44px] border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors text-base text-gray-900 bg-white"
+                      required
+                    >
+                      <option value="0">Select a player</option>
+                      {participants.map(player => (
+                        <option key={player.id} value={player.id}>
+                          {player.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  
+                  {/* Player 2 */}
+                  <div>
+                    <label htmlFor="player-1" className="block text-sm font-medium text-gray-700 mb-1">
+                      Player 2 *
+                    </label>
+                    <select
+                      id="player-1"
+                      value={playerResults[1]?.playerId || 0}
+                      onChange={(e) => updatePlayerResult(1, 'playerId', parseInt(e.target.value))}
+                      className="block w-full px-3 py-2.5 min-h-[44px] border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors text-base text-gray-900 bg-white"
+                      required
+                    >
+                      <option value="0">Select a player</option>
+                      {participants.map(player => (
+                        <option key={player.id} value={player.id}>
+                          {player.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Team A Goals */}
+                  <div className="grid grid-cols-2 gap-4 pt-2">
+                    <Input
+                      label="Goals Scored"
+                      type="number"
+                      min="0"
+                      value={playerResults[0]?.goalsScored?.toString() || '0'}
+                      onChange={(e) => {
+                        const value = e.target.value === '' ? 0 : parseInt(e.target.value, 10);
+                        if (!isNaN(value)) {
+                          updatePlayerResult(0, 'goalsScored', value);
+                          updatePlayerResult(1, 'goalsScored', value);
+                        }
+                      }}
+                      required
+                    />
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Goals Conceded
+                      </label>
+                      <div className="px-3 py-2.5 min-h-[44px] border border-gray-200 rounded-md bg-gray-50 text-gray-600 flex items-center">
+                        {playerResults[0]?.goalsConceded || 0}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* VS Divider */}
+              <div className="flex items-center justify-center my-6">
+                <div className="flex-1 border-t-2 border-gray-300"></div>
+                <div className="px-6 py-2 bg-gradient-to-r from-purple-600 to-pink-600 rounded-full">
+                  <span className="text-lg font-bold text-white">VS</span>
+                </div>
+                <div className="flex-1 border-t-2 border-gray-300"></div>
+              </div>
+
+              {/* Team B */}
+              <div className="p-6 border-2 rounded-xl shadow-md border-purple-300 bg-gradient-to-br from-purple-50 to-pink-50">
+                <div className="flex items-center gap-3 mb-5">
+                  <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-gradient-to-br from-purple-600 to-pink-600">
+                    <span className="text-white font-bold text-lg">B</span>
+                  </div>
+                  <h4 className="text-lg font-bold text-gray-900">Team B</h4>
+                </div>
+                
+                <div className="space-y-4">
+                  {/* Player 3 */}
+                  <div>
+                    <label htmlFor="player-2" className="block text-sm font-medium text-gray-700 mb-1">
+                      Player 1 *
+                    </label>
+                    <select
+                      id="player-2"
+                      value={playerResults[2]?.playerId || 0}
+                      onChange={(e) => updatePlayerResult(2, 'playerId', parseInt(e.target.value))}
+                      className="block w-full px-3 py-2.5 min-h-[44px] border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-colors text-base text-gray-900 bg-white"
+                      required
+                    >
+                      <option value="0">Select a player</option>
+                      {participants.map(player => (
+                        <option key={player.id} value={player.id}>
+                          {player.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  
+                  {/* Player 4 */}
+                  <div>
+                    <label htmlFor="player-3" className="block text-sm font-medium text-gray-700 mb-1">
+                      Player 2 *
+                    </label>
+                    <select
+                      id="player-3"
+                      value={playerResults[3]?.playerId || 0}
+                      onChange={(e) => updatePlayerResult(3, 'playerId', parseInt(e.target.value))}
+                      className="block w-full px-3 py-2.5 min-h-[44px] border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-colors text-base text-gray-900 bg-white"
+                      required
+                    >
+                      <option value="0">Select a player</option>
+                      {participants.map(player => (
+                        <option key={player.id} value={player.id}>
+                          {player.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Team B Goals */}
+                  <div className="grid grid-cols-2 gap-4 pt-2">
+                    <Input
+                      label="Goals Scored"
+                      type="number"
+                      min="0"
+                      value={playerResults[2]?.goalsScored?.toString() || '0'}
+                      onChange={(e) => {
+                        const value = e.target.value === '' ? 0 : parseInt(e.target.value, 10);
+                        if (!isNaN(value)) {
+                          updatePlayerResult(2, 'goalsScored', value);
+                          updatePlayerResult(3, 'goalsScored', value);
+                        }
+                      }}
+                      required
+                    />
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Goals Conceded
+                      </label>
+                      <div className="px-3 py-2.5 min-h-[44px] border border-gray-200 rounded-md bg-gray-50 text-gray-600 flex items-center">
+                        {playerResults[2]?.goalsConceded || 0}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </>
+          ) : (
+            // Singles format - show 2 individual players
+            playerResults.slice(0, 2).map((result, index) => {
             const availablePlayers = getAvailablePlayers(index);
             
             return (
@@ -1171,7 +1358,8 @@ export function MatchResultForm({
               </div>
             </div>
             );
-          })}
+          })
+          )}
         </div>
       </div>
 

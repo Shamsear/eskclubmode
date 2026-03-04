@@ -247,6 +247,97 @@ export function ParticipantSelector({
           )}
         </div>
 
+        {/* Sticky Top Action Bar */}
+        <div className="sticky top-0 z-10 bg-gradient-to-r from-blue-50 via-indigo-50 to-purple-50 border-y border-blue-200 shadow-sm">
+          <div className="px-4 sm:px-6 py-3">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              {/* Selection Summary */}
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-lg flex items-center justify-center">
+                    <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-gray-900">
+                      {selectedPlayerIds.length === 0 ? (
+                        "No players selected"
+                      ) : (
+                        <>
+                          <span className="text-blue-600">{selectedPlayerIds.length}</span> player{selectedPlayerIds.length !== 1 ? 's' : ''} selected
+                        </>
+                      )}
+                    </p>
+                    <p className="text-xs text-gray-600">
+                      {availablePlayers.length} available to add
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-2">
+                <button
+                  onClick={onClose}
+                  disabled={isSubmitting}
+                  className="px-4 py-2 min-h-[40px] bg-white border-2 border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 hover:border-gray-400 transition-all font-medium disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 shadow-sm"
+                  aria-label="Cancel and close"
+                >
+                  <span className="hidden sm:inline">Cancel</span>
+                  <svg className="w-5 h-5 sm:hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+                <button
+                  onClick={handleSubmit}
+                  disabled={isSubmitting || selectedPlayerIds.length === 0}
+                  className="px-5 py-2 min-h-[40px] bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg hover:from-blue-700 hover:to-indigo-700 transition-all font-semibold disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 shadow-lg shadow-blue-500/30 hover:shadow-xl hover:shadow-blue-500/40"
+                  aria-label={isSubmitting ? "Adding participants" : `Add ${selectedPlayerIds.length} selected player${selectedPlayerIds.length !== 1 ? 's' : ''}`}
+                >
+                  {isSubmitting ? (
+                    <>
+                      <svg
+                        className="animate-spin -ml-1 mr-2 h-5 w-5 text-white"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                      >
+                        <circle
+                          className="opacity-25"
+                          cx="12"
+                          cy="12"
+                          r="10"
+                          stroke="currentColor"
+                          strokeWidth="4"
+                        />
+                        <path
+                          className="opacity-75"
+                          fill="currentColor"
+                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                        />
+                      </svg>
+                      <span className="hidden sm:inline">Adding...</span>
+                      <span className="sm:hidden">...</span>
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-5 h-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                      </svg>
+                      <span className="hidden sm:inline">
+                        Add {selectedPlayerIds.length} Player{selectedPlayerIds.length !== 1 ? "s" : ""}
+                      </span>
+                      <span className="sm:hidden">
+                        Add ({selectedPlayerIds.length})
+                      </span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* Player List */}
         <div className="flex-1 overflow-y-auto p-4 sm:p-6">
           {availablePlayers.length === 0 && alreadySelected.length === 0 && (

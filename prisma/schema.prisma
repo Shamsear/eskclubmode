@@ -1,6 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -22,54 +19,45 @@ model Admin {
 }
 
 model Club {
-  id          Int      @id @default(autoincrement())
-  name        String   @db.VarChar(100)
-  logo        String?  @db.VarChar(255)
-  description String?  @db.Text
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  players         Player[]
-  tournaments     Tournament[]
-  transfersFrom   PlayerTransfer[]  @relation("TransfersFrom")
-  transfersTo     PlayerTransfer[]  @relation("TransfersTo")
-  playerStats     PlayerClubStats[] @relation("ClubPlayerStats")
+  id            Int               @id @default(autoincrement())
+  name          String            @db.VarChar(100)
+  logo          String?           @db.VarChar(255)
+  description   String?
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+  playerStats   PlayerClubStats[] @relation("ClubPlayerStats")
+  transfersFrom PlayerTransfer[]  @relation("TransfersFrom")
+  transfersTo   PlayerTransfer[]  @relation("TransfersTo")
+  players       Player[]
+  tournaments   Tournament[]
 
   @@index([name])
   @@index([createdAt])
   @@map("clubs")
 }
 
-enum RoleType {
-  PLAYER
-  CAPTAIN
-  MENTOR
-  MANAGER
-}
-
 model Player {
-  id          Int       @id @default(autoincrement())
-  clubId      Int?      // Optional - null for free agents
-  name        String    @db.VarChar(100)
-  email       String    @unique @db.VarChar(100)
-  phone       String?   @db.VarChar(20)
-  place       String?   @db.VarChar(100)
-  dateOfBirth DateTime? @db.Date
-  photo       String?   @db.VarChar(255)
-  gender      String    @default("MALE") @db.VarChar(20)
-  state       String    @default("") @db.VarChar(100)
-  district    String    @default("") @db.VarChar(100)
-  isFreeAgent Boolean   @default(false) // True if player is not affiliated with any club
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-
-  club                   Club?                   @relation(fields: [clubId], references: [id], onDelete: SetNull)
-  roles                  PlayerRole[]
-  tournamentParticipants TournamentParticipant[]
+  id                     Int                     @id @default(autoincrement())
+  clubId                 Int?
+  name                   String                  @db.VarChar(100)
+  email                  String                  @unique @db.VarChar(100)
+  phone                  String?                 @db.VarChar(20)
+  place                  String?                 @db.VarChar(100)
+  dateOfBirth            DateTime?               @db.Date
+  photo                  String?                 @db.VarChar(255)
+  createdAt              DateTime                @default(now())
+  updatedAt              DateTime                @updatedAt
+  isFreeAgent            Boolean                 @default(false)
+  district               String                  @default("") @db.VarChar(100)
+  gender                 String                  @default("MALE") @db.VarChar(20)
+  state                  String                  @default("") @db.VarChar(100)
   matchResults           MatchResult[]
-  tournamentStats        TournamentPlayerStats[]
-  transferHistory        PlayerTransfer[]        @relation("PlayerTransfers")
   clubStats              PlayerClubStats[]
+  roles                  PlayerRole[]
+  transferHistory        PlayerTransfer[]        @relation("PlayerTransfers")
+  club                   Club?                   @relation(fields: [clubId], references: [id])
+  tournamentParticipants TournamentParticipant[]
+  tournamentStats        TournamentPlayerStats[]
 
   @@index([clubId])
   @@index([email])
@@ -79,25 +67,23 @@ model Player {
   @@map("players")
 }
 
-// Track player stats per club (including free agent period)
 model PlayerClubStats {
-  id               Int      @id @default(autoincrement())
-  playerId         Int
-  clubId           Int?     // null for free agent stats
-  joinedAt         DateTime
-  leftAt           DateTime?
-  matchesPlayed    Int      @default(0)
-  wins             Int      @default(0)
-  draws            Int      @default(0)
-  losses           Int      @default(0)
-  goalsScored      Int      @default(0)
-  goalsConceded    Int      @default(0)
-  totalPoints      Int      @default(0)
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
-
-  player Player @relation(fields: [playerId], references: [id], onDelete: Cascade)
-  club   Club?  @relation("ClubPlayerStats", fields: [clubId], references: [id], onDelete: SetNull)
+  id            Int       @id @default(autoincrement())
+  playerId      Int
+  clubId        Int?
+  joinedAt      DateTime
+  leftAt        DateTime?
+  matchesPlayed Int       @default(0)
+  wins          Int       @default(0)
+  draws         Int       @default(0)
+  losses        Int       @default(0)
+  goalsScored   Int       @default(0)
+  goalsConceded Int       @default(0)
+  totalPoints   Int       @default(0)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  club          Club?     @relation("ClubPlayerStats", fields: [clubId], references: [id])
+  player        Player    @relation(fields: [playerId], references: [id], onDelete: Cascade)
 
   @@index([playerId])
   @@index([clubId])
@@ -106,17 +92,16 @@ model PlayerClubStats {
 }
 
 model PlayerTransfer {
-  id            Int       @id @default(autoincrement())
-  playerId      Int
-  fromClubId    Int?      // null if transferring from free agent
-  toClubId      Int?      // null if transferring to free agent
-  transferDate  DateTime  @default(now())
-  notes         String?   @db.Text
-  createdAt     DateTime  @default(now())
-
-  player   Player @relation("PlayerTransfers", fields: [playerId], references: [id], onDelete: Cascade)
-  fromClub Club?  @relation("TransfersFrom", fields: [fromClubId], references: [id], onDelete: SetNull)
-  toClub   Club?  @relation("TransfersTo", fields: [toClubId], references: [id], onDelete: SetNull)
+  id           Int      @id @default(autoincrement())
+  playerId     Int
+  fromClubId   Int?
+  toClubId     Int?
+  transferDate DateTime @default(now())
+  notes        String?
+  createdAt    DateTime @default(now())
+  fromClub     Club?    @relation("TransfersFrom", fields: [fromClubId], references: [id])
+  player       Player   @relation("PlayerTransfers", fields: [playerId], references: [id], onDelete: Cascade)
+  toClub       Club?    @relation("TransfersTo", fields: [toClubId], references: [id])
 
   @@index([playerId])
   @@index([fromClubId])
@@ -130,8 +115,7 @@ model PlayerRole {
   playerId  Int
   role      RoleType
   createdAt DateTime @default(now())
-
-  player Player @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  player    Player   @relation(fields: [playerId], references: [id], onDelete: Cascade)
 
   @@unique([playerId, role])
   @@index([role])
@@ -140,66 +124,195 @@ model PlayerRole {
 }
 
 model PointSystemTemplate {
-  id          Int     @id @default(autoincrement())
-  name        String  @unique @db.VarChar(100)
-  description String? @db.Text
-
-  // Tournament configuration
-  tournamentType   TournamentType @default(LEAGUE)
-  numberOfTeams    Int            @default(0)
-
-  // Base point configuration
+  id                    Int               @id @default(autoincrement())
+  name                  String            @unique @db.VarChar(100)
+  description           String?
   pointsPerWin          Int
   pointsPerDraw         Int
   pointsPerLoss         Int
   pointsPerGoalScored   Int
   pointsPerGoalConceded Int
-  
-  // Additional point configurations
-  pointsForWalkoverWin  Int @default(3)   // Points for receiving walkover (opponent doesn't show)
-  pointsForWalkoverLoss Int @default(-3)  // Points penalty for giving walkover (not showing up)
-  pointsPerStageWin     Int @default(0)   // Points for winning a stage/round
-  pointsPerStageDraw    Int @default(0)   // Points for drawing a stage/round
-  pointsPerCleanSheet   Int @default(0)   // Points for clean sheet (no goals conceded)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  conditionalRules ConditionalRule[]
-  stagePoints      StagePoint[]
-  tournaments      Tournament[]
+  createdAt             DateTime          @default(now())
+  updatedAt             DateTime          @updatedAt
+  pointsPerCleanSheet   Int               @default(0)
+  pointsPerStageDraw    Int               @default(0)
+  pointsPerStageWin     Int               @default(0)
+  numberOfTeams         Int               @default(0)
+  pointsForWalkoverLoss Int               @default(-3)
+  pointsForWalkoverWin  Int               @default(3)
+  tournamentType        TournamentType    @default(LEAGUE)
+  conditionalRules      ConditionalRule[]
+  stagePoints           StagePoint[]
+  tournaments           Tournament[]
 
   @@index([name])
   @@map("point_system_templates")
 }
 
 model StagePoint {
-  id                    Int                  @id @default(autoincrement())
-  stageId               Int                  // Unique stage identifier within template  
+  id                    Int                 @id @default(autoincrement())
   pointSystemTemplateId Int
-  stageName             String               @db.VarChar(100)
-  stageOrder            Int                  // Order of the stage (1, 2, 3, etc.)
-  pointsPerWin          Int                  @map("pointsForWin")
-  pointsPerDraw         Int                  @map("pointsForDraw")
-  pointsPerLoss         Int                  @map("pointsForLoss")
-  pointsPerGoalScored   Int                  @default(0)
-  pointsPerGoalConceded Int                  @default(0)
-  
-  pointSystemTemplate   PointSystemTemplate  @relation(fields: [pointSystemTemplateId], references: [id], onDelete: Cascade)
-  matches               Match[]              @relation("MatchStage")
+  stageName             String              @db.VarChar(100)
+  stageOrder            Int
+  pointsPerWin          Int                 @map("pointsForWin")
+  pointsPerDraw         Int                 @map("pointsForDraw")
+  pointsPerLoss         Int                 @map("pointsForLoss")
+  pointsPerGoalConceded Int                 @default(0)
+  pointsPerGoalScored   Int                 @default(0)
+  stageId               Int
+  matches               Match[]             @relation("MatchStage")
+  pointSystemTemplate   PointSystemTemplate @relation(fields: [pointSystemTemplateId], references: [id], onDelete: Cascade)
 
   @@unique([pointSystemTemplateId, stageId])
   @@index([pointSystemTemplateId])
   @@map("stage_points")
 }
 
+model ConditionalRule {
+  id              Int                 @id @default(autoincrement())
+  templateId      Int
+  conditionType   RuleConditionType
+  operator        ComparisonOperator
+  threshold       Int
+  pointAdjustment Int
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+  template        PointSystemTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+
+  @@index([templateId])
+  @@map("conditional_rules")
+}
+
+model Tournament {
+  id                    Int                     @id @default(autoincrement())
+  clubId                Int?
+  name                  String                  @db.VarChar(100)
+  description           String?
+  startDate             DateTime                @db.Date
+  endDate               DateTime?               @db.Date
+  pointsPerWin          Int                     @default(3)
+  pointsPerDraw         Int                     @default(1)
+  pointsPerLoss         Int                     @default(0)
+  pointsPerGoalScored   Int                     @default(0)
+  pointsPerGoalConceded Int                     @default(0)
+  createdAt             DateTime                @default(now())
+  updatedAt             DateTime                @updatedAt
+  pointSystemTemplateId Int?
+  pointsPerCleanSheet   Int                     @default(0)
+  pointsPerStageDraw    Int                     @default(0)
+  pointsPerStageWin     Int                     @default(0)
+  pointsForWalkoverLoss Int                     @default(-3)
+  pointsForWalkoverWin  Int                     @default(3)
+  matchFormat           MatchFormat             @default(SINGLES)
+  matches               Match[]
+  participants          TournamentParticipant[]
+  playerStats           TournamentPlayerStats[]
+  club                  Club?                   @relation(fields: [clubId], references: [id], onDelete: Cascade)
+  pointSystemTemplate   PointSystemTemplate?    @relation(fields: [pointSystemTemplateId], references: [id])
+
+  @@index([clubId])
+  @@index([startDate])
+  @@index([pointSystemTemplateId])
+  @@map("tournaments")
+}
+
+model TournamentParticipant {
+  id           Int        @id @default(autoincrement())
+  tournamentId Int
+  playerId     Int
+  createdAt    DateTime   @default(now())
+  player       Player     @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  tournament   Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+
+  @@unique([tournamentId, playerId])
+  @@index([tournamentId])
+  @@index([playerId])
+  @@map("tournament_participants")
+}
+
+model Match {
+  id               Int           @id @default(autoincrement())
+  tournamentId     Int
+  matchDate        DateTime      @db.Date
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+  stageId          Int?
+  stageName        String?       @db.VarChar(100)
+  walkoverWinnerId Int?
+  isTeamMatch      Boolean       @default(false)
+  results          MatchResult[]
+  stage            StagePoint?   @relation("MatchStage", fields: [stageId], references: [id])
+  tournament       Tournament    @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+
+  @@index([tournamentId])
+  @@index([stageId])
+  @@index([matchDate])
+  @@map("matches")
+}
+
+model MatchResult {
+  id                Int          @id @default(autoincrement())
+  matchId           Int
+  playerId          Int
+  outcome           MatchOutcome
+  goalsScored       Int          @default(0)
+  goalsConceded     Int          @default(0)
+  pointsEarned      Int          @default(0)
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+  basePoints        Int          @default(0)
+  conditionalPoints Int          @default(0)
+  match             Match        @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  player            Player       @relation(fields: [playerId], references: [id], onDelete: Cascade)
+
+  @@unique([matchId, playerId])
+  @@index([matchId])
+  @@index([playerId])
+  @@map("match_results")
+}
+
+model TournamentPlayerStats {
+  id                Int        @id @default(autoincrement())
+  tournamentId      Int
+  playerId          Int
+  matchesPlayed     Int        @default(0)
+  wins              Int        @default(0)
+  draws             Int        @default(0)
+  losses            Int        @default(0)
+  goalsScored       Int        @default(0)
+  goalsConceded     Int        @default(0)
+  totalPoints       Int        @default(0)
+  updatedAt         DateTime   @updatedAt
+  conditionalPoints Int        @default(0)
+  player            Player     @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  tournament        Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+
+  @@unique([tournamentId, playerId])
+  @@index([tournamentId])
+  @@index([playerId])
+  @@index([totalPoints])
+  @@map("tournament_player_stats")
+}
+
+enum RoleType {
+  PLAYER
+  CAPTAIN
+  MENTOR
+  MANAGER
+}
+
 enum TournamentType {
-  LEAGUE           // Round-robin league format
-  KNOCKOUT         // Single/double elimination
-  GROUP_STAGE      // Group stage only
-  GROUP_KNOCKOUT   // Group stage + knockout
-  LEAGUE_KNOCKOUT  // League + knockout playoffs
-  MIXED            // Custom mixed format
+  LEAGUE
+  KNOCKOUT
+  GROUP_STAGE
+  GROUP_KNOCKOUT
+  LEAGUE_KNOCKOUT
+  MIXED
+}
+
+enum MatchFormat {
+  SINGLES
+  DOUBLES
 }
 
 enum RuleConditionType {
@@ -217,145 +330,8 @@ enum ComparisonOperator {
   LESS_THAN_OR_EQUAL
 }
 
-model ConditionalRule {
-  id              Int                @id @default(autoincrement())
-  templateId      Int
-  conditionType   RuleConditionType
-  operator        ComparisonOperator
-  threshold       Int
-  pointAdjustment Int
-  createdAt       DateTime           @default(now())
-  updatedAt       DateTime           @updatedAt
-
-  template PointSystemTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
-
-  @@index([templateId])
-  @@map("conditional_rules")
-}
-
-model Tournament {
-  id          Int       @id @default(autoincrement())
-  clubId      Int?
-  name        String    @db.VarChar(100)
-  description String?   @db.Text
-  startDate   DateTime  @db.Date
-  endDate     DateTime? @db.Date
-
-  // Point system template reference (nullable for backward compatibility)
-  pointSystemTemplateId Int?
-
-  // Legacy inline point configuration (kept for backward compatibility)
-  pointsPerWin          Int @default(3)
-  pointsPerDraw         Int @default(1)
-  pointsPerLoss         Int @default(0)
-  pointsPerGoalScored   Int @default(0)
-  pointsPerGoalConceded Int @default(0)
-  
-  // Additional point configurations
-  pointsForWalkoverWin  Int @default(3)
-  pointsForWalkoverLoss Int @default(-3)
-  pointsPerStageWin     Int @default(0)
-  pointsPerStageDraw    Int @default(0)
-  pointsPerCleanSheet   Int @default(0)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  club                Club?                   @relation(fields: [clubId], references: [id], onDelete: Cascade)
-  pointSystemTemplate PointSystemTemplate?    @relation(fields: [pointSystemTemplateId], references: [id], onDelete: SetNull)
-  participants        TournamentParticipant[]
-  matches             Match[]
-  playerStats         TournamentPlayerStats[]
-
-  @@index([clubId])
-  @@index([startDate])
-  @@index([pointSystemTemplateId])
-  @@map("tournaments")
-}
-
-model TournamentParticipant {
-  id           Int      @id @default(autoincrement())
-  tournamentId Int
-  playerId     Int
-  createdAt    DateTime @default(now())
-
-  tournament Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
-  player     Player     @relation(fields: [playerId], references: [id], onDelete: Cascade)
-
-  @@unique([tournamentId, playerId])
-  @@index([tournamentId])
-  @@index([playerId])
-  @@map("tournament_participants")
-}
-
-model Match {
-  id              Int      @id @default(autoincrement())
-  tournamentId    Int
-  stageId         Int?     // Optional reference to tournament stage (StagePoint.id)
-  stageName       String?  @db.VarChar(100) // Stage name for display
-  matchDate       DateTime @db.Date
-  walkoverWinnerId Int?    // Player ID who won by walkover (null = normal match, 0 = both forfeit)
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-
-  tournament Tournament    @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
-  stage      StagePoint?   @relation("MatchStage", fields: [stageId], references: [id], onDelete: SetNull)
-  results    MatchResult[]
-
-  @@index([tournamentId])
-  @@index([stageId])
-  @@index([matchDate])
-  @@map("matches")
-}
-
 enum MatchOutcome {
   WIN
   DRAW
   LOSS
-}
-
-model MatchResult {
-  id                Int          @id @default(autoincrement())
-  matchId           Int
-  playerId          Int
-  outcome           MatchOutcome
-  goalsScored       Int          @default(0)
-  goalsConceded     Int          @default(0)
-  pointsEarned      Int          @default(0)
-  basePoints        Int          @default(0)
-  conditionalPoints Int          @default(0)
-  createdAt         DateTime     @default(now())
-  updatedAt         DateTime     @updatedAt
-
-  match  Match  @relation(fields: [matchId], references: [id], onDelete: Cascade)
-  player Player @relation(fields: [playerId], references: [id], onDelete: Cascade)
-
-  @@unique([matchId, playerId])
-  @@index([matchId])
-  @@index([playerId])
-  @@map("match_results")
-}
-
-model TournamentPlayerStats {
-  id               Int      @id @default(autoincrement())
-  tournamentId     Int
-  playerId         Int
-  matchesPlayed    Int      @default(0)
-  wins             Int      @default(0)
-  draws            Int      @default(0)
-  losses           Int      @default(0)
-  goalsScored      Int      @default(0)
-  goalsConceded    Int      @default(0)
-  totalPoints      Int      @default(0)
-  conditionalPoints Int     @default(0)
-  updatedAt        DateTime @updatedAt
-
-  tournament Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
-  player     Player     @relation(fields: [playerId], references: [id], onDelete: Cascade)
-
-  @@unique([tournamentId, playerId])
-  @@index([tournamentId])
-  @@index([playerId])
-  @@index([totalPoints])
-  @@map("tournament_player_stats")
 }

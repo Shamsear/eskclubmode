@@ -48,6 +48,7 @@ const tournamentSchema = z.object({
   }, {
     message: "Invalid date format",
   }),
+  matchFormat: z.enum(['SINGLES', 'DOUBLES']),
   pointsPerWin: z.number().int().min(0, "Points per win must be 0 or greater"),
   pointsPerDraw: z.number().int().min(0, "Points per draw must be 0 or greater"),
   pointsPerLoss: z.number().int().min(0, "Points per loss must be 0 or greater"),
@@ -71,6 +72,7 @@ interface TournamentFormProps {
     description?: string | null;
     startDate: string;
     endDate?: string | null;
+    matchFormat?: 'SINGLES' | 'DOUBLES';
     pointsPerWin: number;
     pointsPerDraw: number;
     pointsPerLoss: number;
@@ -86,6 +88,7 @@ interface FormErrors {
   description?: string;
   startDate?: string;
   endDate?: string;
+  matchFormat?: string;
   pointsPerWin?: string;
   pointsPerDraw?: string;
   pointsPerLoss?: string;
@@ -108,6 +111,7 @@ export function TournamentForm({ clubId, initialData, mode }: TournamentFormProp
     description: initialData?.description || '',
     startDate: initialData?.startDate ? initialData.startDate.split('T')[0] : '',
     endDate: initialData?.endDate ? initialData.endDate.split('T')[0] : '',
+    matchFormat: (initialData?.matchFormat || 'SINGLES') as 'SINGLES' | 'DOUBLES',
     pointSystemTemplateId: initialData?.pointSystemTemplateId || null,
     pointsPerWin: initialData?.pointsPerWin ?? 3,
     pointsPerDraw: initialData?.pointsPerDraw ?? 1,
@@ -190,6 +194,7 @@ export function TournamentForm({ clubId, initialData, mode }: TournamentFormProp
           description: formData.description || null,
           startDate: new Date(formData.startDate).toISOString(),
           endDate: formData.endDate ? new Date(formData.endDate).toISOString() : null,
+          matchFormat: formData.matchFormat,
           pointSystemTemplateId: useCustomConfig ? null : formData.pointSystemTemplateId,
           pointsPerWin: formData.pointsPerWin,
           pointsPerDraw: formData.pointsPerDraw,
@@ -381,6 +386,84 @@ export function TournamentForm({ clubId, initialData, mode }: TournamentFormProp
               helperText="Leave empty for ongoing tournaments"
             />
           </div>
+        </div>
+
+        {/* Match Format Selection */}
+        <div>
+          <label htmlFor="matchFormat" className="block text-sm font-medium text-gray-700 mb-2">
+            Match Format <span className="text-red-500">*</span>
+          </label>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <button
+              type="button"
+              onClick={() => handleFieldChange('matchFormat', 'SINGLES')}
+              className={`relative flex items-start gap-3 p-4 rounded-xl border-2 transition-all ${
+                formData.matchFormat === 'SINGLES'
+                  ? 'border-violet-500 bg-violet-50'
+                  : 'border-gray-200 bg-white hover:border-gray-300'
+              }`}
+            >
+              <div className={`flex-shrink-0 w-5 h-5 rounded-full border-2 mt-0.5 ${
+                formData.matchFormat === 'SINGLES'
+                  ? 'border-violet-500 bg-violet-500'
+                  : 'border-gray-300'
+              }`}>
+                {formData.matchFormat === 'SINGLES' && (
+                  <svg className="w-full h-full text-white" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                  </svg>
+                )}
+              </div>
+              <div className="flex-1 text-left">
+                <div className="flex items-center gap-2 mb-1">
+                  <svg className="w-5 h-5 text-violet-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                  </svg>
+                  <span className="font-semibold text-gray-900">Singles (1v1)</span>
+                </div>
+                <p className="text-sm text-gray-600">Individual matches that affect player stats</p>
+              </div>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleFieldChange('matchFormat', 'DOUBLES')}
+              className={`relative flex items-start gap-3 p-4 rounded-xl border-2 transition-all ${
+                formData.matchFormat === 'DOUBLES'
+                  ? 'border-violet-500 bg-violet-50'
+                  : 'border-gray-200 bg-white hover:border-gray-300'
+              }`}
+            >
+              <div className={`flex-shrink-0 w-5 h-5 rounded-full border-2 mt-0.5 ${
+                formData.matchFormat === 'DOUBLES'
+                  ? 'border-violet-500 bg-violet-500'
+                  : 'border-gray-300'
+              }`}>
+                {formData.matchFormat === 'DOUBLES' && (
+                  <svg className="w-full h-full text-white" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                  </svg>
+                )}
+              </div>
+              <div className="flex-1 text-left">
+                <div className="flex items-center gap-2 mb-1">
+                  <svg className="w-5 h-5 text-violet-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                  </svg>
+                  <span className="font-semibold text-gray-900">Doubles (2v2)</span>
+                </div>
+                <p className="text-sm text-gray-600">Team matches that affect club stats only</p>
+              </div>
+            </button>
+          </div>
+          {errors.matchFormat && (
+            <p className="mt-2 text-sm text-red-600 flex items-center gap-1" role="alert">
+              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+              </svg>
+              {errors.matchFormat}
+            </p>
+          )}
         </div>
       </div>
 

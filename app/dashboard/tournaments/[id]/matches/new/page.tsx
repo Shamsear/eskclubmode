@@ -20,6 +20,7 @@ async function getTournamentWithParticipants(id: string) {
       select: {
         id: true,
         name: true,
+        matchFormat: true,
         pointsPerWin: true,
         pointsPerDraw: true,
         pointsPerLoss: true,
@@ -130,7 +131,9 @@ export default async function AddMatchResultPage({
             </div>
             <div>
               <h1 className="text-2xl sm:text-3xl font-bold">Add Match Result</h1>
-              <p className="text-pink-100 text-sm mt-1">Record a 1v1 match result for this tournament</p>
+              <p className="text-pink-100 text-sm mt-1">
+                Record a {tournament.matchFormat === 'DOUBLES' ? '2v2 team' : '1v1'} match result for this tournament
+              </p>
             </div>
           </div>
         </div>
@@ -147,7 +150,9 @@ export default async function AddMatchResultPage({
             </div>
             <div>
               <h3 className="font-semibold text-gray-900 text-sm">Select Players</h3>
-              <p className="text-xs text-gray-600 mt-1">Choose two participants for this 1v1 match</p>
+              <p className="text-xs text-gray-600 mt-1">
+                Choose {tournament.matchFormat === 'DOUBLES' ? 'four participants (2 teams of 2)' : 'two participants for this 1v1 match'}
+              </p>
             </div>
           </div>
         </div>
@@ -199,6 +204,7 @@ export default async function AddMatchResultPage({
         <div className="p-6 sm:p-8">
           <MatchResultForm
             tournamentId={tournament.id}
+            matchFormat={tournament.matchFormat}
             participants={tournament.participants}
             pointSystem={{
               pointsPerWin: tournament.pointsPerWin,

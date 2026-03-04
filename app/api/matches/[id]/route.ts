@@ -121,6 +121,7 @@ export async function PUT(
         tournament: {
           select: {
             id: true,
+            matchFormat: true,
             pointSystemTemplateId: true,
             pointsPerWin: true,
             pointsPerDraw: true,
@@ -142,6 +143,7 @@ export async function PUT(
     }
 
     const tournamentId = existingMatch.tournament.id;
+    const isTeamMatch = existingMatch.tournament.matchFormat === 'DOUBLES';
     const oldPlayerIds = existingMatch.results.map(r => r.playerId);
 
     // If results are being updated, verify all players are participants
@@ -347,9 +349,9 @@ export async function PUT(
       });
     });
 
-    // Update statistics for all affected players
+    // Update statistics for all affected players (only for singles matches)
     const affectedPlayerIds = [...new Set([...oldPlayerIds, ...newPlayerIds])];
-    if (affectedPlayerIds.length > 0) {
+    if (affectedPlayerIds.length > 0 && !isTeamMatch) {
       await updatePlayerStatistics(tournamentId, affectedPlayerIds);
     }
 
@@ -385,6 +387,7 @@ export async function DELETE(
         tournament: {
           select: {
             id: true,
+            matchFormat: true,
           },
         },
         results: {
@@ -400,6 +403,7 @@ export async function DELETE(
     }
 
     const tournamentId = existingMatch.tournament.id;
+    const isTeamMatch = existingMatch.tournament.matchFormat === 'DOUBLES';
     const playerIds = existingMatch.results.map(r => r.playerId);
     const resultCount = existingMatch.results.length;
 
@@ -408,8 +412,8 @@ export async function DELETE(
       where: { id: matchId },
     });
 
-    // Update statistics for affected players
-    if (playerIds.length > 0) {
+    // Update statistics for affected players (only for singles matches)
+    if (playerIds.length > 0 && !isTeamMatch) {
       await updatePlayerStatistics(tournamentId, playerIds);
     }
 

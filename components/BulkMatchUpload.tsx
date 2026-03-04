@@ -11,6 +11,7 @@ interface Participant {
 
 interface BulkMatchUploadProps {
   tournamentId: number;
+  matchFormat?: 'SINGLES' | 'DOUBLES';
   participants: Participant[];
   pointSystem?: {
     pointsPerWin: number;
@@ -26,12 +27,16 @@ interface BulkMatchUploadProps {
 interface ParsedMatch {
   playerAName: string;
   playerBName: string;
+  playerCName?: string; // For doubles
+  playerDName?: string; // For doubles
   playerAGoals: number;
   playerBGoals: number;
   matchDate: string;
   walkover?: string; // 'normal', 'both', playerName
   playerAExtraPoints?: number;
   playerBExtraPoints?: number;
+  playerCExtraPoints?: number; // For doubles
+  playerDExtraPoints?: number; // For doubles
   rowNumber?: number; // Track original CSV row
   validationErrors?: string[]; // Track validation errors
   isValid?: boolean; // Quick validation check
@@ -41,11 +46,13 @@ interface FormMatch extends ParsedMatch {
   id: number;
   playerAId: number;
   playerBId: number;
+  playerCId?: number; // For doubles
+  playerDId?: number; // For doubles
 }
 
 type UploadMode = 'form' | 'csv';
 
-export function BulkMatchUpload({ tournamentId, participants, pointSystem }: BulkMatchUploadProps) {
+export function BulkMatchUpload({ tournamentId, matchFormat = 'SINGLES', participants, pointSystem }: BulkMatchUploadProps) {
   const router = useRouter();
   const { showToast } = useToast();
   const [mode, setMode] = useState<UploadMode>('form');
@@ -58,8 +65,28 @@ export function BulkMatchUpload({ tournamentId, participants, pointSystem }: Bul
   // Form mode state
   const today = new Date().toISOString().split('T')[0];
   const [formMatches, setFormMatches] = useState<FormMatch[]>([
-    { id: 1, playerAId: 0, playerBId: 0, playerAName: '', playerBName: '', playerAGoals: 0, playerBGoals: 0, matchDate: today, walkover: 'normal', playerAExtraPoints: 0, playerBExtraPoints: 0 }
+    matchFormat === 'DOUBLES'
+      ? { 
+          id: 1, 
+          playerAId: 0, playerBId: 0, playerCId: 0, playerDId: 0,
+          playerAName: '', playerBName: '', playerCName: '', playerDName: '',
+          playerAGoals: 0, playerBGoals: 0, 
+          matchDate: today, 
+          walkover: 'normal', 
+          playerAExtraPoints: 0, playerBExtraPoints: 0, playerCExtraPoints: 0, playerDExtraPoints: 0 
+        }
+      : { 
+          id: 1, 
+          playerAId: 0, playerBId: 0, 
+          playerAName: '', playerBName: '', 
+          playerAGoals: 0, playerBGoals: 0, 
+          matchDate: today, 
+          walkover: 'normal', 
+          playerAExtraPoints: 0, playerBExtraPoints: 0 
+        }
   ]);
+  
+  const isDoublesFormat = matchFormat === 'DOUBLES';
   
   // Track which matches have expanded point details
   const [expandedMatches, setExpandedMatches] = useState<Set<number>>(new Set());
@@ -184,7 +211,13 @@ export function BulkMatchUpload({ tournamentId, participants, pointSystem }: Bul
     
     // Check if player names are provided
     if (!match.playerAName || !match.playerBName) {
-      errors.push('Both player names are required');
+      errors.push('Player A and Player B names are required');
+    }
+    
+    if (isDoublesFormat) {
+      if (!match.playerCName || !match.playerDName) {
+        errors.push('Player C and Player D names are required for doubles format');
+      }
     }
     
     // Check if players exist in participants (case-insensitive)
@@ -202,10 +235,39 @@ export function BulkMatchUpload({ tournamentId, participants, pointSystem }: Bul
       errors.push(`Player B "${match.playerBName}" not found in tournament participants`);
     }
     
-    // Check if players are different
-    if (match.playerAName && match.playerBName && 
-        match.playerAName.toLowerCase() === match.playerBName.toLowerCase()) {
-      errors.push('Players must be different');
+    if (isDoublesFormat) {
+      const playerCExists = participants.some(
+        p => p.name.toLowerCase() === (match.playerCName || '').toLowerCase()
+      );
+      const playerDExists = participants.some(
+        p => p.name.toLowerCase() === (match.playerDName || '').toLowerCase()
+      );
+      
+      if (match.playerCName && !playerCExists) {
+        errors.push(`Player C "${match.playerCName}" not found in tournament participants`);
+      }
+      if (match.playerDName && !playerDExists) {
+        errors.push(`Player D "${match.playerDName}" not found in tournament participants`);
+      }
+      
+      // Check if all 4 players are different
+      const playerNames = [
+        match.playerAName?.toLowerCase(),
+        match.playerBName?.toLowerCase(),
+        match.playerCName?.toLowerCase(),
+        match.playerDName?.toLowerCase()
+      ].filter(Boolean);
+      
+      const uniqueNames = new Set(playerNames);
+      if (uniqueNames.size !== playerNames.length) {
+        errors.push('All four players must be different');
+      }
+    } else {
+      // Check if players are different (singles)
+      if (match.playerAName && match.playerBName && 
+          match.playerAName.toLowerCase() === match.playerBName.toLowerCase()) {
+        errors.push('Players must be different');
+      }
     }
     
     // Check date format
@@ -222,12 +284,18 @@ export function BulkMatchUpload({ tournamentId, participants, pointSystem }: Bul
     
     // Validate walkover value
     if (match.walkover && match.walkover !== 'normal' && match.walkover !== 'both') {
-      const walkoverPlayerExists = 
-        match.walkover.toLowerCase() === match.playerAName.toLowerCase() ||
-        match.walkover.toLowerCase() === match.playerBName.toLowerCase();
-      
-      if (!walkoverPlayerExists) {
-        errors.push(`Walkover value must be "normal", "both", or one of the player names`);
+      if (isDoublesFormat) {
+        if (match.walkover !== 'team1' && match.walkover !== 'team2') {
+          errors.push(`Walkover value must be "normal", "both", "team1", or "team2" for doubles format`);
+        }
+      } else {
+        const walkoverPlayerExists = 
+          match.walkover.toLowerCase() === match.playerAName.toLowerCase() ||
+          match.walkover.toLowerCase() === match.playerBName.toLowerCase();
+        
+        if (!walkoverPlayerExists) {
+          errors.push(`Walkover value must be "normal", "both", or one of the player names`);
+        }
       }
     }
     
@@ -245,11 +313,16 @@ export function BulkMatchUpload({ tournamentId, participants, pointSystem }: Bul
     }
 
     const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
-    const requiredHeaders = ['playera', 'playerb', 'playeragoals', 'playerbgoals', 'matchdate'];
+    const requiredHeaders = isDoublesFormat
+      ? ['playera', 'playerb', 'playerc', 'playerd', 'playeragoals', 'playerbgoals', 'matchdate']
+      : ['playera', 'playerb', 'playeragoals', 'playerbgoals', 'matchdate'];
     const missingHeaders = requiredHeaders.filter(h => !headers.includes(h));
     
     if (missingHeaders.length > 0) {
-      setErrors([`Missing required columns: ${missingHeaders.join(', ')}. Optional: walkover, playerAExtraPoints, playerBExtraPoints`]);
+      const optionalCols = isDoublesFormat
+        ? 'walkover, playerAExtraPoints, playerBExtraPoints, playerCExtraPoints, playerDExtraPoints'
+        : 'walkover, playerAExtraPoints, playerBExtraPoints';
+      setErrors([`Missing required columns: ${missingHeaders.join(', ')}. Optional: ${optionalCols}`]);
       setPreview([]);
       return;
     }
@@ -262,6 +335,8 @@ export function BulkMatchUpload({ tournamentId, participants, pointSystem }: Bul
       const match: ParsedMatch = {
         playerAName: '',
         playerBName: '',
+        playerCName: isDoublesFormat ? '' : undefined,
+        playerDName: isDoublesFormat ? '' : undefined,
         playerAGoals: 0,
         playerBGoals: 0,
         matchDate: '',
@@ -277,6 +352,12 @@ export function BulkMatchUpload({ tournamentId, participants, pointSystem }: Bul
             break;
           case 'playerb':
             match.playerBName = value;
+            break;
+          case 'playerc':
+            if (isDoublesFormat) match.playerCName = value;
+            break;
+          case 'playerd':
+            if (isDoublesFormat) match.playerDName = value;
             break;
           case 'playeragoals':
             match.playerAGoals = parseInt(value) || 0;
@@ -295,6 +376,12 @@ export function BulkMatchUpload({ tournamentId, participants, pointSystem }: Bul
             break;
           case 'playerbextrapoints':
             match.playerBExtraPoints = parseInt(value) || 0;
+            break;
+          case 'playercextrapoints':
+            if (isDoublesFormat) match.playerCExtraPoints = parseInt(value) || 0;
+            break;
+          case 'playerdextrapoints':
+            if (isDoublesFormat) match.playerDExtraPoints = parseInt(value) || 0;
             break;
         }
       });
@@ -387,15 +474,43 @@ export function BulkMatchUpload({ tournamentId, participants, pointSystem }: Bul
   };
 
   const downloadTemplate = () => {
-    const playerNames = participants.map(p => p.name).slice(0, 4);
-    const template = `playerA,playerB,playerAGoals,playerBGoals,matchDate,walkover,playerAExtraPoints,playerBExtraPoints
+    const playerNames = participants.map(p => p.name).slice(0, isDoublesFormat ? 8 : 4);
+    
+    const template = isDoublesFormat
+      ? `playerA,playerB,playerC,playerD,playerAGoals,playerBGoals,matchDate,walkover,playerAExtraPoints,playerBExtraPoints,playerCExtraPoints,playerDExtraPoints
+${playerNames[0] || 'Player 1'},${playerNames[1] || 'Player 2'},${playerNames[2] || 'Player 3'},${playerNames[3] || 'Player 4'},3,1,2024-01-15,normal,0,0,0,0
+${playerNames[4] || 'Player 5'},${playerNames[5] || 'Player 6'},${playerNames[6] || 'Player 7'},${playerNames[7] || 'Player 8'},2,2,2024-01-16,normal,0,0,0,0
+${playerNames[0] || 'Player 1'},${playerNames[1] || 'Player 2'},${playerNames[2] || 'Player 3'},${playerNames[3] || 'Player 4'},0,0,2024-01-17,team1,0,0,0,0
+${playerNames[4] || 'Player 5'},${playerNames[5] || 'Player 6'},${playerNames[6] || 'Player 7'},${playerNames[7] || 'Player 8'},0,0,2024-01-18,both,0,0,0,0
+
+Instructions for DOUBLES (2v2) Format:
+- playerA and playerB form Team 1
+- playerC and playerD form Team 2
+- All player names must match participant names exactly
+- playerAGoals = Team 1 goals, playerBGoals = Team 2 goals
+- Goals must be non-negative integers
+- matchDate format: YYYY-MM-DD
+- walkover options:
+  * normal (or empty) = regular match with goals
+  * both = both teams forfeited (no points)
+  * team1 = Team 1 won by walkover
+  * team2 = Team 2 won by walkover
+- Extra points (optional):
+  * positive numbers = bonus points
+  * negative numbers = penalty points
+  * 0 or empty = no extra points
+- Note: Doubles matches affect CLUB/TEAM stats only, not individual player stats
+
+Available Participants:
+${participants.map(p => p.name).join(', ')}`
+      : `playerA,playerB,playerAGoals,playerBGoals,matchDate,walkover,playerAExtraPoints,playerBExtraPoints
 ${playerNames[0] || 'Player 1'},${playerNames[1] || 'Player 2'},3,1,2024-01-15,normal,0,0
 ${playerNames[2] || 'Player 3'},${playerNames[3] || 'Player 4'},2,2,2024-01-16,normal,0,0
 ${playerNames[0] || 'Player 1'},${playerNames[2] || 'Player 3'},0,0,2024-01-17,${playerNames[0] || 'Player 1'},0,0
 ${playerNames[1] || 'Player 2'},${playerNames[3] || 'Player 4'},0,0,2024-01-18,both,0,0
 ${playerNames[0] || 'Player 1'},${playerNames[1] || 'Player 2'},3,1,2024-01-19,normal,5,-2
 
-Instructions:
+Instructions for SINGLES (1v1) Format:
 - playerA and playerB must match participant names exactly
 - Goals must be non-negative integers
 - matchDate format: YYYY-MM-DD
@@ -415,7 +530,7 @@ ${participants.map(p => p.name).join(', ')}`;
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'matches_template.csv';
+    a.download = `matches_template_${isDoublesFormat ? 'doubles' : 'singles'}.csv`;
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -423,19 +538,26 @@ ${participants.map(p => p.name).join(', ')}`;
   // Form mode handlers
   const addFormMatch = () => {
     const newId = Math.max(...formMatches.map(m => m.id), 0) + 1;
-    setFormMatches([...formMatches, { 
-      id: newId, 
-      playerAId: 0, 
-      playerBId: 0, 
-      playerAName: '', 
-      playerBName: '', 
-      playerAGoals: 0, 
-      playerBGoals: 0, 
-      matchDate: today,
-      walkover: 'normal',
-      playerAExtraPoints: 0,
-      playerBExtraPoints: 0
-    }]);
+    setFormMatches([...formMatches, isDoublesFormat
+      ? { 
+          id: newId, 
+          playerAId: 0, playerBId: 0, playerCId: 0, playerDId: 0,
+          playerAName: '', playerBName: '', playerCName: '', playerDName: '',
+          playerAGoals: 0, playerBGoals: 0, 
+          matchDate: today,
+          walkover: 'normal',
+          playerAExtraPoints: 0, playerBExtraPoints: 0, playerCExtraPoints: 0, playerDExtraPoints: 0
+        }
+      : { 
+          id: newId, 
+          playerAId: 0, playerBId: 0, 
+          playerAName: '', playerBName: '', 
+          playerAGoals: 0, playerBGoals: 0, 
+          matchDate: today,
+          walkover: 'normal',
+          playerAExtraPoints: 0, playerBExtraPoints: 0
+        }
+    ]);
   };
 
   const removeFormMatch = (id: number) => {
@@ -456,6 +578,12 @@ ${participants.map(p => p.name).join(', ')}`;
         } else if (field === 'playerBId') {
           const participant = participants.find(p => p.id === Number(value));
           updated.playerBName = participant?.name || '';
+        } else if (field === 'playerCId' && isDoublesFormat) {
+          const participant = participants.find(p => p.id === Number(value));
+          updated.playerCName = participant?.name || '';
+        } else if (field === 'playerDId' && isDoublesFormat) {
+          const participant = participants.find(p => p.id === Number(value));
+          updated.playerDName = participant?.name || '';
         }
         
         return updated;
@@ -474,8 +602,23 @@ ${participants.map(p => p.name).join(', ')}`;
       if (!match.playerBId || match.playerBId === 0) {
         validationErrors.push(`Match ${index + 1}: Player B is required`);
       }
-      if (match.playerAId === match.playerBId && match.playerAId !== 0) {
-        validationErrors.push(`Match ${index + 1}: Players must be different`);
+      if (isDoublesFormat) {
+        if (!match.playerCId || match.playerCId === 0) {
+          validationErrors.push(`Match ${index + 1}: Player C is required`);
+        }
+        if (!match.playerDId || match.playerDId === 0) {
+          validationErrors.push(`Match ${index + 1}: Player D is required`);
+        }
+        // Check all 4 players are different
+        const playerIds = [match.playerAId, match.playerBId, match.playerCId, match.playerDId].filter(id => id !== 0);
+        const uniqueIds = new Set(playerIds);
+        if (uniqueIds.size !== playerIds.length) {
+          validationErrors.push(`Match ${index + 1}: All players must be different`);
+        }
+      } else {
+        if (match.playerAId === match.playerBId && match.playerAId !== 0) {
+          validationErrors.push(`Match ${index + 1}: Players must be different`);
+        }
       }
       if (!match.matchDate) {
         validationErrors.push(`Match ${index + 1}: Match date is required`);
@@ -491,16 +634,32 @@ ${participants.map(p => p.name).join(', ')}`;
     setIsUploading(true);
 
     try {
-      const matchesData = formMatches.map(match => ({
-        playerAName: match.playerAName,
-        playerBName: match.playerBName,
-        playerAGoals: match.playerAGoals,
-        playerBGoals: match.playerBGoals,
-        matchDate: match.matchDate,
-        walkover: match.walkover || 'normal',
-        playerAExtraPoints: match.playerAExtraPoints || 0,
-        playerBExtraPoints: match.playerBExtraPoints || 0,
-      }));
+      const matchesData = formMatches.map(match => isDoublesFormat
+        ? {
+            playerAName: match.playerAName,
+            playerBName: match.playerBName,
+            playerCName: match.playerCName,
+            playerDName: match.playerDName,
+            playerAGoals: match.playerAGoals,
+            playerBGoals: match.playerBGoals,
+            matchDate: match.matchDate,
+            walkover: match.walkover || 'normal',
+            playerAExtraPoints: match.playerAExtraPoints || 0,
+            playerBExtraPoints: match.playerBExtraPoints || 0,
+            playerCExtraPoints: match.playerCExtraPoints || 0,
+            playerDExtraPoints: match.playerDExtraPoints || 0,
+          }
+        : {
+            playerAName: match.playerAName,
+            playerBName: match.playerBName,
+            playerAGoals: match.playerAGoals,
+            playerBGoals: match.playerBGoals,
+            matchDate: match.matchDate,
+            walkover: match.walkover || 'normal',
+            playerAExtraPoints: match.playerAExtraPoints || 0,
+            playerBExtraPoints: match.playerBExtraPoints || 0,
+          }
+      );
 
       const response = await fetch(`/api/tournaments/${tournamentId}/matches/bulk`, {
         method: 'POST',
@@ -626,10 +785,21 @@ ${participants.map(p => p.name).join(', ')}`;
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Team 1 Header for Doubles */}
+                    {isDoublesFormat && (
+                      <div className="md:col-span-2">
+                        <div className="flex items-center gap-2 mb-2">
+                          <div className="h-px flex-1 bg-blue-200"></div>
+                          <span className="text-sm font-semibold text-blue-700">Team 1</span>
+                          <div className="h-px flex-1 bg-blue-200"></div>
+                        </div>
+                      </div>
+                    )}
+
                     {/* Player A */}
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Player A
+                        {isDoublesFormat ? 'Team 1 - Player A' : 'Player A'}
                       </label>
                       <select
                         value={String(match.playerAId)}
@@ -638,7 +808,10 @@ ${participants.map(p => p.name).join(', ')}`;
                       >
                         <option value="0">Select Player A</option>
                         {participants
-                          .filter(p => p.id !== match.playerBId)
+                          .filter(p => isDoublesFormat 
+                            ? p.id !== match.playerBId && p.id !== match.playerCId && p.id !== match.playerDId
+                            : p.id !== match.playerBId
+                          )
                           .map(p => (
                             <option key={p.id} value={String(p.id)}>{p.name}</option>
                           ))}
@@ -648,7 +821,7 @@ ${participants.map(p => p.name).join(', ')}`;
                     {/* Player B */}
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Player B
+                        {isDoublesFormat ? 'Team 1 - Player B' : 'Player B'}
                       </label>
                       <select
                         value={String(match.playerBId)}
@@ -657,17 +830,84 @@ ${participants.map(p => p.name).join(', ')}`;
                       >
                         <option value="0">Select Player B</option>
                         {participants
-                          .filter(p => p.id !== match.playerAId)
+                          .filter(p => isDoublesFormat
+                            ? p.id !== match.playerAId && p.id !== match.playerCId && p.id !== match.playerDId
+                            : p.id !== match.playerAId
+                          )
                           .map(p => (
                             <option key={p.id} value={String(p.id)}>{p.name}</option>
                           ))}
                       </select>
                     </div>
 
+                    {/* Team 2 Header for Doubles */}
+                    {isDoublesFormat && (
+                      <div className="md:col-span-2">
+                        <div className="flex items-center gap-2 mb-2 mt-2">
+                          <div className="h-px flex-1 bg-purple-200"></div>
+                          <span className="text-sm font-semibold text-purple-700">Team 2</span>
+                          <div className="h-px flex-1 bg-purple-200"></div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Player C (Doubles only) */}
+                    {isDoublesFormat && (
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Team 2 - Player C
+                        </label>
+                        <select
+                          value={String(match.playerCId || 0)}
+                          onChange={(e) => updateFormMatch(match.id, 'playerCId', Number(e.target.value))}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-violet-500 focus:border-transparent bg-white text-gray-900"
+                        >
+                          <option value="0">Select Player C</option>
+                          {participants
+                            .filter(p => p.id !== match.playerAId && p.id !== match.playerBId && p.id !== match.playerDId)
+                            .map(p => (
+                              <option key={p.id} value={String(p.id)}>{p.name}</option>
+                            ))}
+                        </select>
+                      </div>
+                    )}
+
+                    {/* Player D (Doubles only) */}
+                    {isDoublesFormat && (
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Team 2 - Player D
+                        </label>
+                        <select
+                          value={String(match.playerDId || 0)}
+                          onChange={(e) => updateFormMatch(match.id, 'playerDId', Number(e.target.value))}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-violet-500 focus:border-transparent bg-white text-gray-900"
+                        >
+                          <option value="0">Select Player D</option>
+                          {participants
+                            .filter(p => p.id !== match.playerAId && p.id !== match.playerBId && p.id !== match.playerCId)
+                            .map(p => (
+                              <option key={p.id} value={String(p.id)}>{p.name}</option>
+                            ))}
+                        </select>
+                      </div>
+                    )}
+
+                    {/* Goals Section Header */}
+                    <div className="md:col-span-2">
+                      <div className="flex items-center gap-2 mb-2 mt-2">
+                        <div className="h-px flex-1 bg-gray-200"></div>
+                        <span className="text-sm font-semibold text-gray-700">
+                          {isDoublesFormat ? 'Team Goals' : 'Goals'}
+                        </span>
+                        <div className="h-px flex-1 bg-gray-200"></div>
+                      </div>
+                    </div>
+
                     {/* Player A Goals */}
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Player A Goals
+                        {isDoublesFormat ? 'Team 1 Goals' : 'Player A Goals'}
                       </label>
                       <input
                         type="number"
@@ -685,7 +925,7 @@ ${participants.map(p => p.name).join(', ')}`;
                     {/* Player B Goals */}
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Player B Goals
+                        {isDoublesFormat ? 'Team 2 Goals' : 'Player B Goals'}
                       </label>
                       <input
                         type="number"
@@ -718,19 +958,36 @@ ${participants.map(p => p.name).join(', ')}`;
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-violet-500 focus:border-transparent bg-white text-gray-900"
                       >
                         <option value="normal">Normal Match (no walkover)</option>
-                        <option value="both">Both Players Forfeited</option>
-                        {match.playerAName && (
-                          <option value={match.playerAName}>{match.playerAName} Won by Walkover</option>
-                        )}
-                        {match.playerBName && (
-                          <option value={match.playerBName}>{match.playerBName} Won by Walkover</option>
+                        <option value="both">Both {isDoublesFormat ? 'Teams' : 'Players'} Forfeited</option>
+                        {isDoublesFormat ? (
+                          <>
+                            {match.playerAName && match.playerBName && (
+                              <option value="team1">Team 1 ({match.playerAName} & {match.playerBName}) Won by Walkover</option>
+                            )}
+                            {match.playerCName && match.playerDName && (
+                              <option value="team2">Team 2 ({match.playerCName} & {match.playerDName}) Won by Walkover</option>
+                            )}
+                          </>
+                        ) : (
+                          <>
+                            {match.playerAName && (
+                              <option value={match.playerAName}>{match.playerAName} Won by Walkover</option>
+                            )}
+                            {match.playerBName && (
+                              <option value={match.playerBName}>{match.playerBName} Won by Walkover</option>
+                            )}
+                          </>
                         )}
                       </select>
                       {match.walkover && match.walkover !== 'normal' && (
                         <p className="mt-1 text-sm text-orange-600">
                           {match.walkover === 'both' 
-                            ? '⚠️ Both players forfeited - no points will be awarded'
-                            : `✓ ${match.walkover} wins by walkover`
+                            ? `⚠️ Both ${isDoublesFormat ? 'teams' : 'players'} forfeited - no points will be awarded`
+                            : isDoublesFormat
+                              ? match.walkover === 'team1'
+                                ? `✓ Team 1 wins by walkover`
+                                : `✓ Team 2 wins by walkover`
+                              : `✓ ${match.walkover} wins by walkover`
                           }
                         </p>
                       )}

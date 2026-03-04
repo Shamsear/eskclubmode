@@ -23,6 +23,7 @@ async function getTournament(id: string) {
         description: true,
         startDate: true,
         endDate: true,
+        matchFormat: true,
         pointsPerWin: true,
         pointsPerDraw: true,
         pointsPerLoss: true,

@@ -9,6 +9,7 @@ export const tournamentSchema = z.object({
   endDate: z.string().refine((date) => !isNaN(Date.parse(date)), {
     message: "Invalid end date format",
   }).optional().nullable(),
+  matchFormat: z.enum(['SINGLES', 'DOUBLES']).default('SINGLES'),
   pointSystemTemplateId: z.number().int().positive().optional().nullable(),
   pointsPerWin: z.number().int().min(0, "Points per win must be non-negative").default(3),
   pointsPerDraw: z.number().int().min(0, "Points per draw must be non-negative").default(1),
@@ -36,6 +37,7 @@ export const tournamentUpdateSchema = z.object({
   endDate: z.string().refine((date) => !isNaN(Date.parse(date)), {
     message: "Invalid end date format",
   }).optional().nullable(),
+  matchFormat: z.enum(['SINGLES', 'DOUBLES']).optional(),
   pointSystemTemplateId: z.number().int().positive().optional().nullable(),
   pointsPerWin: z.number().int().min(0, "Points per win must be non-negative").optional(),
   pointsPerDraw: z.number().int().min(0, "Points per draw must be non-negative").optional(),

@@ -108,6 +108,7 @@ export async function POST(
       where: { id: tournamentId },
       select: {
         id: true,
+        matchFormat: true,
         pointSystemTemplateId: true,
         pointsPerWin: true,
         pointsPerDraw: true,
@@ -120,6 +121,9 @@ export async function POST(
     if (!tournament) {
       throw new NotFoundError("Tournament");
     }
+
+    // Determine if this is a team match based on tournament format
+    const isTeamMatch = tournament.matchFormat === 'DOUBLES';
 
     // Fetch point system configuration (stage-specific, template, or inline)
     let pointSystemConfig: PointSystemConfig;
@@ -333,6 +337,7 @@ export async function POST(
         data: {
           tournamentId,
           matchDate: new Date(matchDate),
+          isTeamMatch,
           ...(stageId && { stageId }),
           ...(stageName && { stageName }),
           ...(walkoverWinnerId !== undefined && { walkoverWinnerId }),
@@ -373,8 +378,10 @@ export async function POST(
       });
     });
 
-    // Update player statistics
-    await updatePlayerStatistics(tournamentId, playerIds);
+    // Update player statistics (only for singles matches)
+    if (!isTeamMatch) {
+      await updatePlayerStatistics(tournamentId, playerIds);
+    }
 
     return NextResponse.json(match, { status: 201 });
   } catch (error) {
