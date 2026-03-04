@@ -24,10 +24,12 @@ async function getMatchWithTournament(matchId: string, tournamentId: string) {
         matchDate: true,
         stageId: true,
         stageName: true,
+        isTeamMatch: true,
         tournament: {
           select: {
             id: true,
             name: true,
+            matchFormat: true,
             pointsPerWin: true,
             pointsPerDraw: true,
             pointsPerLoss: true,
@@ -52,6 +54,29 @@ async function getMatchWithTournament(matchId: string, tournamentId: string) {
             },
           },
         },
+        teamResults: {
+          include: {
+            playerA: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+                photo: true,
+              },
+            },
+            playerB: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+                photo: true,
+              },
+            },
+          },
+          orderBy: {
+            teamPosition: "asc",
+          },
+        },
       },
     });
 
@@ -73,6 +98,7 @@ async function getMatchWithTournament(matchId: string, tournamentId: string) {
             id: true,
             name: true,
             photo: true,
+            clubId: true,
           },
         },
       },
@@ -89,6 +115,7 @@ async function getMatchWithTournament(matchId: string, tournamentId: string) {
         id: p.player.id,
         name: p.player.name,
         photo: p.player.photo,
+        clubId: p.player.clubId,
       })),
     };
   } catch (error) {
@@ -115,12 +142,30 @@ export default async function EditMatchResultPage({
   const { match, participants } = data;
 
   // Format match data for the form
-  const initialData = {
-    id: match.id,
-    matchDate: match.matchDate.toISOString().split("T")[0],
-    stageId: match.stageId,
-    stageName: match.stageName,
-    results: match.results.map((result) => ({
+  // For doubles matches, convert teamResults to results format
+  let formattedResults;
+  if (match.isTeamMatch && match.teamResults.length > 0) {
+    // Convert team results to individual player results for the form
+    formattedResults = match.teamResults.flatMap((teamResult) => [
+      {
+        playerId: teamResult.playerA.id,
+        outcome: teamResult.outcome,
+        goalsScored: teamResult.goalsScored,
+        goalsConceded: teamResult.goalsConceded,
+        pointsEarned: teamResult.pointsEarned,
+        player: teamResult.playerA,
+      },
+      {
+        playerId: teamResult.playerB.id,
+        outcome: teamResult.outcome,
+        goalsScored: teamResult.goalsScored,
+        goalsConceded: teamResult.goalsConceded,
+        pointsEarned: teamResult.pointsEarned,
+        player: teamResult.playerB,
+      },
+    ]);
+  } else {
+    formattedResults = match.results.map((result) => ({
       id: result.id,
       playerId: result.playerId,
       outcome: result.outcome,
@@ -128,7 +173,15 @@ export default async function EditMatchResultPage({
       goalsConceded: result.goalsConceded,
       pointsEarned: result.pointsEarned,
       player: result.player,
-    })),
+    }));
+  }
+
+  const initialData = {
+    id: match.id,
+    matchDate: match.matchDate.toISOString().split("T")[0],
+    stageId: match.stageId,
+    stageName: match.stageName,
+    results: formattedResults,
   };
 
   return (
@@ -176,6 +229,7 @@ export default async function EditMatchResultPage({
           <MatchResultForm
             tournamentId={match.tournament.id}
             matchId={match.id}
+            matchFormat={match.tournament.matchFormat}
             participants={participants}
             initialData={initialData}
             pointSystem={{

@@ -20,6 +20,7 @@ interface TournamentDetailsClientProps {
     pointsPerLoss: number;
     pointsPerGoalScored: number;
     pointsPerGoalConceded: number;
+    matchFormat?: string;
     pointSystemTemplate?: {
       id: number;
       name: string;
@@ -78,6 +79,32 @@ interface TournamentDetailsClientProps {
           name: string;
         } | null;
       };
+    }>;
+    teamStats?: Array<{
+      id: string;
+      clubId: number;
+      club: {
+        id: number;
+        name: string;
+        logo: string | null;
+      } | null;
+      playerA: {
+        id: number;
+        name: string;
+        photo: string | null;
+      } | null;
+      playerB: {
+        id: number;
+        name: string;
+        photo: string | null;
+      } | null;
+      matchesPlayed: number;
+      wins: number;
+      draws: number;
+      losses: number;
+      goalsScored: number;
+      goalsConceded: number;
+      totalPoints: number;
     }>;
     _count: {
       participants: number;
@@ -485,6 +512,11 @@ function OverviewTab({ tournament }: TournamentDetailsClientProps) {
 }
 
 function LeaderboardTab({ tournament }: TournamentDetailsClientProps) {
+  // Check if it's a doubles tournament
+  if (tournament.matchFormat === 'DOUBLES' && tournament.teamStats) {
+    return <TeamLeaderboard tournament={tournament} teamStats={tournament.teamStats} />;
+  }
+
   return (
     <Leaderboard
       tournament={{
@@ -498,6 +530,191 @@ function LeaderboardTab({ tournament }: TournamentDetailsClientProps) {
       }}
       stats={tournament.playerStats}
     />
+  );
+}
+
+// Team Leaderboard Component for Doubles Tournaments
+function TeamLeaderboard({ tournament, teamStats }: { 
+  tournament: TournamentDetailsClientProps['tournament']; 
+  teamStats: NonNullable<TournamentDetailsClientProps['tournament']['teamStats']>;
+}) {
+  if (teamStats.length === 0) {
+    return (
+      <div className="text-center py-16 bg-gradient-to-br from-gray-50 to-white rounded-xl border-2 border-dashed border-gray-300">
+        <div className="w-16 h-16 bg-gradient-to-br from-purple-100 to-pink-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+          <svg className="w-8 h-8 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+          </svg>
+        </div>
+        <h3 className="text-xl font-bold text-gray-900 mb-2">No team statistics yet</h3>
+        <p className="text-gray-600 mb-6 max-w-md mx-auto">
+          Add doubles match results to see the team leaderboard.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      {/* Desktop Table */}
+      <div className="hidden md:block overflow-x-auto bg-white rounded-xl border border-gray-200 shadow-sm">
+        <table className="min-w-full divide-y divide-gray-200">
+          <thead className="bg-gradient-to-r from-purple-50 to-pink-50">
+            <tr>
+              <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Rank</th>
+              <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Team</th>
+              <th scope="col" className="px-6 py-4 text-center text-xs font-bold text-gray-700 uppercase tracking-wider">MP</th>
+              <th scope="col" className="px-6 py-4 text-center text-xs font-bold text-gray-700 uppercase tracking-wider">W</th>
+              <th scope="col" className="px-6 py-4 text-center text-xs font-bold text-gray-700 uppercase tracking-wider">D</th>
+              <th scope="col" className="px-6 py-4 text-center text-xs font-bold text-gray-700 uppercase tracking-wider">L</th>
+              <th scope="col" className="px-6 py-4 text-center text-xs font-bold text-gray-700 uppercase tracking-wider">GS</th>
+              <th scope="col" className="px-6 py-4 text-center text-xs font-bold text-gray-700 uppercase tracking-wider">GC</th>
+              <th scope="col" className="px-6 py-4 text-center text-xs font-bold text-gray-700 uppercase tracking-wider">Pts</th>
+            </tr>
+          </thead>
+          <tbody className="bg-white divide-y divide-gray-200">
+            {teamStats.map((team, index) => (
+              <tr key={team.id} className={`hover:bg-gradient-to-r hover:from-purple-50 hover:to-pink-50 transition-all ${index < 3 ? 'bg-gradient-to-r from-yellow-50/30 to-orange-50/30' : ''}`}>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <div className="flex items-center justify-center w-10 h-10">
+                    {index < 3 ? (
+                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+                        index === 0 ? 'bg-gradient-to-br from-yellow-400 to-orange-500' : 
+                        index === 1 ? 'bg-gradient-to-br from-gray-300 to-gray-400' : 
+                        'bg-gradient-to-br from-amber-500 to-orange-600'
+                      }`}>
+                        <span className="text-xl">{index === 0 ? '🥇' : index === 1 ? '🥈' : '🥉'}</span>
+                      </div>
+                    ) : (
+                      <span className="text-sm font-bold text-gray-700">{index + 1}</span>
+                    )}
+                  </div>
+                </td>
+                <td className="px-6 py-4">
+                  <div className="space-y-2">
+                    {/* Players */}
+                    <div className="flex items-center gap-2">
+                      {team.playerA?.photo ? (
+                        <img src={team.playerA.photo} alt={team.playerA.name} className="h-8 w-8 rounded-full object-cover" />
+                      ) : (
+                        <div className="h-8 w-8 rounded-full bg-purple-100 flex items-center justify-center">
+                          <span className="text-xs font-medium text-purple-700">{team.playerA?.name.charAt(0).toUpperCase()}</span>
+                        </div>
+                      )}
+                      <span className="text-sm font-medium text-gray-900">{team.playerA?.name}</span>
+                      <span className="text-gray-400">&</span>
+                      {team.playerB?.photo ? (
+                        <img src={team.playerB.photo} alt={team.playerB.name} className="h-8 w-8 rounded-full object-cover" />
+                      ) : (
+                        <div className="h-8 w-8 rounded-full bg-purple-100 flex items-center justify-center">
+                          <span className="text-xs font-medium text-purple-700">{team.playerB?.name.charAt(0).toUpperCase()}</span>
+                        </div>
+                      )}
+                      <span className="text-sm font-medium text-gray-900">{team.playerB?.name}</span>
+                    </div>
+                    {/* Club */}
+                    <div className="flex items-center gap-2">
+                      {team.club?.logo && (
+                        <img src={team.club.logo} alt={team.club.name} className="h-5 w-5 object-contain" />
+                      )}
+                      <span className="text-xs text-gray-500">{team.club?.name || 'Free Agent'}</span>
+                    </div>
+                  </div>
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-center">{team.matchesPlayed}</td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-green-600 text-center font-medium">{team.wins}</td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 text-center">{team.draws}</td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-red-600 text-center font-medium">{team.losses}</td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-center">{team.goalsScored}</td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-center">{team.goalsConceded}</td>
+                <td className="px-6 py-4 whitespace-nowrap text-center">
+                  <span className="text-sm font-bold text-purple-600">{team.totalPoints}</span>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Mobile Cards */}
+      <div className="md:hidden space-y-3">
+        {teamStats.map((team, index) => (
+          <div key={team.id} className={`bg-white border-2 rounded-xl p-4 shadow-md hover:shadow-lg transition-all ${
+            index < 3 ? 'border-yellow-300 bg-gradient-to-br from-yellow-50/50 to-orange-50/50' : 'border-gray-200'
+          }`}>
+            <div className="flex items-start justify-between mb-3">
+              <div className="flex items-center gap-3">
+                <div className="flex items-center justify-center w-10 h-10">
+                  {index < 3 ? (
+                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+                      index === 0 ? 'bg-gradient-to-br from-yellow-400 to-orange-500' : 
+                      index === 1 ? 'bg-gradient-to-br from-gray-300 to-gray-400' : 
+                      'bg-gradient-to-br from-amber-500 to-orange-600'
+                    }`}>
+                      <span className="text-xl">{index === 0 ? '🥇' : index === 1 ? '🥈' : '🥉'}</span>
+                    </div>
+                  ) : (
+                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center">
+                      <span className="text-sm font-bold text-gray-700">#{index + 1}</span>
+                    </div>
+                  )}
+                </div>
+                <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    {team.playerA?.photo ? (
+                      <img src={team.playerA.photo} alt={team.playerA.name} className="h-8 w-8 rounded-full object-cover" />
+                    ) : (
+                      <div className="h-8 w-8 rounded-full bg-purple-100 flex items-center justify-center">
+                        <span className="text-xs font-medium text-purple-700">{team.playerA?.name.charAt(0).toUpperCase()}</span>
+                      </div>
+                    )}
+                    <span className="text-sm font-semibold text-gray-900">{team.playerA?.name}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {team.playerB?.photo ? (
+                      <img src={team.playerB.photo} alt={team.playerB.name} className="h-8 w-8 rounded-full object-cover" />
+                    ) : (
+                      <div className="h-8 w-8 rounded-full bg-purple-100 flex items-center justify-center">
+                        <span className="text-xs font-medium text-purple-700">{team.playerB?.name.charAt(0).toUpperCase()}</span>
+                      </div>
+                    )}
+                    <span className="text-sm font-semibold text-gray-900">{team.playerB?.name}</span>
+                  </div>
+                  <div className="flex items-center gap-1 mt-1">
+                    {team.club?.logo && (
+                      <img src={team.club.logo} alt={team.club.name} className="h-4 w-4 object-contain" />
+                    )}
+                    <span className="text-xs text-gray-500">{team.club?.name || 'Free Agent'}</span>
+                  </div>
+                </div>
+              </div>
+              <div className="text-right">
+                <div className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">{team.totalPoints}</div>
+                <div className="text-xs text-gray-500 font-medium">points</div>
+              </div>
+            </div>
+            <div className="grid grid-cols-4 gap-2 pt-3 border-t border-gray-200">
+              <div className="text-center bg-gray-50 rounded-lg p-2">
+                <div className="text-xs text-gray-600 mb-1 font-medium">MP</div>
+                <div className="text-sm font-bold text-gray-900">{team.matchesPlayed}</div>
+              </div>
+              <div className="text-center bg-gray-50 rounded-lg p-2">
+                <div className="text-xs text-gray-600 mb-1 font-medium">W/D/L</div>
+                <div className="text-xs font-bold text-gray-900">{team.wins}/{team.draws}/{team.losses}</div>
+              </div>
+              <div className="text-center bg-gray-50 rounded-lg p-2">
+                <div className="text-xs text-gray-600 mb-1 font-medium">GS</div>
+                <div className="text-sm font-bold text-gray-900">{team.goalsScored}</div>
+              </div>
+              <div className="text-center bg-gray-50 rounded-lg p-2">
+                <div className="text-xs text-gray-600 mb-1 font-medium">GC</div>
+                <div className="text-sm font-bold text-gray-900">{team.goalsConceded}</div>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }
 

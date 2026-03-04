@@ -17,10 +17,11 @@ export const matchCreateSchema = z.object({
   matchDate: z.string().refine((date) => !isNaN(Date.parse(date)), {
     message: "Invalid match date format",
   }),
-  stageId: z.number().int().positive("Stage ID must be a positive integer").optional(),
-  stageName: z.string().optional(),
+  stageId: z.union([z.number().int().positive("Stage ID must be a positive integer"), z.null()]).optional(),
+  stageName: z.union([z.string(), z.null()]).optional(),
   walkoverWinnerId: z.number().int().nullable().optional(), // null = normal, 0 = both forfeit, playerId = winner
   results: z.array(matchResultSchema).min(1, "At least one match result is required"),
+  matchFormat: z.enum(['SINGLES', 'DOUBLES']).optional(), // Optional match format hint
 }).refine((data) => {
   // Check for duplicate player IDs
   const playerIds = data.results.map(r => r.playerId);
@@ -29,6 +30,18 @@ export const matchCreateSchema = z.object({
 }, {
   message: "Duplicate player IDs are not allowed in match results",
   path: ["results"],
+}).refine((data) => {
+  // Validate player count based on match format
+  if (data.matchFormat === 'DOUBLES' && data.results.length !== 4) {
+    return false;
+  }
+  if (data.matchFormat === 'SINGLES' && data.results.length !== 2) {
+    return false;
+  }
+  return true;
+}, {
+  message: "Invalid number of players for match format (Singles: 2 players, Doubles: 4 players)",
+  path: ["results"],
 });
 
 // Schema for updating a match
@@ -36,8 +49,8 @@ export const matchUpdateSchema = z.object({
   matchDate: z.string().refine((date) => !isNaN(Date.parse(date)), {
     message: "Invalid match date format",
   }).optional(),
-  stageId: z.number().int().positive("Stage ID must be a positive integer").optional(),
-  stageName: z.string().optional(),
+  stageId: z.union([z.number().int().positive("Stage ID must be a positive integer"), z.null()]).optional(),
+  stageName: z.union([z.string(), z.null()]).optional(),
   walkoverWinnerId: z.number().int().nullable().optional(), // null = normal, 0 = both forfeit, playerId = winner
   results: z.array(matchResultSchema).min(1, "At least one match result is required").optional(),
 }).refine((data) => {

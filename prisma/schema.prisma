@@ -19,17 +19,18 @@ model Admin {
 }
 
 model Club {
-  id            Int               @id @default(autoincrement())
-  name          String            @db.VarChar(100)
-  logo          String?           @db.VarChar(255)
+  id            Int                @id @default(autoincrement())
+  name          String             @db.VarChar(100)
+  logo          String?            @db.VarChar(255)
   description   String?
-  createdAt     DateTime          @default(now())
-  updatedAt     DateTime          @updatedAt
-  playerStats   PlayerClubStats[] @relation("ClubPlayerStats")
-  transfersFrom PlayerTransfer[]  @relation("TransfersFrom")
-  transfersTo   PlayerTransfer[]  @relation("TransfersTo")
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+  playerStats   PlayerClubStats[]  @relation("ClubPlayerStats")
+  transfersFrom PlayerTransfer[]   @relation("TransfersFrom")
+  transfersTo   PlayerTransfer[]   @relation("TransfersTo")
   players       Player[]
   tournaments   Tournament[]
+  teamMatches   TeamMatchResult[]
 
   @@index([name])
   @@index([createdAt])
@@ -52,6 +53,8 @@ model Player {
   gender                 String                  @default("MALE") @db.VarChar(20)
   state                  String                  @default("") @db.VarChar(100)
   matchResults           MatchResult[]
+  teamMatchesAsPlayerA   TeamMatchResult[]       @relation("TeamMatchPlayerA")
+  teamMatchesAsPlayerB   TeamMatchResult[]       @relation("TeamMatchPlayerB")
   clubStats              PlayerClubStats[]
   roles                  PlayerRole[]
   transferHistory        PlayerTransfer[]        @relation("PlayerTransfers")
@@ -231,22 +234,24 @@ model TournamentParticipant {
 }
 
 model Match {
-  id               Int           @id @default(autoincrement())
+  id               Int               @id @default(autoincrement())
   tournamentId     Int
-  matchDate        DateTime      @db.Date
-  createdAt        DateTime      @default(now())
-  updatedAt        DateTime      @updatedAt
+  matchDate        DateTime          @db.Date
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
   stageId          Int?
-  stageName        String?       @db.VarChar(100)
+  stageName        String?           @db.VarChar(100)
   walkoverWinnerId Int?
-  isTeamMatch      Boolean       @default(false)
+  isTeamMatch      Boolean           @default(false)
   results          MatchResult[]
-  stage            StagePoint?   @relation("MatchStage", fields: [stageId], references: [id])
-  tournament       Tournament    @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  teamResults      TeamMatchResult[]
+  stage            StagePoint?       @relation("MatchStage", fields: [stageId], references: [id])
+  tournament       Tournament        @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
 
   @@index([tournamentId])
   @@index([stageId])
   @@index([matchDate])
+  @@index([isTeamMatch])
   @@map("matches")
 }
 
@@ -269,6 +274,34 @@ model MatchResult {
   @@index([matchId])
   @@index([playerId])
   @@map("match_results")
+}
+
+model TeamMatchResult {
+  id                Int          @id @default(autoincrement())
+  matchId           Int
+  clubId            Int
+  teamPosition      Int          @default(1)
+  playerAId         Int
+  playerBId         Int
+  outcome           MatchOutcome
+  goalsScored       Int          @default(0)
+  goalsConceded     Int          @default(0)
+  pointsEarned      Int          @default(0)
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+  basePoints        Int          @default(0)
+  conditionalPoints Int          @default(0)
+  match             Match        @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  club              Club         @relation(fields: [clubId], references: [id], onDelete: Cascade)
+  playerA           Player       @relation("TeamMatchPlayerA", fields: [playerAId], references: [id], onDelete: Cascade)
+  playerB           Player       @relation("TeamMatchPlayerB", fields: [playerBId], references: [id], onDelete: Cascade)
+
+  @@unique([matchId, teamPosition])
+  @@index([matchId])
+  @@index([clubId])
+  @@index([playerAId])
+  @@index([playerBId])
+  @@map("team_match_results")
 }
 
 model TournamentPlayerStats {

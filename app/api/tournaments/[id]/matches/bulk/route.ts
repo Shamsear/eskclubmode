@@ -2,249 +2,322 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { createErrorResponse, UnauthorizedError } from "@/lib/errors";
-import { updatePlayerStatistics } from "@/lib/match-utils";
+import { calculatePointsWithRules, updatePlayerStatistics, PointSystemConfig } from "@/lib/match-utils";
+import { 
+  createErrorResponse, 
+  NotFoundError, 
+  UnauthorizedError, 
+  ValidationError,
+} from "@/lib/errors";
 
-interface BulkMatch {
+interface BulkMatchData {
   playerAName: string;
   playerBName: string;
+  playerCName?: string;
+  playerDName?: string;
   playerAGoals: number;
   playerBGoals: number;
   matchDate: string;
-  walkover?: string; // 'normal', 'both', or player name
+  walkover?: string;
   playerAExtraPoints?: number;
   playerBExtraPoints?: number;
+  playerCExtraPoints?: number;
+  playerDExtraPoints?: number;
 }
 
+// POST /api/tournaments/[id]/matches/bulk - Create multiple matches
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
-
+    
     if (!session) {
       throw new UnauthorizedError();
     }
 
     const { id } = await params;
     const tournamentId = parseInt(id);
-
+    
     if (isNaN(tournamentId)) {
-      return NextResponse.json(
-        { error: "Invalid tournament ID" },
-        { status: 400 }
-      );
+      throw new ValidationError("Invalid tournament ID");
     }
 
-    // Get tournament with participants and point system
+    const body = await request.json();
+    const { matches } = body as { matches: BulkMatchData[] };
+
+    if (!Array.isArray(matches) || matches.length === 0) {
+      throw new ValidationError("Matches array is required and must not be empty");
+    }
+
+    // Check if tournament exists and get its configuration
     const tournament = await prisma.tournament.findUnique({
       where: { id: tournamentId },
+      select: {
+        id: true,
+        matchFormat: true,
+        pointSystemTemplateId: true,
+        pointsPerWin: true,
+        pointsPerDraw: true,
+        pointsPerLoss: true,
+        pointsPerGoalScored: true,
+        pointsPerGoalConceded: true,
+      },
+    });
+
+    if (!tournament) {
+      throw new NotFoundError("Tournament");
+    }
+
+    const isDoublesFormat = tournament.matchFormat === 'DOUBLES';
+
+    // Get all participants
+    const participants = await prisma.tournamentParticipant.findMany({
+      where: { tournamentId },
       include: {
-        participants: {
-          include: {
-            player: true,
+        player: {
+          select: {
+            id: true,
+            name: true,
+            clubId: true,
           },
         },
       },
     });
 
-    if (!tournament) {
-      return NextResponse.json(
-        { error: "Tournament not found" },
-        { status: 404 }
-      );
+    const playerMap = new Map(participants.map(p => [p.player.name.toLowerCase(), p.player]));
+
+    // Fetch point system configuration
+    let pointSystemConfig: PointSystemConfig;
+    
+    if (tournament.pointSystemTemplateId) {
+      const template = await prisma.pointSystemTemplate.findUnique({
+        where: { id: tournament.pointSystemTemplateId },
+        include: {
+          conditionalRules: true,
+        },
+      });
+
+      if (template) {
+        pointSystemConfig = {
+          pointsPerWin: template.pointsPerWin,
+          pointsPerDraw: template.pointsPerDraw,
+          pointsPerLoss: template.pointsPerLoss,
+          pointsPerGoalScored: template.pointsPerGoalScored,
+          pointsPerGoalConceded: template.pointsPerGoalConceded,
+          conditionalRules: template.conditionalRules,
+          pointsForWalkoverWin: template.pointsForWalkoverWin,
+          pointsForWalkoverLoss: template.pointsForWalkoverLoss,
+        };
+      } else {
+        pointSystemConfig = {
+          pointsPerWin: tournament.pointsPerWin,
+          pointsPerDraw: tournament.pointsPerDraw,
+          pointsPerLoss: tournament.pointsPerLoss,
+          pointsPerGoalScored: tournament.pointsPerGoalScored,
+          pointsPerGoalConceded: tournament.pointsPerGoalConceded,
+        };
+      }
+    } else {
+      pointSystemConfig = {
+        pointsPerWin: tournament.pointsPerWin,
+        pointsPerDraw: tournament.pointsPerDraw,
+        pointsPerLoss: tournament.pointsPerLoss,
+        pointsPerGoalScored: tournament.pointsPerGoalScored,
+        pointsPerGoalConceded: tournament.pointsPerGoalConceded,
+      };
     }
 
-    const body = await request.json();
-    const { matches } = body as { matches: BulkMatch[] };
-
-    if (!Array.isArray(matches) || matches.length === 0) {
-      return NextResponse.json(
-        { error: "No matches provided" },
-        { status: 400 }
-      );
-    }
-
-    let added = 0;
-    let skipped = 0;
     const errors: string[] = [];
-    const affectedPlayerIds = new Set<number>();
+    const addedMatches: any[] = [];
+    let skipped = 0;
 
-    for (const match of matches) {
+    // Process each match
+    for (let i = 0; i < matches.length; i++) {
+      const match = matches[i];
+      const matchNum = i + 1;
+
       try {
-        // Find players by name
-        const playerA = tournament.participants.find(
-          p => p.player.name.toLowerCase() === match.playerAName.toLowerCase()
-        );
-        const playerB = tournament.participants.find(
-          p => p.player.name.toLowerCase() === match.playerBName.toLowerCase()
-        );
+        // Find players
+        const playerA = playerMap.get(match.playerAName.toLowerCase());
+        const playerB = playerMap.get(match.playerBName.toLowerCase());
 
-        if (!playerA || !playerB) {
-          errors.push(`Players not found: ${match.playerAName} vs ${match.playerBName}`);
+        if (!playerA) {
+          errors.push(`Match ${matchNum}: Player "${match.playerAName}" not found in tournament participants`);
+          skipped++;
+          continue;
+        }
+        if (!playerB) {
+          errors.push(`Match ${matchNum}: Player "${match.playerBName}" not found in tournament participants`);
           skipped++;
           continue;
         }
 
-        // Handle walkover
-        const walkover = match.walkover?.toLowerCase() || 'normal';
-        let walkoverWinnerId: number | null = null;
-        let playerAOutcome: 'WIN' | 'DRAW' | 'LOSS';
-        let playerBOutcome: 'WIN' | 'DRAW' | 'LOSS';
-        let playerAPoints = 0;
-        let playerBPoints = 0;
+        let playerC, playerD;
+        if (isDoublesFormat) {
+          if (!match.playerCName || !match.playerDName) {
+            errors.push(`Match ${matchNum}: Doubles format requires 4 players`);
+            skipped++;
+            continue;
+          }
 
-        if (walkover === 'both') {
-          // Both forfeited
-          walkoverWinnerId = 0;
-          playerAOutcome = 'LOSS';
-          playerBOutcome = 'LOSS';
-          playerAPoints = 0;
-          playerBPoints = 0;
-        } else if (walkover === match.playerAName.toLowerCase()) {
-          // Player A won by walkover
-          walkoverWinnerId = playerA.player.id;
-          playerAOutcome = 'WIN';
-          playerBOutcome = 'LOSS';
-          
-          // Get walkover points from template if available
-          if (tournament.pointSystemTemplateId) {
-            const template = await prisma.pointSystemTemplate.findUnique({
-              where: { id: tournament.pointSystemTemplateId },
-              select: {
-                pointsForWalkoverWin: true,
-                pointsForWalkoverLoss: true,
-              },
-            });
-            if (template) {
-              playerAPoints = template.pointsForWalkoverWin;
-              playerBPoints = template.pointsForWalkoverLoss;
-            } else {
-              playerAPoints = 3;
-              playerBPoints = -3;
-            }
-          } else {
-            playerAPoints = 3;
-            playerBPoints = -3;
+          playerC = playerMap.get(match.playerCName.toLowerCase());
+          playerD = playerMap.get(match.playerDName.toLowerCase());
+
+          if (!playerC) {
+            errors.push(`Match ${matchNum}: Player "${match.playerCName}" not found in tournament participants`);
+            skipped++;
+            continue;
           }
-        } else if (walkover === match.playerBName.toLowerCase()) {
-          // Player B won by walkover
-          walkoverWinnerId = playerB.player.id;
-          playerAOutcome = 'LOSS';
-          playerBOutcome = 'WIN';
-          
-          // Get walkover points from template if available
-          if (tournament.pointSystemTemplateId) {
-            const template = await prisma.pointSystemTemplate.findUnique({
-              where: { id: tournament.pointSystemTemplateId },
-              select: {
-                pointsForWalkoverWin: true,
-                pointsForWalkoverLoss: true,
-              },
-            });
-            if (template) {
-              playerBPoints = template.pointsForWalkoverWin;
-              playerAPoints = template.pointsForWalkoverLoss;
-            } else {
-              playerBPoints = 3;
-              playerAPoints = -3;
-            }
-          } else {
-            playerBPoints = 3;
-            playerAPoints = -3;
+          if (!playerD) {
+            errors.push(`Match ${matchNum}: Player "${match.playerDName}" not found in tournament participants`);
+            skipped++;
+            continue;
           }
+
+          // Validate team composition
+          if (playerA.clubId !== playerB.clubId) {
+            errors.push(`Match ${matchNum}: Team 1 players must be from same club or both free agents`);
+            skipped++;
+            continue;
+          }
+          if (playerC.clubId !== playerD.clubId) {
+            errors.push(`Match ${matchNum}: Team 2 players must be from same club or both free agents`);
+            skipped++;
+            continue;
+          }
+        }
+
+        // Determine outcomes
+        const teamAGoals = match.playerAGoals;
+        const teamBGoals = match.playerBGoals;
+        let teamAOutcome: 'WIN' | 'DRAW' | 'LOSS';
+        let teamBOutcome: 'WIN' | 'DRAW' | 'LOSS';
+
+        if (teamAGoals > teamBGoals) {
+          teamAOutcome = 'WIN';
+          teamBOutcome = 'LOSS';
+        } else if (teamAGoals < teamBGoals) {
+          teamAOutcome = 'LOSS';
+          teamBOutcome = 'WIN';
         } else {
-          // Normal match - determine outcomes by goals
-          if (match.playerAGoals > match.playerBGoals) {
-            playerAOutcome = 'WIN';
-            playerBOutcome = 'LOSS';
-          } else if (match.playerAGoals < match.playerBGoals) {
-            playerAOutcome = 'LOSS';
-            playerBOutcome = 'WIN';
-          } else {
-            playerAOutcome = 'DRAW';
-            playerBOutcome = 'DRAW';
-          }
+          teamAOutcome = 'DRAW';
+          teamBOutcome = 'DRAW';
+        }
 
-          // Calculate points normally
-          const calculatePoints = (outcome: string, goalsScored: number, goalsConceded: number) => {
-            let points = 0;
-            if (outcome === 'WIN') points += tournament.pointsPerWin;
-            else if (outcome === 'DRAW') points += tournament.pointsPerDraw;
-            else points += tournament.pointsPerLoss;
-            
-            points += goalsScored * tournament.pointsPerGoalScored;
-            points += goalsConceded * tournament.pointsPerGoalConceded;
-            
-            return points;
+        // Calculate points
+        const calculatePoints = (outcome: 'WIN' | 'DRAW' | 'LOSS', goalsScored: number, goalsConceded: number, extraPoints: number = 0) => {
+          const result = {
+            outcome,
+            goalsScored,
+            goalsConceded,
           };
+          const calculation = calculatePointsWithRules(result, pointSystemConfig);
+          return {
+            pointsEarned: calculation.totalPoints + extraPoints,
+            basePoints: calculation.basePoints + extraPoints,
+            conditionalPoints: calculation.conditionalPoints,
+          };
+        };
 
-          playerAPoints = calculatePoints(playerAOutcome, match.playerAGoals, match.playerBGoals);
-          playerBPoints = calculatePoints(playerBOutcome, match.playerBGoals, match.playerAGoals);
-        }
+        const teamAPoints = calculatePoints(teamAOutcome, teamAGoals, teamBGoals, match.playerAExtraPoints || 0);
+        const teamBPoints = calculatePoints(teamBOutcome, teamBGoals, teamAGoals, match.playerBExtraPoints || 0);
 
-        // Add extra points if provided
-        if (match.playerAExtraPoints) {
-          playerAPoints += match.playerAExtraPoints;
-        }
-        if (match.playerBExtraPoints) {
-          playerBPoints += match.playerBExtraPoints;
-        }
+        // Create match in transaction
+        const createdMatch = await prisma.$transaction(async (tx) => {
+          const newMatch = await tx.match.create({
+            data: {
+              tournamentId,
+              matchDate: new Date(match.matchDate),
+              isTeamMatch: isDoublesFormat,
+            },
+          });
 
-        // Create match with results
-        await prisma.match.create({
-          data: {
-            tournamentId,
-            matchDate: new Date(match.matchDate),
-            ...(walkoverWinnerId !== null && { walkoverWinnerId }),
-            results: {
-              create: [
+          if (isDoublesFormat && playerC && playerD) {
+            // Create team match results
+            if (playerA.clubId) {
+              await tx.teamMatchResult.create({
+                data: {
+                  matchId: newMatch.id,
+                  clubId: playerA.clubId,
+                  teamPosition: 1,
+                  playerAId: playerA.id,
+                  playerBId: playerB.id,
+                  outcome: teamAOutcome,
+                  goalsScored: teamAGoals,
+                  goalsConceded: teamBGoals,
+                  pointsEarned: teamAPoints.pointsEarned,
+                  basePoints: teamAPoints.basePoints,
+                  conditionalPoints: teamAPoints.conditionalPoints,
+                },
+              });
+            }
+
+            if (playerC.clubId) {
+              await tx.teamMatchResult.create({
+                data: {
+                  matchId: newMatch.id,
+                  clubId: playerC.clubId,
+                  teamPosition: 2,
+                  playerAId: playerC.id,
+                  playerBId: playerD.id,
+                  outcome: teamBOutcome,
+                  goalsScored: teamBGoals,
+                  goalsConceded: teamAGoals,
+                  pointsEarned: teamBPoints.pointsEarned,
+                  basePoints: teamBPoints.basePoints,
+                  conditionalPoints: teamBPoints.conditionalPoints,
+                },
+              });
+            }
+          } else {
+            // Create individual match results for singles
+            await tx.matchResult.createMany({
+              data: [
                 {
-                  playerId: playerA.player.id,
-                  outcome: playerAOutcome,
-                  goalsScored: match.playerAGoals,
-                  goalsConceded: match.playerBGoals,
-                  pointsEarned: playerAPoints,
-                  basePoints: playerAPoints,
-                  conditionalPoints: 0,
+                  matchId: newMatch.id,
+                  playerId: playerA.id,
+                  outcome: teamAOutcome,
+                  goalsScored: teamAGoals,
+                  goalsConceded: teamBGoals,
+                  pointsEarned: teamAPoints.pointsEarned,
+                  basePoints: teamAPoints.basePoints,
+                  conditionalPoints: teamAPoints.conditionalPoints,
                 },
                 {
-                  playerId: playerB.player.id,
-                  outcome: playerBOutcome,
-                  goalsScored: match.playerBGoals,
-                  goalsConceded: match.playerAGoals,
-                  pointsEarned: playerBPoints,
-                  basePoints: playerBPoints,
-                  conditionalPoints: 0,
+                  matchId: newMatch.id,
+                  playerId: playerB.id,
+                  outcome: teamBOutcome,
+                  goalsScored: teamBGoals,
+                  goalsConceded: teamAGoals,
+                  pointsEarned: teamBPoints.pointsEarned,
+                  basePoints: teamBPoints.basePoints,
+                  conditionalPoints: teamBPoints.conditionalPoints,
                 },
               ],
-            },
-          },
+            });
+          }
+
+          return newMatch;
         });
 
-        // Track affected players for statistics update
-        affectedPlayerIds.add(playerA.player.id);
-        affectedPlayerIds.add(playerB.player.id);
+        addedMatches.push(createdMatch);
 
-        added++;
-      } catch (error) {
-        errors.push(`Failed to add match ${match.playerAName} vs ${match.playerBName}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        // Update player statistics for singles matches
+        if (!isDoublesFormat) {
+          await updatePlayerStatistics(tournamentId, [playerA.id, playerB.id]);
+        }
+      } catch (error: any) {
+        errors.push(`Match ${matchNum}: ${error.message || 'Unknown error'}`);
         skipped++;
       }
     }
 
-    // Update statistics for all affected players
-    if (affectedPlayerIds.size > 0) {
-      await updatePlayerStatistics(tournamentId, Array.from(affectedPlayerIds));
-    }
-
     return NextResponse.json({
-      success: true,
-      added,
+      added: addedMatches.length,
       skipped,
       errors: errors.length > 0 ? errors : undefined,
-      message: `Successfully added ${added} match(es)`,
     });
   } catch (error) {
     return createErrorResponse(error);
