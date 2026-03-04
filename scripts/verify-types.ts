@@ -48,6 +48,7 @@ const tournament: Tournament = {
   description: null,
   startDate: new Date(),
   endDate: null,
+  matchFormat: 'SINGLES',
   pointSystemTemplateId: null, // This field should exist
   pointsPerWin: 3,
   pointsPerDraw: 1,
