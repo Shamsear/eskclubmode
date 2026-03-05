@@ -24,7 +24,7 @@ export interface PointSystemConfig extends PointSystem {
 }
 
 export interface MatchResultData {
-  playerId: number;
+  playerId?: number;
   outcome: MatchOutcome;
   goalsScored: number;
   goalsConceded: number;
