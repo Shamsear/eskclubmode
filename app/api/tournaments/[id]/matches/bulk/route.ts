@@ -154,7 +154,8 @@ export async function POST(
           continue;
         }
 
-        let playerC, playerD;
+        let playerC: { id: number; name: string; clubId: number | null } | undefined;
+        let playerD: { id: number; name: string; clubId: number | null } | undefined;
         if (isDoublesFormat) {
           if (!match.playerCName || !match.playerDName) {
             errors.push(`Match ${matchNum}: Doubles format requires 4 players`);
