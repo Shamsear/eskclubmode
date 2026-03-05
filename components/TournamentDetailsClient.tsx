@@ -47,6 +47,7 @@ interface TournamentDetailsClientProps {
     matches: Array<{
       id: number;
       matchDate: Date;
+      isTeamMatch: boolean;
       results: Array<{
         id: number;
         outcome: string;
@@ -54,6 +55,29 @@ interface TournamentDetailsClientProps {
         goalsConceded: number;
         pointsEarned: number;
         player: {
+          id: number;
+          name: string;
+          photo: string | null;
+        };
+      }>;
+      teamResults?: Array<{
+        id: number;
+        teamPosition: number;
+        outcome: string;
+        goalsScored: number;
+        goalsConceded: number;
+        pointsEarned: number;
+        club: {
+          id: number;
+          name: string;
+          logo: string | null;
+        } | null;
+        playerA: {
+          id: number;
+          name: string;
+          photo: string | null;
+        };
+        playerB: {
           id: number;
           name: string;
           photo: string | null;

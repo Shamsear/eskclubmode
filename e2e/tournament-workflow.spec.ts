@@ -217,7 +217,7 @@ test.describe('Complete Tournament Workflow', () => {
       await page.waitForTimeout(1000);
       
       // Click edit on first match
-      await page.click('a[href*="/matches/"][href*="/edit"], button:has-text("Edit")').first();
+      await page.locator('a[href*="/matches/"][href*="/edit"], button:has-text("Edit")').first().click();
       await page.waitForURL(/\/matches\/\d+\/edit$/);
       
       // Update goals

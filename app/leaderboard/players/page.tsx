@@ -37,7 +37,7 @@ async function getPlayersLeaderboard(tournamentId?: string) {
       const totalMatches = result._count.id;
       return { player: { id: player.id, name: player.name, photo: player.photo, club: player.club }, stats: { totalMatches, totalWins: wins, totalDraws: draws, totalLosses: losses, totalGoalsScored: result._sum.goalsScored || 0, totalGoalsConceded: result._sum.goalsConceded || 0, totalPoints: result._sum.pointsEarned || 0, winRate: totalMatches > 0 ? (wins / totalMatches) * 100 : 0 } };
     }));
-    return { players: playerStats.filter(Boolean).sort((a, b) => b!.stats.totalPoints - a!.stats.totalPoints) };
+    return { players: playerStats.filter((p): p is PlayerStats => p !== null).sort((a, b) => b.stats.totalPoints - a.stats.totalPoints) };
   } catch { return null; }
 }
 
