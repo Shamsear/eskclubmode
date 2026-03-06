@@ -49,12 +49,41 @@ interface PlayerProfileData {
     goalsScored: number;
     goalsConceded: number;
     pointsEarned: number;
-    opponent: {
+    isTeamMatch?: boolean;
+    opponent?: {
       id: number;
       name: string;
       photo: string | null;
       goalsScored: number;
       goalsConceded: number;
+    } | null;
+    partner?: {
+      id: number;
+      name: string;
+      photo: string | null;
+    };
+    club?: {
+      id: number;
+      name: string;
+      logo: string | null;
+    } | null;
+    opponentTeam?: {
+      club: {
+        id: number;
+        name: string;
+        logo: string | null;
+      } | null;
+      playerA: {
+        id: number;
+        name: string;
+        photo: string | null;
+      };
+      playerB: {
+        id: number;
+        name: string;
+        photo: string | null;
+      };
+      goalsScored: number;
     } | null;
   }>;
   tournaments: Array<{
@@ -170,32 +199,44 @@ export default function PlayerProfileClient({ initialData }: PlayerProfileClient
               </div>
 
               {/* Club Badge */}
-              <div
-                onClick={() => router.push(`/clubs/${player.club.id}`)}
-                className="inline-flex items-center gap-3 bg-white/10 backdrop-blur-sm px-5 py-3 rounded-xl border border-white/20 hover:bg-white/20 transition-all cursor-pointer group"
-              >
-                {player.club.logo ? (
-                  <div className="w-12 h-12 rounded-lg border-2 border-[#FF6600] overflow-hidden bg-white">
-                    <OptimizedImage
-                      src={player.club.logo}
-                      alt={player.club.name}
-                      width={48}
-                      height={48}
-                      className="w-full h-full object-cover"
-                    />
+              {player.club ? (
+                <div
+                  onClick={() => router.push(`/clubs/${player.club.id}`)}
+                  className="inline-flex items-center gap-3 bg-white/10 backdrop-blur-sm px-5 py-3 rounded-xl border border-white/20 hover:bg-white/20 transition-all cursor-pointer group"
+                >
+                  {player.club.logo ? (
+                    <div className="w-12 h-12 rounded-lg border-2 border-[#FF6600] overflow-hidden bg-white">
+                      <OptimizedImage
+                        src={player.club.logo}
+                        alt={player.club.name}
+                        width={48}
+                        height={48}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  ) : (
+                    <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-[#FF6600] to-[#CC2900] flex items-center justify-center">
+                      <span className="text-xl font-bold text-white">
+                        {player.club.name.charAt(0)}
+                      </span>
+                    </div>
+                  )}
+                  <div className="text-left">
+                    <div className="text-xs text-white/70">Playing for</div>
+                    <div className="font-bold text-white group-hover:text-[#FFB700] transition-colors">{player.club.name}</div>
                   </div>
-                ) : (
-                  <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-[#FF6600] to-[#CC2900] flex items-center justify-center">
-                    <span className="text-xl font-bold text-white">
-                      {player.club.name.charAt(0)}
-                    </span>
-                  </div>
-                )}
-                <div className="text-left">
-                  <div className="text-xs text-white/70">Playing for</div>
-                  <div className="font-bold text-white group-hover:text-[#FFB700] transition-colors">{player.club.name}</div>
                 </div>
-              </div>
+              ) : (
+                <div className="inline-flex items-center gap-3 bg-white/10 backdrop-blur-sm px-5 py-3 rounded-xl border border-white/20">
+                  <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-gray-500 to-gray-700 flex items-center justify-center">
+                    <span className="text-xl font-bold text-white">F</span>
+                  </div>
+                  <div className="text-left">
+                    <div className="text-xs text-white/70">Status</div>
+                    <div className="font-bold text-white">Free Agent</div>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -263,6 +304,8 @@ export default function PlayerProfileClient({ initialData }: PlayerProfileClient
           <div className="grid gap-3 mb-10">
             {recentMatches.map((match) => {
               const config = outcomeConfig[match.outcome];
+              const isTeamMatch = match.isTeamMatch;
+              
               return (
                 <div key={match.id} className="rounded-2xl border border-[#1E1E1E] hover:border-[#FF6600]/40 transition-all duration-300 overflow-hidden group" style={{ background: '#111' }}>
                   <Link href={`/matches/${match.matchId}`} className="block">
@@ -271,50 +314,149 @@ export default function PlayerProfileClient({ initialData }: PlayerProfileClient
                       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-0 mb-3">
                         <div className="flex items-center gap-2 flex-wrap">
                           <span className={`px-2.5 py-1 rounded-lg text-xs font-bold border ${config.color}`}>{config.label}</span>
+                          {isTeamMatch && <span className="px-2 py-0.5 rounded bg-purple-500/20 text-purple-300 text-xs font-bold">2v2</span>}
                           {match.stageName && <span className="text-xs text-[#555]">{match.stageName}</span>}
                         </div>
                         <div className="text-xs text-[#555]">{new Date(match.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</div>
                       </div>
 
-                      {/* Match Score */}
-                      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-3">
-                        {/* Current Player */}
-                        <div className="flex items-center gap-2 sm:gap-3 flex-1 w-full sm:w-auto">
-                          {player.photo ? (
-                            <img src={player.photo} alt={player.name} className="w-10 h-10 sm:w-12 sm:h-12 rounded-full object-cover border border-[#FF6600]/50 flex-shrink-0" />
-                          ) : (
-                            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: "linear-gradient(135deg,#FF6600,#CC2900)" }}>
-                              <span className="text-base sm:text-lg font-bold text-white">{player.name.charAt(0)}</span>
+                      {isTeamMatch ? (
+                        /* Team Match Display */
+                        <div className="flex flex-col gap-3 mb-3">
+                          {/* Your Team */}
+                          <div className="flex flex-col gap-2">
+                            {match.club && (
+                              <div className="flex items-center gap-2 justify-center">
+                                {match.club.logo && <img src={match.club.logo} alt={match.club.name} className="w-5 h-5 object-contain" />}
+                                <span className="text-xs font-bold text-white/70">Your Team: {match.club.name}</span>
+                              </div>
+                            )}
+                            
+                            <div className="flex items-center justify-center gap-4">
+                              <div className="flex items-center gap-2">
+                                {player.photo ? (
+                                  <img src={player.photo} alt={player.name} className="w-10 h-10 rounded-full object-cover border border-[#FF6600]/50 flex-shrink-0" />
+                                ) : (
+                                  <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: "linear-gradient(135deg,#FF6600,#CC2900)" }}>
+                                    <span className="text-base font-bold text-white">{player.name.charAt(0)}</span>
+                                  </div>
+                                )}
+                                <div className="text-left">
+                                  <div className="font-bold text-sm text-white">{player.name}</div>
+                                  <div className="text-xs text-[#555]">You</div>
+                                </div>
+                              </div>
+
+                              <div className="text-xs text-[#555]">&</div>
+
+                              {match.partner && (
+                                <div className="flex items-center gap-2">
+                                  {match.partner.photo ? (
+                                    <img src={match.partner.photo} alt={match.partner.name} className="w-10 h-10 rounded-full object-cover border border-purple-500/50 flex-shrink-0" />
+                                  ) : (
+                                    <div className="w-10 h-10 rounded-full bg-purple-500/20 flex items-center justify-center flex-shrink-0">
+                                      <span className="text-base font-bold text-purple-300">{match.partner.name.charAt(0)}</span>
+                                    </div>
+                                  )}
+                                  <div className="text-left">
+                                    <div className="font-bold text-sm text-white">{match.partner.name}</div>
+                                    <div className="text-xs text-[#555]">Partner</div>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Score */}
+                          <div className="flex items-center justify-center gap-4 px-6">
+                            <div className="text-3xl font-bold text-[#FF6600]">{match.goalsScored}</div>
+                            <div className="text-2xl font-bold text-gray-400">-</div>
+                            <div className="text-3xl font-bold text-[#CC2900]">{match.goalsConceded}</div>
+                          </div>
+
+                          {/* Opponent Team */}
+                          {match.opponentTeam && (
+                            <div className="flex flex-col gap-2 pt-2 border-t border-[#1A1A1A]">
+                              {match.opponentTeam.club && (
+                                <div className="flex items-center gap-2 justify-center">
+                                  {match.opponentTeam.club.logo && <img src={match.opponentTeam.club.logo} alt={match.opponentTeam.club.name} className="w-5 h-5 object-contain" />}
+                                  <span className="text-xs font-bold text-white/70">Opponent: {match.opponentTeam.club.name}</span>
+                                </div>
+                              )}
+                              
+                              <div className="flex items-center justify-center gap-4">
+                                <div className="flex items-center gap-2">
+                                  {match.opponentTeam.playerA.photo ? (
+                                    <img src={match.opponentTeam.playerA.photo} alt={match.opponentTeam.playerA.name} className="w-8 h-8 rounded-full object-cover border border-[#333] flex-shrink-0" />
+                                  ) : (
+                                    <div className="w-8 h-8 rounded-full bg-[#1A1A1A] flex items-center justify-center flex-shrink-0">
+                                      <span className="text-xs font-bold text-[#555]">{match.opponentTeam.playerA.name.charAt(0)}</span>
+                                    </div>
+                                  )}
+                                  <div className="text-left">
+                                    <div className="text-xs text-white">{match.opponentTeam.playerA.name}</div>
+                                  </div>
+                                </div>
+
+                                <div className="text-xs text-[#555]">&</div>
+
+                                <div className="flex items-center gap-2">
+                                  {match.opponentTeam.playerB.photo ? (
+                                    <img src={match.opponentTeam.playerB.photo} alt={match.opponentTeam.playerB.name} className="w-8 h-8 rounded-full object-cover border border-[#333] flex-shrink-0" />
+                                  ) : (
+                                    <div className="w-8 h-8 rounded-full bg-[#1A1A1A] flex items-center justify-center flex-shrink-0">
+                                      <span className="text-xs font-bold text-[#555]">{match.opponentTeam.playerB.name.charAt(0)}</span>
+                                    </div>
+                                  )}
+                                  <div className="text-left">
+                                    <div className="text-xs text-white">{match.opponentTeam.playerB.name}</div>
+                                  </div>
+                                </div>
+                              </div>
                             </div>
                           )}
-                          <div className="text-left min-w-0 flex-1">
-                            <div className="font-bold text-sm sm:text-base text-white truncate group-hover:text-[#FFB700] transition-colors">{player.name}</div>
-                            <div className="text-xs text-[#555] truncate">{player.club?.name || 'Free Agent'}</div>
-                          </div>
                         </div>
-
-                        {/* Score */}
-                        <div className="flex items-center gap-2 sm:gap-4 px-3 sm:px-6 flex-shrink-0">
-                          <div className="text-2xl sm:text-3xl font-bold text-[#FF6600]">{match.goalsScored}</div>
-                          <div className="text-xl sm:text-2xl font-bold text-gray-400">-</div>
-                          <div className="text-2xl sm:text-3xl font-bold text-[#CC2900]">{match.goalsConceded}</div>
-                        </div>
-
-                        {/* Opponent */}
-                        <div className="flex items-center gap-2 sm:gap-3 flex-1 justify-end w-full sm:w-auto">
-                          <div className="text-right min-w-0 flex-1">
-                            <div className="font-bold text-sm sm:text-base text-white truncate">{match.opponent?.name || 'Walkover'}</div>
-                            <div className="text-xs text-[#555] truncate">Opponent</div>
-                          </div>
-                          {match.opponent?.photo ? (
-                            <img src={match.opponent.photo} alt={match.opponent.name} className="w-10 h-10 sm:w-12 sm:h-12 rounded-full object-cover border border-[#333] flex-shrink-0" />
-                          ) : (
-                            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-[#1A1A1A] flex items-center justify-center flex-shrink-0">
-                              <span className="text-base sm:text-lg font-bold text-[#555]">{match.opponent?.name.charAt(0) || '?'}</span>
+                      ) : (
+                        /* Singles Match Display */
+                        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-3">
+                          {/* Current Player */}
+                          <div className="flex items-center gap-2 sm:gap-3 flex-1 w-full sm:w-auto">
+                            {player.photo ? (
+                              <img src={player.photo} alt={player.name} className="w-10 h-10 sm:w-12 sm:h-12 rounded-full object-cover border border-[#FF6600]/50 flex-shrink-0" />
+                            ) : (
+                              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: "linear-gradient(135deg,#FF6600,#CC2900)" }}>
+                                <span className="text-base sm:text-lg font-bold text-white">{player.name.charAt(0)}</span>
+                              </div>
+                            )}
+                            <div className="text-left min-w-0 flex-1">
+                              <div className="font-bold text-sm sm:text-base text-white truncate group-hover:text-[#FFB700] transition-colors">{player.name}</div>
+                              <div className="text-xs text-[#555] truncate">{player.club?.name || 'Free Agent'}</div>
                             </div>
-                          )}
+                          </div>
+
+                          {/* Score */}
+                          <div className="flex items-center gap-2 sm:gap-4 px-3 sm:px-6 flex-shrink-0">
+                            <div className="text-2xl sm:text-3xl font-bold text-[#FF6600]">{match.goalsScored}</div>
+                            <div className="text-xl sm:text-2xl font-bold text-gray-400">-</div>
+                            <div className="text-2xl sm:text-3xl font-bold text-[#CC2900]">{match.goalsConceded}</div>
+                          </div>
+
+                          {/* Opponent */}
+                          <div className="flex items-center gap-2 sm:gap-3 flex-1 justify-end w-full sm:w-auto">
+                            <div className="text-right min-w-0 flex-1">
+                              <div className="font-bold text-sm sm:text-base text-white truncate">{match.opponent?.name || 'Walkover'}</div>
+                              <div className="text-xs text-[#555] truncate">Opponent</div>
+                            </div>
+                            {match.opponent?.photo ? (
+                              <img src={match.opponent.photo} alt={match.opponent.name} className="w-10 h-10 sm:w-12 sm:h-12 rounded-full object-cover border border-[#333] flex-shrink-0" />
+                            ) : (
+                              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-[#1A1A1A] flex items-center justify-center flex-shrink-0">
+                                <span className="text-base sm:text-lg font-bold text-[#555]">{match.opponent?.name.charAt(0) || '?'}</span>
+                              </div>
+                            )}
+                          </div>
                         </div>
-                      </div>
+                      )}
 
                       {/* Tournament Name */}
                       <div className="text-xs text-[#555] text-center pt-3 border-t border-[#1A1A1A]">

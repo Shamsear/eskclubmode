@@ -9,7 +9,7 @@ interface PageProps {
 async function getPlayerData(id: number) {
   try {
     // Fetch player data and recent matches in parallel
-    const [player, recentMatches, tournamentStats, roles] = await Promise.all([
+    const [player, singlesMatches, teamMatches, tournamentStats, roles] = await Promise.all([
       prisma.player.findUnique({
         where: { id },
         select: {
@@ -29,7 +29,7 @@ async function getPlayerData(id: number) {
           },
         },
       }),
-      // Fetch only recent 10 matches with all results to find opponent
+      // Fetch singles matches
       prisma.matchResult.findMany({
         where: { playerId: id },
         include: {
@@ -38,6 +38,7 @@ async function getPlayerData(id: number) {
               id: true,
               matchDate: true,
               stageName: true,
+              isTeamMatch: true,
               tournament: {
                 select: {
                   id: true,
@@ -55,6 +56,86 @@ async function getPlayerData(id: number) {
                   },
                 },
               },
+            },
+          },
+        },
+        orderBy: {
+          match: {
+            matchDate: 'desc',
+          },
+        },
+        take: 10,
+      }),
+      // Fetch team matches (doubles)
+      prisma.teamMatchResult.findMany({
+        where: {
+          OR: [
+            { playerAId: id },
+            { playerBId: id },
+          ],
+        },
+        include: {
+          match: {
+            select: {
+              id: true,
+              matchDate: true,
+              stageName: true,
+              isTeamMatch: true,
+              tournament: {
+                select: {
+                  id: true,
+                  name: true,
+                },
+              },
+              teamResults: {
+                include: {
+                  club: {
+                    select: {
+                      id: true,
+                      name: true,
+                      logo: true,
+                    },
+                  },
+                  playerA: {
+                    select: {
+                      id: true,
+                      name: true,
+                      photo: true,
+                    },
+                  },
+                  playerB: {
+                    select: {
+                      id: true,
+                      name: true,
+                      photo: true,
+                    },
+                  },
+                },
+                orderBy: {
+                  teamPosition: 'asc',
+                },
+              },
+            },
+          },
+          club: {
+            select: {
+              id: true,
+              name: true,
+              logo: true,
+            },
+          },
+          playerA: {
+            select: {
+              id: true,
+              name: true,
+              photo: true,
+            },
+          },
+          playerB: {
+            select: {
+              id: true,
+              name: true,
+              photo: true,
             },
           },
         },
@@ -98,6 +179,72 @@ async function getPlayerData(id: number) {
     const totalGoalsConceded = tournamentStats.reduce((sum, stat) => sum + stat.goalsConceded, 0);
     const totalPoints = tournamentStats.reduce((sum, stat) => sum + stat.totalPoints, 0);
 
+    // Process singles matches
+    const processedSinglesMatches = singlesMatches.map(result => {
+      const opponent = result.match.results.find(r => r.playerId !== id);
+      
+      return {
+        id: result.id,
+        matchId: result.match.id,
+        date: result.match.matchDate.toISOString(),
+        tournament: result.match.tournament,
+        stageName: result.match.stageName,
+        outcome: result.outcome as 'WIN' | 'DRAW' | 'LOSS',
+        goalsScored: result.goalsScored,
+        goalsConceded: result.goalsConceded,
+        pointsEarned: result.pointsEarned,
+        isTeamMatch: false,
+        opponent: opponent ? {
+          id: opponent.player.id,
+          name: opponent.player.name,
+          photo: opponent.player.photo,
+          goalsScored: opponent.goalsScored,
+          goalsConceded: opponent.goalsConceded,
+        } : null,
+      };
+    });
+
+    // Process team matches
+    const processedTeamMatches = teamMatches.map(result => {
+      // Find partner (the other player in the team)
+      const partner = result.playerAId === id ? result.playerB : result.playerA;
+      
+      // Find opponent team (the other team in the match)
+      const opponentTeam = result.match.teamResults?.find(
+        tr => tr.playerAId !== id && tr.playerBId !== id
+      );
+      
+      return {
+        id: result.id,
+        matchId: result.match.id,
+        date: result.match.matchDate.toISOString(),
+        tournament: result.match.tournament,
+        stageName: result.match.stageName,
+        outcome: result.outcome as 'WIN' | 'DRAW' | 'LOSS',
+        goalsScored: result.goalsScored,
+        goalsConceded: result.goalsConceded,
+        pointsEarned: result.pointsEarned,
+        isTeamMatch: true,
+        partner: {
+          id: partner.id,
+          name: partner.name,
+          photo: partner.photo,
+        },
+        club: result.club,
+        opponentTeam: opponentTeam ? {
+          club: opponentTeam.club,
+          playerA: opponentTeam.playerA,
+          playerB: opponentTeam.playerB,
+          goalsScored: opponentTeam.goalsScored,
+        } : null,
+      };
+    });
+
+    // Combine and sort all matches by date
+    const allMatches = [...processedSinglesMatches, ...processedTeamMatches]
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+      .slice(0, 10);
+
     return {
       player: {
         id: player.id,
@@ -121,29 +268,7 @@ async function getPlayerData(id: number) {
         totalPoints,
         winRate: totalMatches > 0 ? (totalWins / totalMatches) * 100 : 0,
       },
-      recentMatches: recentMatches.map(result => {
-        // Find opponent from match results
-        const opponent = result.match.results.find(r => r.playerId !== id);
-        
-        return {
-          id: result.id,
-          matchId: result.match.id,
-          date: result.match.matchDate.toISOString(),
-          tournament: result.match.tournament,
-          stageName: result.match.stageName,
-          outcome: result.outcome as 'WIN' | 'DRAW' | 'LOSS',
-          goalsScored: result.goalsScored,
-          goalsConceded: result.goalsConceded,
-          pointsEarned: result.pointsEarned,
-          opponent: opponent ? {
-            id: opponent.player.id,
-            name: opponent.player.name,
-            photo: opponent.player.photo,
-            goalsScored: opponent.goalsScored,
-            goalsConceded: opponent.goalsConceded,
-          } : null,
-        };
-      }),
+      recentMatches: allMatches,
       tournaments: tournamentStats.map(stat => ({
         id: stat.tournament.id,
         name: stat.tournament.name,

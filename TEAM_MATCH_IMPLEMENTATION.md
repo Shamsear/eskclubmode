@@ -124,6 +124,14 @@ Separate table for storing doubles match results:
    - Fixed "Cannot read properties of undefined (reading 'create')" error
    - Command: `npx prisma generate`
 
+9. **TypeScript Build Fixes**
+   - Added `pointsForWalkoverWin` and `pointsForWalkoverLoss` to `PointSystemConfig` interface
+   - Made `playerId` optional in `MatchResultData` interface (not used in point calculations)
+   - Added explicit type annotations for `playerC` and `playerD` in bulk upload
+   - Fixed `TournamentDetailsClient` to include `isTeamMatch` and `teamResults` in matches type
+   - Fixed leaderboard players page to properly filter null values with type predicate
+   - Fixed e2e test to use `.locator().first().click()` instead of `.click().first()`
+
 ## Troubleshooting
 
 ### "An unexpected error occurred" when submitting doubles match
@@ -174,6 +182,15 @@ Check the browser console (F12) for detailed error logs. Common issues:
     - Displays club logo and team stats
     - Updated stat cards to show "Total Teams" instead of "Total Players" for doubles
     - Updated "Current Leader" to show team name for doubles tournaments
+
+13. **Public Matches List**
+    - Updated `/api/matches` endpoint to include `teamResults` data
+    - Updated `MatchesList` component to display both singles and doubles matches
+    - Added `TeamSlot` component for displaying team match cards
+    - Purple gradient header for doubles matches (vs orange for singles)
+    - Shows "2v2" badge for team matches
+    - Displays both players for each team with club logo
+    - Shows team outcome, points, and goals
 
 ### 📋 Next Steps (If Needed)
 

@@ -41,6 +41,34 @@ export async function GET(request: NextRequest) {
             },
           },
         },
+        teamResults: {
+          include: {
+            club: {
+              select: {
+                id: true,
+                name: true,
+                logo: true,
+              },
+            },
+            playerA: {
+              select: {
+                id: true,
+                name: true,
+                photo: true,
+              },
+            },
+            playerB: {
+              select: {
+                id: true,
+                name: true,
+                photo: true,
+              },
+            },
+          },
+          orderBy: {
+            teamPosition: 'asc',
+          },
+        },
         stage: {
           select: {
             id: true,

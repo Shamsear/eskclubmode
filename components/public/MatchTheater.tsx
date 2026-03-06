@@ -246,8 +246,8 @@ function PlayerPerformanceCard({ result }: PlayerPerformanceCardProps) {
             <div className="flex-1 min-w-0">
               <h3 className="text-base font-black text-white group-hover/player:text-[#FFB700] transition-colors truncate">{result.player.name}</h3>
               <div className="flex items-center gap-2 text-xs text-[#555]">
-                {result.player.club.logo && <OptimizedImage src={result.player.club.logo} alt="" width={14} height={14} className="w-3.5 h-3.5 object-contain" />}
-                <span className="truncate">{result.player.club.name}</span>
+                {result.player.club?.logo && <OptimizedImage src={result.player.club.logo} alt="" width={14} height={14} className="w-3.5 h-3.5 object-contain" />}
+                <span className="truncate">{result.player.club?.name || 'Free Agent'}</span>
               </div>
             </div>
           </div>

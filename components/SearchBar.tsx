@@ -197,7 +197,7 @@ export default function SearchBar({ className = "" }: SearchBarProps) {
                         {player.name}
                       </p>
                       <p className="text-xs text-gray-500 truncate">
-                        {player.club.name}
+                        {player.club ? player.club.name : 'Free Agent'}
                       </p>
                       <div className="flex flex-wrap gap-1 mt-1">
                         {player.roles.map((role) => (

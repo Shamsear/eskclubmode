@@ -269,7 +269,7 @@ export default function SearchResults() {
                           </div>
                           <div className="mt-3 flex flex-wrap items-center gap-2">
                             <span className="text-sm text-gray-500">
-                              {player.club.name}
+                              {player.club ? player.club.name : 'Free Agent'}
                             </span>
                             <span className="text-gray-300">•</span>
                             <div className="flex flex-wrap gap-1">
