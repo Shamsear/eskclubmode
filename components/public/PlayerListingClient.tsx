@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { motion } from 'framer-motion';
 import { RoleBadge } from './Badge';
 
 interface Player {
@@ -130,10 +131,14 @@ export default function PlayerListingClient() {
 
       {/* Results count */}
       {data && !loading && (
-        <div className="text-sm text-[#555]">
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="text-sm text-[#555]"
+        >
           Showing <span className="font-black text-white">{data.players.length}</span> of{' '}
           <span className="font-black text-white">{data.pagination.total}</span> players
-        </div>
+        </motion.div>
       )}
 
       {/* Grid */}
@@ -141,9 +146,12 @@ export default function PlayerListingClient() {
         {loading ? (
           [...Array(8)].map((_, i) => <PlayerCardSkeleton key={i} />)
         ) : data && data.players.length > 0 ? (
-          data.players.map((player) => (
-            <div
+          data.players.map((player, index) => (
+            <motion.div
               key={player.id}
+              initial={{ opacity: 0, y: 28 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.45, delay: index * 0.055, ease: [0.22, 1, 0.36, 1] }}
               onClick={() => router.push(`/players/${player.id}`)}
               className="group rounded-2xl border border-[#1E1E1E] hover:border-[#FF6600]/50 transition-all duration-300 overflow-hidden cursor-pointer hover:-translate-y-1 hover:shadow-2xl"
               style={{ background: '#111' }}
@@ -235,7 +243,7 @@ export default function PlayerListingClient() {
 
               {/* Hover sweep bar */}
               <div className="h-px bg-gradient-to-r from-transparent via-[#FF6600] to-transparent transform scale-x-0 group-hover:scale-x-100 transition-transform duration-500 origin-left" />
-            </div>
+            </motion.div>
           ))
         ) : (
           <div className="col-span-full rounded-2xl border border-dashed border-[#1E1E1E] p-16 text-center" style={{ background: '#111' }}>

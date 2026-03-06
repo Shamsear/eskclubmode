@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { motion } from 'framer-motion';
 import { AchievementBadge } from './Badge';
 import { PublicSkeletons } from './PublicSkeletons';
 import { OptimizedImage } from '@/components/ui/OptimizedImage';
@@ -130,16 +131,14 @@ export default function ClubListingClient() {
         <>
           <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-5">
             {filteredClubs.map((club, index) => (
-              <div
+              <motion.div
                 key={club.id}
+                initial={{ opacity: 0, y: 28 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.45, delay: index * 0.06, ease: [0.22, 1, 0.36, 1] }}
                 onClick={() => router.push(`/clubs/${club.id}`)}
                 className="group rounded-2xl border border-[#1E1E1E] hover:border-[#FF6600]/50 transition-all duration-300 overflow-hidden cursor-pointer hover:-translate-y-1 hover:shadow-2xl"
-                style={{
-                  background: '#111',
-                  animationDelay: `${index * 50}ms`,
-                  animation: 'fadeInUp 0.5s ease-out forwards',
-                  opacity: 0,
-                }}
+                style={{ background: '#111' }}
               >
                 {/* Top accent line */}
                 <div className="h-px" style={{ background: 'linear-gradient(90deg,transparent,#FF6600,transparent)' }} />
@@ -208,7 +207,7 @@ export default function ClubListingClient() {
 
                 {/* Hover bar */}
                 <div className="h-px bg-gradient-to-r from-transparent via-[#FF6600] to-transparent transform scale-x-0 group-hover:scale-x-100 transition-transform duration-500 origin-left" />
-              </div>
+              </motion.div>
             ))}
           </div>
 

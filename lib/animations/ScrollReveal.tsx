@@ -10,11 +10,12 @@ interface ScrollRevealProps {
   delay?: number;
   threshold?: number;
   once?: boolean;
+  direction?: 'up' | 'down' | 'left' | 'right' | 'scale';
 }
 
 /**
  * ScrollReveal - Reveals content when it enters the viewport
- * Perfect for Match Theater and other scroll-triggered animations
+ * Premium spring-based entrance with directional control
  */
 export function ScrollReveal({
   children,
@@ -22,6 +23,7 @@ export function ScrollReveal({
   delay = 0,
   threshold = 0.1,
   once = true,
+  direction = 'up',
 }: ScrollRevealProps) {
   const ref = useRef<HTMLDivElement>(null);
   const isInView = useInView(ref, { once, amount: threshold });
@@ -31,15 +33,25 @@ export function ScrollReveal({
     return <div className={className}>{children}</div>;
   }
 
+  const directionMap = {
+    up:    { initial: { opacity: 0, y: 32 },  animate: { opacity: 1, y: 0 } },
+    down:  { initial: { opacity: 0, y: -32 }, animate: { opacity: 1, y: 0 } },
+    left:  { initial: { opacity: 0, x: 32 },  animate: { opacity: 1, x: 0 } },
+    right: { initial: { opacity: 0, x: -32 }, animate: { opacity: 1, x: 0 } },
+    scale: { initial: { opacity: 0, scale: 0.92 }, animate: { opacity: 1, scale: 1 } },
+  };
+
+  const { initial, animate } = directionMap[direction];
+
   return (
     <motion.div
       ref={ref}
-      initial={{ opacity: 0, y: 50 }}
-      animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 50 }}
+      initial={initial}
+      animate={isInView ? animate : initial}
       transition={{
         duration: animationDuration.slow,
         delay,
-        ease: animationEasing.easeOut,
+        ease: [0.22, 1, 0.36, 1], // custom expo ease-out for premium feel
       }}
       className={className}
     >
@@ -56,7 +68,6 @@ interface ParallaxProps {
 
 /**
  * Parallax - Creates parallax scrolling effect
- * Used in Match Theater hero section
  */
 export function Parallax({ children, className = '', offset = 50 }: ParallaxProps) {
   const ref = useRef<HTMLDivElement>(null);
@@ -64,7 +75,7 @@ export function Parallax({ children, className = '', offset = 50 }: ParallaxProp
     target: ref,
     offset: ['start start', 'end start'],
   });
-  
+
   const y = useTransform(scrollYProgress, [0, 1], [0, offset]);
   const shouldAnimate = !prefersReducedMotion();
 
@@ -84,20 +95,49 @@ interface ScrollProgressProps {
 }
 
 /**
- * ScrollProgress - Shows scroll progress indicator
+ * ScrollProgress - Orange branded scroll progress bar
  */
 export function ScrollProgress({ className = '' }: ScrollProgressProps) {
   const { scrollYProgress } = useScroll();
   const shouldAnimate = !prefersReducedMotion();
 
-  if (!shouldAnimate) {
-    return null;
-  }
+  if (!shouldAnimate) return null;
 
   return (
     <motion.div
-      className={`fixed top-0 left-0 right-0 h-1 bg-blue-600 origin-left z-50 ${className}`}
-      style={{ scaleX: scrollYProgress }}
+      className={`fixed top-0 left-0 right-0 h-[2px] origin-left z-50 ${className}`}
+      style={{
+        scaleX: scrollYProgress,
+        background: 'linear-gradient(90deg,#FF6600,#FFB700)',
+      }}
     />
+  );
+}
+
+interface FadeInWhenVisibleProps {
+  children: React.ReactNode;
+  className?: string;
+  delay?: number;
+}
+
+/**
+ * FadeInWhenVisible - Simple fade-in triggered by IntersectionObserver
+ * Lightweight version without full motion dependency
+ */
+export function FadeInWhenVisible({ children, className = '', delay = 0 }: FadeInWhenVisibleProps) {
+  const ref = useRef<HTMLDivElement>(null);
+  const isInView = useInView(ref, { once: true, amount: 0.1 });
+  const shouldAnimate = !prefersReducedMotion();
+
+  return (
+    <motion.div
+      ref={ref}
+      initial={shouldAnimate ? { opacity: 0, y: 20 } : { opacity: 1 }}
+      animate={isInView ? { opacity: 1, y: 0 } : (shouldAnimate ? { opacity: 0, y: 20 } : { opacity: 1 })}
+      transition={{ duration: 0.5, delay, ease: [0.22, 1, 0.36, 1] }}
+      className={className}
+    >
+      {children}
+    </motion.div>
   );
 }

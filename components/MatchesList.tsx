@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { motion } from 'framer-motion';
 import { OptimizedImage } from './ui/OptimizedImage';
 
 interface MatchResult {
@@ -272,15 +273,20 @@ export function MatchesList() {
   /* ── Match List ── */
   return (
     <div className="space-y-3">
-      {matches.map((match) => {
+      {matches.map((match, index) => {
         const isTeamMatch = match.teamResults && match.teamResults.length > 0;
         const [player1, player2] = match.results;
         const [team1, team2] = match.teamResults || [];
         const isWalkover = match.walkoverWinnerId !== null;
 
         return (
-          <Link
+          <motion.div
             key={match.id}
+            initial={{ opacity: 0, y: 28 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.42, delay: index * 0.06, ease: [0.22, 1, 0.36, 1] }}
+          >
+          <Link
             href={`/matches/${match.id}`}
             className="block rounded-2xl border border-[#1E1E1E] hover:border-[#FF6600]/40 transition-all duration-300 overflow-hidden group"
             style={{ background: '#111' }}
@@ -319,8 +325,9 @@ export function MatchesList() {
 
             {/* Body */}
             {isWalkover ? (
-              <div className="p-5">
-                <div className="rounded-xl border border-yellow-500/20 p-4 text-center"
+              <div className="p-4 sm:p-5">
+                {/* Walkover Banner */}
+                <div className="rounded-xl border border-yellow-500/20 p-3 mb-4 text-center"
                   style={{ background: 'rgba(234,179,8,0.06)' }}>
                   <div className="flex items-center justify-center gap-2">
                     <svg className="w-4 h-4 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -330,6 +337,25 @@ export function MatchesList() {
                       {match.walkoverWinnerId === 0 ? 'Both players forfeited' : 'Walkover'}
                     </span>
                   </div>
+                </div>
+
+                {/* Show players even for walkover */}
+                <div className="flex flex-col md:flex-row md:items-center gap-3 md:gap-4">
+                  {/* Team/Player 1 */}
+                  {isTeamMatch ? <TeamSlot teamResult={team1} align="left" /> : <PlayerSlot result={player1} align="left" />}
+
+                  {/* VS Divider */}
+                  <div className="flex md:flex-col items-center justify-center gap-1 flex-shrink-0 self-center">
+                    <div className="w-10 h-10 rounded-full flex items-center justify-center border border-yellow-500/40"
+                      style={{ background: 'rgba(234,179,8,0.1)' }}>
+                      <span className="text-yellow-400 font-black text-xs">
+                        {match.walkoverWinnerId === 0 ? 'FF' : 'WO'}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Team/Player 2 */}
+                  {isTeamMatch ? <TeamSlot teamResult={team2} align="right" /> : <PlayerSlot result={player2} align="right" />}
                 </div>
               </div>
             ) : (
@@ -365,6 +391,7 @@ export function MatchesList() {
             {/* Hover bar */}
             <div className="h-px bg-gradient-to-r from-transparent via-[#FF6600] to-transparent transform scale-x-0 group-hover:scale-x-100 transition-transform duration-500 origin-left" />
           </Link>
+          </motion.div>
         );
       })}
     </div>

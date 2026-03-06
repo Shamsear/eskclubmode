@@ -146,7 +146,7 @@ async function getTournamentMatches(id: number): Promise<TournamentMatchesData |
         },
       },
       orderBy: [
-        { matchDate: 'asc' },
+        { matchDate: 'desc' },
       ],
     });
 
@@ -157,13 +157,13 @@ async function getTournamentMatches(id: number): Promise<TournamentMatchesData |
         const team1 = match.teamResults[0];
         const team2 = match.teamResults[1];
 
-        // Determine status
+        // Determine status - check walkover first
         let status: 'SCHEDULED' | 'COMPLETED' | 'CANCELLED' = 'SCHEDULED';
 
-        if (team1 && team2 && team1.outcome && team2.outcome) {
-          status = 'COMPLETED';
-        } else if (match.walkoverWinnerId !== null && match.walkoverWinnerId !== undefined) {
+        if (match.walkoverWinnerId !== null && match.walkoverWinnerId !== undefined) {
           status = 'CANCELLED';
+        } else if (team1 && team2 && team1.outcome && team2.outcome) {
+          status = 'COMPLETED';
         }
 
         // Determine winner (for team matches, we'll show the club that won)
@@ -216,15 +216,15 @@ async function getTournamentMatches(id: number): Promise<TournamentMatchesData |
       const player1Result = match.results[0];
       const player2Result = match.results[1];
 
-      // Determine status based on results
+      // Determine status based on results - check walkover first
       let status: 'SCHEDULED' | 'COMPLETED' | 'CANCELLED' = 'SCHEDULED';
 
-      // Match is completed if both players have results with outcome set
-      if (player1Result && player2Result &&
+      // Check for walkover first before checking completion
+      if (match.walkoverWinnerId !== null && match.walkoverWinnerId !== undefined) {
+        status = 'CANCELLED';
+      } else if (player1Result && player2Result &&
         player1Result.outcome && player2Result.outcome) {
         status = 'COMPLETED';
-      } else if (match.walkoverWinnerId !== null && match.walkoverWinnerId !== undefined) {
-        status = 'CANCELLED';
       }
 
       // Determine winner
@@ -389,6 +389,20 @@ async function TournamentMatchesContent({ tournamentId }: { tournamentId: number
                         </div>
                       </div>
 
+                      {/* Walkover/Forfeit Banner */}
+                      {match.status === 'CANCELLED' && (
+                        <div className="rounded-xl border border-yellow-500/20 p-2.5 mb-3 text-center" style={{ background: 'rgba(234,179,8,0.06)' }}>
+                          <div className="flex items-center justify-center gap-2">
+                            <svg className="w-4 h-4 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                            </svg>
+                            <span className="text-sm text-yellow-400 font-bold">
+                              {match.winner ? 'Walkover' : 'Both players forfeited'}
+                            </span>
+                          </div>
+                        </div>
+                      )}
+
                       {/* Team Match Display */}
                       {match.isTeamMatch && match.team1 && match.team2 ? (
                         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
@@ -408,9 +422,18 @@ async function TournamentMatchesContent({ tournamentId }: { tournamentId: number
                                 ))}
                               </div>
                               {match.status === 'COMPLETED' && match.winner?.id === team.clubId && <div className="mt-1.5 text-xs text-green-400 font-semibold">✓ Winner</div>}
+                              {match.status === 'CANCELLED' && match.winner?.id === team.clubId && (
+                                <div className="mt-1.5">
+                                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-black bg-yellow-500/20 text-yellow-400 border border-yellow-500/30">
+                                    {match.winner ? 'WO' : 'FF'}
+                                  </span>
+                                </div>
+                              )}
                             </div>
                           ))}
-                          <div className="flex-shrink-0 text-center px-2"><div className="text-lg font-black text-[#333]">VS</div></div>
+                          <div className="flex-shrink-0 text-center px-2">
+                            <div className="text-lg font-black text-[#333]">VS</div>
+                          </div>
                         </div>
                       ) : (
                         /* Singles Match */
@@ -423,6 +446,13 @@ async function TournamentMatchesContent({ tournamentId }: { tournamentId: number
                                 <div className="flex-1 min-w-0">
                                   <div className="font-bold text-sm text-white truncate group-hover:text-[#FFB700] transition-colors">{match.player1.name}</div>
                                   {match.status === 'COMPLETED' && match.winner?.id === match.player1.id && <div className="text-xs text-green-400 font-semibold">✓ Winner</div>}
+                                  {match.status === 'CANCELLED' && match.winner?.id === match.player1.id && (
+                                    <div className="mt-1">
+                                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-black bg-yellow-500/20 text-yellow-400 border border-yellow-500/30">
+                                        {match.winner ? 'WO' : 'FF'}
+                                      </span>
+                                    </div>
+                                  )}
                                 </div>
                                 {match.player1Score !== null && <div className="text-2xl font-black text-[#FF6600] flex-shrink-0">{match.player1Score}</div>}
                               </>
@@ -437,6 +467,13 @@ async function TournamentMatchesContent({ tournamentId }: { tournamentId: number
                                 <div className="flex-1 min-w-0 text-right">
                                   <div className="font-bold text-sm text-white truncate group-hover:text-[#FFB700] transition-colors">{match.player2.name}</div>
                                   {match.status === 'COMPLETED' && match.winner?.id === match.player2.id && <div className="text-xs text-green-400 font-semibold">✓ Winner</div>}
+                                  {match.status === 'CANCELLED' && match.winner?.id === match.player2.id && (
+                                    <div className="mt-1">
+                                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-black bg-yellow-500/20 text-yellow-400 border border-yellow-500/30">
+                                        {match.winner ? 'WO' : 'FF'}
+                                      </span>
+                                    </div>
+                                  )}
                                 </div>
                                 {match.player2Score !== null && <div className="text-2xl font-black text-[#FF6600] flex-shrink-0">{match.player2Score}</div>}
                               </>
