@@ -12,7 +12,7 @@ export function HeroContent({ children }: { children: React.ReactNode }) {
       animate="visible"
       variants={{
         hidden: {},
-        visible: { transition: { staggerChildren: 0.1, delayChildren: 0.05 } },
+        visible: { transition: { staggerChildren: 0.08, delayChildren: 0 } },
       }}
     >
       {children}
@@ -32,10 +32,9 @@ export function HeroItem({
   return (
     <motion.div
       className={className}
-      variants={{
-        hidden: { opacity: 0, y: 28 },
-        visible: { opacity: 1, y: 0, transition: { duration: 0.6, ease, delay } },
-      }}
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5, delay, ease }}
     >
       {children}
     </motion.div>
@@ -52,10 +51,10 @@ export function StatPill({
 }) {
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20, scale: 0.95 }}
-      whileInView={{ opacity: 1, y: 0, scale: 1 }}
-      viewport={{ once: true, amount: 0.3 }}
-      transition={{ duration: 0.5, delay: index * 0.08, ease }}
+      initial={{ opacity: 0, y: 16 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, amount: 0.3, margin: "0px 0px -100px 0px" }}
+      transition={{ duration: 0.4, delay: index * 0.05, ease }}
     >
       {children}
     </motion.div>
@@ -72,10 +71,10 @@ export function FeatureCardWrapper({
 }) {
   return (
     <motion.div
-      initial={{ opacity: 0, y: 32 }}
+      initial={{ opacity: 0, y: 20 }}
       whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, amount: 0.15 }}
-      transition={{ duration: 0.5, delay: index * 0.07, ease }}
+      viewport={{ once: true, amount: 0.2, margin: "0px 0px -50px 0px" }}
+      transition={{ duration: 0.4, delay: index * 0.05, ease }}
     >
       {children}
     </motion.div>
@@ -92,10 +91,10 @@ export function StatBandItem({
 }) {
   return (
     <motion.div
-      initial={{ opacity: 0, y: 24 }}
+      initial={{ opacity: 0, y: 16 }}
       whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, amount: 0.3 }}
-      transition={{ duration: 0.55, delay: index * 0.1, ease }}
+      viewport={{ once: true, amount: 0.3, margin: "0px 0px -100px 0px" }}
+      transition={{ duration: 0.4, delay: index * 0.06, ease }}
       className="text-center group"
     >
       {children}
@@ -114,10 +113,10 @@ export function SectionReveal({
   return (
     <motion.div
       className={className}
-      initial={{ opacity: 0, y: 40 }}
+      initial={{ opacity: 0, y: 24 }}
       whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, amount: 0.1 }}
-      transition={{ duration: 0.6, ease }}
+      viewport={{ once: true, amount: 0.15, margin: "0px 0px -50px 0px" }}
+      transition={{ duration: 0.5, ease }}
     >
       {children}
     </motion.div>

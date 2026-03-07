@@ -148,17 +148,19 @@ export default async function Home() {
         <section className="relative min-h-screen flex items-center justify-center overflow-hidden mesh-bg">
           {/* Animated blob lights */}
           <div
-            className="absolute top-[-10%] left-[-5%] w-[45rem] h-[45rem] rounded-full opacity-20 blur-3xl pointer-events-none"
+            className="absolute top-[-10%] left-[-5%] w-[45rem] h-[45rem] rounded-full opacity-15 blur-2xl pointer-events-none"
             style={{
               background: "radial-gradient(circle, #FF6600 0%, transparent 70%)",
               animation: "hero-blob-1 12s ease-in-out infinite",
+              willChange: "transform",
             }}
           />
           <div
-            className="absolute bottom-[-10%] right-[-5%] w-[40rem] h-[40rem] rounded-full opacity-15 blur-3xl pointer-events-none"
+            className="absolute bottom-[-10%] right-[-5%] w-[40rem] h-[40rem] rounded-full opacity-12 blur-2xl pointer-events-none"
             style={{
               background: "radial-gradient(circle, #FFB700 0%, transparent 70%)",
               animation: "hero-blob-2 14s ease-in-out infinite",
+              willChange: "transform",
             }}
           />
 
@@ -325,7 +327,7 @@ export default async function Home() {
             WHY SECTION
         ══════════════════════════════════════ */}
         <section className="py-16 sm:py-24 lg:py-32 bg-[#111111] relative overflow-hidden">
-          <div className="absolute right-0 top-1/2 -translate-y-1/2 w-96 h-96 rounded-full opacity-10 blur-3xl pointer-events-none"
+          <div className="absolute right-0 top-1/2 -translate-y-1/2 w-96 h-96 rounded-full opacity-8 blur-2xl pointer-events-none"
             style={{ background: "radial-gradient(circle, #FF6600, transparent)" }} />
 
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -385,7 +387,7 @@ export default async function Home() {
               <div className="relative h-96 hidden lg:block">
                 {/* Large card */}
                 <div className="absolute top-6 left-0 w-64 glass border border-[#FFB700]/20 rounded-2xl p-5 shadow-2xl"
-                  style={{ animation: "float 6s ease-in-out infinite" }}>
+                  style={{ animation: "float 6s ease-in-out infinite", willChange: "transform" }}>
                   <div className="flex items-center gap-3 mb-3">
                     <div className="w-10 h-10 rounded-xl bg-[#FF6600]/20 border border-[#FF6600]/30 flex items-center justify-center">
                       <div className="w-5 h-5 text-[#FF6600]"><TrophyIcon /></div>
@@ -403,7 +405,7 @@ export default async function Home() {
 
                 {/* Stat card */}
                 <div className="absolute top-36 right-8 w-52 glass border border-[#FF6600]/25 rounded-2xl p-4 shadow-2xl"
-                  style={{ animation: "float 8s ease-in-out infinite", animationDelay: "-2s" }}>
+                  style={{ animation: "float 8s ease-in-out infinite", animationDelay: "-2s", willChange: "transform" }}>
                   <div className="text-[#707070] text-xs uppercase tracking-widest mb-1">Top Scorer</div>
                   <div className="text-white font-bold text-sm mb-2">Club Mode Player</div>
                   <div className="w-full h-1.5 bg-white/10 rounded-full overflow-hidden">
@@ -413,7 +415,7 @@ export default async function Home() {
 
                 {/* Mini pill */}
                 <div className="absolute bottom-16 left-8 glass border border-[#FFB700]/30 rounded-full px-5 py-2.5 flex items-center gap-2 shadow-xl"
-                  style={{ animation: "float 7s ease-in-out infinite", animationDelay: "-4s" }}>
+                  style={{ animation: "float 7s ease-in-out infinite", animationDelay: "-4s", willChange: "transform" }}>
                   <span className="w-2 h-2 rounded-full bg-[#22c55e] animate-pulse" />
                   <span className="text-white text-xs font-semibold">Platform Live</span>
                 </div>
@@ -438,9 +440,9 @@ export default async function Home() {
               {/* Dot grid inside */}
               <div className="absolute inset-0 dot-grid opacity-20 pointer-events-none" />
               {/* Glow orbs */}
-              <div className="absolute top-0 left-1/4 w-64 h-64 rounded-full blur-3xl opacity-25 pointer-events-none"
+              <div className="absolute top-0 left-1/4 w-64 h-64 rounded-full blur-2xl opacity-20 pointer-events-none"
                 style={{ background: "radial-gradient(circle, #FF6600, transparent)" }} />
-              <div className="absolute bottom-0 right-1/4 w-48 h-48 rounded-full blur-3xl opacity-20 pointer-events-none"
+              <div className="absolute bottom-0 right-1/4 w-48 h-48 rounded-full blur-2xl opacity-15 pointer-events-none"
                 style={{ background: "radial-gradient(circle, #FFB700, transparent)" }} />
               {/* Border glow top */}
               <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[#FF6600] to-transparent" />
