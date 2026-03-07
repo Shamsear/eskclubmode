@@ -177,15 +177,10 @@ export default function ClubListingClient() {
                   )}
 
                   {/* Stats */}
-                  <div className="flex justify-around items-center py-3 sm:py-4 border-t border-b border-[#1A1A1A] my-3 sm:my-4">
+                  <div className="flex justify-center items-center py-3 sm:py-4 border-t border-b border-[#1A1A1A] my-3 sm:my-4">
                     <div className="text-center">
                       <p className="text-lg sm:text-2xl font-black text-[#FF6600]">{club.playerCount}</p>
                       <p className="text-[9px] sm:text-xs text-[#555] mt-1 font-medium">Players</p>
-                    </div>
-                    <div className="w-px h-8 sm:h-10 bg-[#1E1E1E]" />
-                    <div className="text-center">
-                      <p className="text-lg sm:text-2xl font-black text-[#FFB700]">{club.tournamentCount}</p>
-                      <p className="text-[9px] sm:text-xs text-[#555] mt-1 font-medium">Tournaments</p>
                     </div>
                   </div>
 
