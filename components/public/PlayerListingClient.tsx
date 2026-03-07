@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { RoleBadge } from './Badge';
+import { PageLoader } from './PageLoader';
 
 interface Player {
   id: number;
@@ -25,30 +26,7 @@ interface PlayerListingResponse {
   pagination: { page: number; pageSize: number; total: number };
 }
 
-function PlayerCardSkeleton() {
-  return (
-    <div className="rounded-2xl border border-[#1E1E1E] overflow-hidden animate-pulse" style={{ background: '#111' }}>
-      <div className="aspect-square" style={{ background: '#1A1A1A' }} />
-      <div className="p-4 space-y-3">
-        <div className="h-5 w-3/4 rounded" style={{ background: '#1A1A1A' }} />
-        <div className="h-3 w-1/2 rounded" style={{ background: '#151515' }} />
-        <div className="h-8 w-full rounded-lg" style={{ background: '#1A1A1A' }} />
-        <div className="flex gap-1.5">
-          <div className="h-5 w-14 rounded-full" style={{ background: '#1A1A1A' }} />
-          <div className="h-5 w-16 rounded-full" style={{ background: '#151515' }} />
-        </div>
-        <div className="grid grid-cols-3 gap-2 pt-3 border-t border-[#1A1A1A]">
-          {[1, 2, 3].map((i) => (
-            <div key={i} className="text-center">
-              <div className="h-5 w-8 rounded mx-auto mb-1" style={{ background: '#1A1A1A' }} />
-              <div className="h-3 w-10 rounded mx-auto" style={{ background: '#151515' }} />
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
+
 
 export default function PlayerListingClient() {
   const router = useRouter();
@@ -144,14 +122,21 @@ export default function PlayerListingClient() {
       {/* Grid */}
       <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-5">
         {loading ? (
-          [...Array(8)].map((_, i) => <PlayerCardSkeleton key={i} />)
+          <div className="col-span-full">
+            <PageLoader label="Loading players..." />
+          </div>
         ) : data && data.players.length > 0 ? (
           data.players.map((player, index) => (
             <motion.div
               key={player.id}
-              initial={{ opacity: 0, y: 28 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.45, delay: index * 0.055, ease: [0.22, 1, 0.36, 1] }}
+              initial={{ opacity: 0, y: 32, scale: 0.95 }}
+              whileInView={{ opacity: 1, y: 0, scale: 1 }}
+              viewport={{ once: true, amount: 0.1 }}
+              transition={{
+                duration: 0.5,
+                delay: Math.min(index, 5) * 0.1,
+                ease: [0.22, 1, 0.36, 1],
+              }}
               onClick={() => router.push(`/players/${player.id}`)}
               className="group rounded-2xl border border-[#1E1E1E] hover:border-[#FF6600]/50 transition-all duration-300 overflow-hidden cursor-pointer hover:-translate-y-1 hover:shadow-2xl"
               style={{ background: '#111' }}

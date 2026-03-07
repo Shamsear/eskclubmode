@@ -1,4 +1,5 @@
 import ClubListingClient from "@/components/public/ClubListingClient";
+import { HeroText } from "@/components/ui/HeroText";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -17,19 +18,25 @@ export default function ClubsPage() {
         <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[#FF6600] to-transparent opacity-60" />
 
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full mb-5 border border-[#FFB700]/25 text-xs font-bold tracking-widest uppercase text-[#FFB700]" style={{ background: "rgba(255,183,0,0.08)" }}>
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /></svg>
-            Club Directory
-          </div>
-          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black text-white mb-4 font-['Outfit',sans-serif]">
-            Explore{" "}
-            <span style={{ background: "linear-gradient(135deg,#FFB700,#FF6600,#FFB700)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>
-              Clubs
-            </span>
-          </h1>
-          <p className="text-[#707070] text-base sm:text-lg max-w-xl mx-auto leading-relaxed">
-            Discover clubs, their achievements, and join the competitive gaming community.
-          </p>
+          <HeroText delay={0}>
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full mb-5 border border-[#FFB700]/25 text-xs font-bold tracking-widest uppercase text-[#FFB700]" style={{ background: "rgba(255,183,0,0.08)" }}>
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /></svg>
+              Club Directory
+            </div>
+          </HeroText>
+          <HeroText delay={0.1}>
+            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black text-white mb-4 font-['Outfit',sans-serif]">
+              Explore{" "}
+              <span style={{ background: "linear-gradient(135deg,#FFB700,#FF6600,#FFB700)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>
+                Clubs
+              </span>
+            </h1>
+          </HeroText>
+          <HeroText delay={0.2}>
+            <p className="text-[#707070] text-base sm:text-lg max-w-xl mx-auto leading-relaxed">
+              Discover clubs, their achievements, and join the competitive gaming community.
+            </p>
+          </HeroText>
         </div>
       </section>
 

@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { AchievementBadge } from './Badge';
-import { PublicSkeletons } from './PublicSkeletons';
+import { PageLoader } from './PageLoader';
 import { OptimizedImage } from '@/components/ui/OptimizedImage';
 
 interface Club {
@@ -117,14 +117,8 @@ export default function ClubListingClient() {
         </div>
       )}
 
-      {/* Loading skeletons */}
-      {loading && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-          {[...Array(6)].map((_, i) => (
-            <PublicSkeletons.ClubCard key={i} />
-          ))}
-        </div>
-      )}
+      {/* Loading */}
+      {loading && <PageLoader label="Loading clubs..." />}
 
       {/* Club Grid */}
       {!loading && filteredClubs.length > 0 && (
@@ -133,9 +127,14 @@ export default function ClubListingClient() {
             {filteredClubs.map((club, index) => (
               <motion.div
                 key={club.id}
-                initial={{ opacity: 0, y: 28 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.45, delay: index * 0.06, ease: [0.22, 1, 0.36, 1] }}
+                initial={{ opacity: 0, y: 32, scale: 0.95 }}
+                whileInView={{ opacity: 1, y: 0, scale: 1 }}
+                viewport={{ once: true, amount: 0.1 }}
+                transition={{
+                  duration: 0.5,
+                  delay: Math.min(index, 5) * 0.1,
+                  ease: [0.22, 1, 0.36, 1],
+                }}
                 onClick={() => router.push(`/clubs/${club.id}`)}
                 className="group rounded-2xl border border-[#1E1E1E] hover:border-[#FF6600]/50 transition-all duration-300 overflow-hidden cursor-pointer hover:-translate-y-1 hover:shadow-2xl"
                 style={{ background: '#111' }}

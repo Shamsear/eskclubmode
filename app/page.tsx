@@ -1,6 +1,7 @@
 import Link from "next/link";
 import PublicNavigation from "@/components/public/PublicNavigation";
 import PublicFooter from "@/components/public/PublicFooter";
+import { HeroItem, StatPill, FeatureCardWrapper, StatBandItem, SectionReveal } from "@/components/public/HomeAnimations";
 import type { Metadata } from "next";
 import { prisma } from "@/lib/prisma";
 
@@ -180,63 +181,67 @@ export default async function Home() {
 
           <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24 text-center">
             {/* Eyebrow badge */}
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full mb-8 glass border border-[#FFB700]/30 text-xs sm:text-sm font-semibold text-[#FFB700] tracking-widest uppercase">
-              <span className="w-2 h-2 rounded-full bg-[#FF6600] animate-pulse inline-block" />
-              eFootball Club Mode Platform
-            </div>
+            <HeroItem delay={0}>
+              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full mb-8 glass border border-[#FFB700]/30 text-xs sm:text-sm font-semibold text-[#FFB700] tracking-widest uppercase">
+                <span className="w-2 h-2 rounded-full bg-[#FF6600] animate-pulse inline-block" />
+                eFootball Club Mode Platform
+              </div>
+            </HeroItem>
 
             {/* Main heading */}
-            <h1 className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-black leading-[0.95] tracking-tight mb-6 font-['Outfit',sans-serif]">
-              <span className="block text-white mb-2">Welcome to</span>
-              <span className="gradient-text-brand text-glow block">Eskimos&nbsp;Club</span>
-            </h1>
+            <HeroItem delay={0.1}>
+              <h1 className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-black leading-[0.95] tracking-tight mb-6 font-['Outfit',sans-serif]">
+                <span className="block text-white mb-2">Welcome to</span>
+                <span className="gradient-text-brand text-glow block">Eskimos&nbsp;Club</span>
+              </h1>
+            </HeroItem>
 
-            <p className="text-base sm:text-lg md:text-xl text-[#A0A0A0] mb-10 max-w-2xl mx-auto leading-relaxed font-light">
-              The ultimate destination to track tournaments, analyse player performance,
-              and dominate eFootball competition — all in one premium platform.
-            </p>
+            <HeroItem delay={0.2}>
+              <p className="text-base sm:text-lg md:text-xl text-[#A0A0A0] mb-10 max-w-2xl mx-auto leading-relaxed font-light">
+                The ultimate destination to track tournaments, analyse player performance,
+                and dominate eFootball competition — all in one premium platform.
+              </p>
+            </HeroItem>
 
             {/* CTA buttons */}
-            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-16">
-              <Link
-                href="/tournaments"
-                id="hero-cta-primary"
-                className="group relative inline-flex items-center gap-2.5 px-8 py-4 rounded-xl font-bold text-sm sm:text-base text-white overflow-hidden sheen transition-all duration-300 hover:scale-105 active:scale-95"
-                style={{
-                  background: "linear-gradient(135deg, #FF6600 0%, #CC2900 100%)",
-                  boxShadow: "0 0 30px rgba(255,102,0,0.35), 0 4px 20px rgba(0,0,0,0.4)",
-                }}
-              >
-                <span className="w-5 h-5 flex-shrink-0">
-                  <TrophyIcon />
-                </span>
-                View Tournaments
-                <ArrowRight cls="group-hover:translate-x-1 transition-transform" />
-              </Link>
-
-              <Link
-                href="/players"
-                id="hero-cta-secondary"
-                className="group inline-flex items-center gap-2.5 px-8 py-4 rounded-xl font-semibold text-sm sm:text-base text-white transition-all duration-300 hover:scale-105 active:scale-95 glass border border-[#FFB700]/40 hover:border-[#FFB700]/80 hover:bg-white/10"
-              >
-                Browse Players
-                <ArrowRight cls="group-hover:translate-x-1 transition-transform" />
-              </Link>
-            </div>
+            <HeroItem delay={0.3}>
+              <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-16">
+                <Link
+                  href="/tournaments"
+                  id="hero-cta-primary"
+                  className="group relative inline-flex items-center gap-2.5 px-8 py-4 rounded-xl font-bold text-sm sm:text-base text-white overflow-hidden sheen transition-all duration-300 hover:scale-105 active:scale-95"
+                  style={{
+                    background: "linear-gradient(135deg, #FF6600 0%, #CC2900 100%)",
+                    boxShadow: "0 0 30px rgba(255,102,0,0.35), 0 4px 20px rgba(0,0,0,0.4)",
+                  }}
+                >
+                  <span className="w-5 h-5 flex-shrink-0"><TrophyIcon /></span>
+                  View Tournaments
+                  <ArrowRight cls="group-hover:translate-x-1 transition-transform" />
+                </Link>
+                <Link
+                  href="/players"
+                  id="hero-cta-secondary"
+                  className="group inline-flex items-center gap-2.5 px-8 py-4 rounded-xl font-semibold text-sm sm:text-base text-white transition-all duration-300 hover:scale-105 active:scale-95 glass border border-[#FFB700]/40 hover:border-[#FFB700]/80 hover:bg-white/10"
+                >
+                  Browse Players
+                  <ArrowRight cls="group-hover:translate-x-1 transition-transform" />
+                </Link>
+              </div>
+            </HeroItem>
 
             {/* Stat pills */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 max-w-3xl mx-auto">
               {statItems.map((s, i) => (
-                <div
-                  key={i}
-                  className="relative rounded-2xl p-4 sm:p-5 glass border border-[#FFB700]/20 hover:border-[#FFB700]/50 transition-all duration-300 hover:-translate-y-1 group overflow-hidden"
-                >
-                  <div className="absolute inset-0 bg-gradient-to-br from-[#FF6600]/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-2xl" />
-                  <div className="stat-number text-3xl sm:text-4xl font-black mb-1 font-['Outfit',sans-serif]">
-                    {s.value}{s.suffix}
+                <StatPill key={i} index={i}>
+                  <div className="relative rounded-2xl p-4 sm:p-5 glass border border-[#FFB700]/20 hover:border-[#FFB700]/50 transition-all duration-300 hover:-translate-y-1 group overflow-hidden">
+                    <div className="absolute inset-0 bg-gradient-to-br from-[#FF6600]/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-2xl" />
+                    <div className="stat-number text-3xl sm:text-4xl font-black mb-1 font-['Outfit',sans-serif]">
+                      {s.value}{s.suffix}
+                    </div>
+                    <div className="text-[#707070] text-xs sm:text-sm font-medium">{s.label}</div>
                   </div>
-                  <div className="text-[#707070] text-xs sm:text-sm font-medium">{s.label}</div>
-                </div>
+                </StatPill>
               ))}
             </div>
           </div>
@@ -269,12 +274,16 @@ export default async function Home() {
             {/* Cards grid — first 4 in 2×2, last one full width centred */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-5">
               {features.slice(0, 4).map((f, i) => (
-                <FeatureCard key={i} feature={f} index={i} />
+                <FeatureCardWrapper key={i} index={i}>
+                  <FeatureCard feature={f} index={i} />
+                </FeatureCardWrapper>
               ))}
             </div>
             <div className="flex justify-center">
               <div className="w-full sm:w-1/2 lg:w-1/4">
-                <FeatureCard feature={features[4]} index={4} />
+                <FeatureCardWrapper index={4}>
+                  <FeatureCard feature={features[4]} index={4} />
+                </FeatureCardWrapper>
               </div>
             </div>
           </div>
@@ -298,7 +307,7 @@ export default async function Home() {
                 { value: stats.players, label: "Players", suffix: "", gradient: "from-[#FFB700] to-[#FF9900]" },
                 { value: stats.clubs, label: "Clubs", suffix: "", gradient: "from-[#FF6600] to-[#FFB700]" },
               ].map((s, i) => (
-                <div key={i} className="text-center group">
+                <StatBandItem key={i} index={i}>
                   <div
                     className={`text-4xl sm:text-5xl lg:text-6xl font-black mb-2 bg-gradient-to-br ${s.gradient} bg-clip-text text-transparent font-['Outfit',sans-serif] group-hover:scale-110 transition-transform duration-300`}
                   >
@@ -306,7 +315,7 @@ export default async function Home() {
                   </div>
                   <div className="text-[#707070] text-sm sm:text-base font-medium tracking-wide uppercase">{s.label}</div>
                   <div className="mt-3 mx-auto w-10 h-0.5 rounded-full bg-gradient-to-r from-[#FF6600] to-[#FFB700] opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                </div>
+                </StatBandItem>
               ))}
             </div>
           </div>

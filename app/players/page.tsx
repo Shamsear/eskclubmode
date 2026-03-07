@@ -1,4 +1,5 @@
 import PlayerListingClient from "@/components/public/PlayerListingClient";
+import { HeroText } from "@/components/ui/HeroText";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -17,28 +18,25 @@ export default function PlayersPage() {
         <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[#FF6600] to-transparent opacity-60" />
 
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <div
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-full mb-5 border border-[#FFB700]/25 text-xs font-bold tracking-widest uppercase text-[#FFB700]"
-            style={{ background: "rgba(255,183,0,0.08)", animationDelay: "0ms", animation: "slideUp 0.6s cubic-bezier(0.22,1,0.36,1) forwards", opacity: 0 }}
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" /><circle cx="9" cy="7" r="4" /><path strokeLinecap="round" strokeLinejoin="round" d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75" /></svg>
-            Player Profiles
-          </div>
-          <h1
-            className="text-4xl sm:text-5xl lg:text-6xl font-black text-white mb-4 font-['Outfit',sans-serif]"
-            style={{ animationDelay: "100ms", animation: "slideUp 0.7s cubic-bezier(0.22,1,0.36,1) forwards", opacity: 0 }}
-          >
-            Discover{" "}
-            <span style={{ background: "linear-gradient(135deg,#FFB700,#FF6600,#FFB700)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>
-              Players
-            </span>
-          </h1>
-          <p
-            className="text-[#707070] text-base sm:text-lg max-w-xl mx-auto leading-relaxed"
-            style={{ animationDelay: "200ms", animation: "slideUp 0.7s cubic-bezier(0.22,1,0.36,1) forwards", opacity: 0 }}
-          >
-            Explore player profiles with detailed statistics, match history, and performance analytics.
-          </p>
+          <HeroText delay={0}>
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full mb-5 border border-[#FFB700]/25 text-xs font-bold tracking-widest uppercase text-[#FFB700]" style={{ background: "rgba(255,183,0,0.08)" }}>
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" /><circle cx="9" cy="7" r="4" /><path strokeLinecap="round" strokeLinejoin="round" d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75" /></svg>
+              Player Profiles
+            </div>
+          </HeroText>
+          <HeroText delay={0.1}>
+            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black text-white mb-4 font-['Outfit',sans-serif]">
+              Discover{" "}
+              <span style={{ background: "linear-gradient(135deg,#FFB700,#FF6600,#FFB700)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>
+                Players
+              </span>
+            </h1>
+          </HeroText>
+          <HeroText delay={0.2}>
+            <p className="text-[#707070] text-base sm:text-lg max-w-xl mx-auto leading-relaxed">
+              Explore player profiles with detailed statistics, match history, and performance analytics.
+            </p>
+          </HeroText>
         </div>
       </section>
 

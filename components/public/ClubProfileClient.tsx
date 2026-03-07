@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { PublicCard } from './PublicCard';
 import { RoleBadge } from './Badge';
-import { PublicSkeletons } from './PublicSkeletons';
+import { PageLoader } from './PageLoader';
 import { OptimizedImage } from '@/components/ui/OptimizedImage';
 
 interface Player {
@@ -94,10 +94,8 @@ export default function ClubProfileClient({ clubId }: ClubProfileClientProps) {
 
   if (loading || !data) {
     return (
-      <div className="bg-[#0D0D0D] min-h-screen py-8 sm:py-12">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <PublicSkeletons.PlayerProfile />
-        </div>
+      <div className="bg-[#0D0D0D] min-h-screen flex items-center justify-center">
+        <PageLoader label="Loading club..." />
       </div>
     );
   }

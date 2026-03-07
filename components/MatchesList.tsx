@@ -219,17 +219,33 @@ export function MatchesList() {
   /* ── Loading ── */
   if (isLoading) {
     return (
-      <div className="space-y-3">
-        {[1, 2, 3, 4].map((i) => (
-          <div key={i} className="rounded-2xl border border-[#1E1E1E] overflow-hidden animate-pulse" style={{ background: '#111' }}>
-            <div className="h-10 w-full" style={{ background: 'rgba(255,102,0,0.08)' }} />
-            <div className="p-5 flex gap-4">
-              <div className="flex-1 h-16 rounded-xl bg-[#1A1A1A]" />
-              <div className="w-14 h-14 rounded-full bg-[#1A1A1A] self-center flex-shrink-0" />
-              <div className="flex-1 h-16 rounded-xl bg-[#1A1A1A]" />
-            </div>
-          </div>
-        ))}
+      <div className="flex flex-col items-center justify-center py-24 gap-6" role="status" aria-label="Loading matches">
+        <div className="relative w-16 h-16">
+          <div className="absolute inset-0 rounded-full border-2 border-[#1E1E1E]" />
+          <motion.div
+            className="absolute inset-0 rounded-full border-2 border-transparent"
+            style={{ borderTopColor: '#FF6600', borderRightColor: 'rgba(255,102,0,0.3)' }}
+            animate={{ rotate: 360 }}
+            transition={{ duration: 0.9, ease: 'linear', repeat: Infinity }}
+          />
+          <motion.div
+            className="absolute inset-0 flex items-center justify-center"
+            animate={{ scale: [1, 1.15, 1], opacity: [0.7, 1, 0.7] }}
+            transition={{ duration: 1.6, ease: 'easeInOut', repeat: Infinity }}
+          >
+            <div
+              className="w-2.5 h-2.5 rounded-full"
+              style={{ background: 'linear-gradient(135deg,#FF6600,#FFB700)', boxShadow: '0 0 10px rgba(255,102,0,0.8)' }}
+            />
+          </motion.div>
+        </div>
+        <motion.p
+          className="text-sm text-[#444] font-medium tracking-widest uppercase"
+          animate={{ opacity: [0.4, 0.8, 0.4] }}
+          transition={{ duration: 1.6, ease: 'easeInOut', repeat: Infinity }}
+        >
+          Loading matches...
+        </motion.p>
       </div>
     );
   }
@@ -282,9 +298,14 @@ export function MatchesList() {
         return (
           <motion.div
             key={match.id}
-            initial={{ opacity: 0, y: 28 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.42, delay: index * 0.06, ease: [0.22, 1, 0.36, 1] }}
+            initial={{ opacity: 0, y: 32, scale: 0.97 }}
+            whileInView={{ opacity: 1, y: 0, scale: 1 }}
+            viewport={{ once: true, amount: 0.1 }}
+            transition={{
+              duration: 0.48,
+              delay: Math.min(index, 5) * 0.1,
+              ease: [0.22, 1, 0.36, 1],
+            }}
           >
           <Link
             href={`/matches/${match.id}`}

@@ -2,13 +2,13 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
+import { motion } from 'framer-motion';
 import { StatusBadge } from './Badge';
-import { PublicSkeletons } from './PublicSkeletons';
+import { PageLoader } from './PageLoader';
 import { SearchBar, HighlightedText } from './SearchBar';
 import { FilterPanel, FilterConfig } from './FilterPanel';
 import { SearchEmptyState, FilterEmptyState } from './EmptyState';
 import { applyFilters, getActiveFilterCount } from '@/lib/utils/filterUtils';
-import { StaggerContainer, StaggerItem } from '@/lib/animations';
 
 interface Tournament {
   id: number;
@@ -142,10 +142,8 @@ export default function TournamentListingClient() {
 
           {/* Grid */}
           {loading ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {[...Array(6)].map((_, i) => (
-                <PublicSkeletons.Card key={i} />
-              ))}
+            <div className="col-span-full">
+              <PageLoader label="Loading tournaments..." />
             </div>
           ) : paginatedTournaments.length === 0 ? (
             searchQuery ? (
@@ -166,13 +164,22 @@ export default function TournamentListingClient() {
             )
           ) : (
             <>
-              <StaggerContainer speed="fast">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {paginatedTournaments.map((tournament) => {
-                    const accent = statusAccent[tournament.status] ?? '#555';
-                    return (
-                      <StaggerItem key={tournament.id}>
-                        <Link href={`/tournaments/${tournament.id}`} className="group block h-full">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {paginatedTournaments.map((tournament, index) => {
+                  const accent = statusAccent[tournament.status] ?? '#555';
+                  return (
+                    <motion.div
+                      key={tournament.id}
+                      initial={{ opacity: 0, y: 32, scale: 0.95 }}
+                      whileInView={{ opacity: 1, y: 0, scale: 1 }}
+                      viewport={{ once: true, amount: 0.1 }}
+                      transition={{
+                        duration: 0.5,
+                        delay: Math.min(index, 5) * 0.1,
+                        ease: [0.22, 1, 0.36, 1],
+                      }}
+                    >
+                      <Link href={`/tournaments/${tournament.id}`} className="group block h-full">
                           <div className="h-full rounded-2xl border border-[#1E1E1E] hover:border-[#FF6600]/50 transition-all duration-300 overflow-hidden hover:-translate-y-1 hover:shadow-2xl"
                             style={{ background: '#111' }}>
 
@@ -236,11 +243,10 @@ export default function TournamentListingClient() {
                             <div className="h-px bg-gradient-to-r from-transparent via-[#FF6600] to-transparent transform scale-x-0 group-hover:scale-x-100 transition-transform duration-500 origin-left" />
                           </div>
                         </Link>
-                      </StaggerItem>
+                      </motion.div>
                     );
                   })}
-                </div>
-              </StaggerContainer>
+              </div>
 
               {/* Pagination */}
               {totalPages > 1 && (
