@@ -56,23 +56,10 @@ export function SearchBar({
 
   return (
     <div className={`relative ${className}`} role="search">
-      <label htmlFor="search-input" className="sr-only">
-        Search
-      </label>
+      <label htmlFor="search-input" className="sr-only">Search</label>
       <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-        <svg
-          className="h-5 w-5 text-gray-400"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-          aria-hidden="true"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-          />
+        <svg className="h-5 w-5 text-[#555]" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
         </svg>
       </div>
       <input
@@ -81,7 +68,8 @@ export function SearchBar({
         placeholder={placeholder}
         value={localValue}
         onChange={(e) => setLocalValue(e.target.value)}
-        className="w-full pl-10 pr-10 py-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all"
+        className="w-full pl-10 pr-10 py-3 rounded-xl border border-[#1E1E1E] text-sm text-white placeholder-[#444] focus:outline-none focus:border-[#FF6600]/50 transition-all"
+        style={{ background: '#111' }}
         aria-label="Search"
         aria-describedby={localValue ? 'search-clear-button' : undefined}
       />
@@ -89,23 +77,12 @@ export function SearchBar({
         <button
           id="search-clear-button"
           onClick={handleClear}
-          className="absolute inset-y-0 right-0 pr-3 flex items-center min-h-[44px] min-w-[44px] lg:min-h-[40px] lg:min-w-[40px] justify-center hover:text-gray-700 transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 rounded-lg"
+          className="absolute inset-y-0 right-0 pr-3 flex items-center justify-center hover:text-white transition-colors focus:outline-none"
           aria-label="Clear search"
           type="button"
         >
-          <svg
-            className="h-5 w-5 text-gray-400 hover:text-gray-600"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-            aria-hidden="true"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M6 18L18 6M6 6l12 12"
-            />
+          <svg className="h-5 w-5 text-[#555] hover:text-[#FF6600]" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
           </svg>
         </button>
       )}
@@ -138,11 +115,11 @@ export function HighlightedText({ text, highlight, className = '' }: Highlighted
       {parts.map((part, index) => {
         const isMatch = regex.test(part);
         regex.lastIndex = 0; // Reset regex state
-        
+
         return isMatch ? (
           <mark
             key={index}
-            className="bg-yellow-200 text-gray-900 font-medium px-0.5 rounded"
+            className="bg-[#FF6600]/30 text-[#FFB700] font-bold px-0.5 rounded"
           >
             {part}
           </mark>

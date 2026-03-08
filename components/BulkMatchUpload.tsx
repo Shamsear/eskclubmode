@@ -7,6 +7,7 @@ import { useToast } from './ui/Toast';
 interface Participant {
   id: number;
   name: string;
+  clubId?: number | null;
 }
 
 interface BulkMatchUploadProps {
@@ -592,6 +593,84 @@ ${participants.map(p => p.name).join(', ')}`;
     }));
   };
 
+  // Get available players for a specific position in a match with club filtering
+  const getAvailablePlayersForMatch = (match: FormMatch, position: 'A' | 'B' | 'C' | 'D'): Participant[] => {
+    // Get the ID of the player currently in this position
+    const currentPlayerId = position === 'A' ? match.playerAId : 
+                           position === 'B' ? match.playerBId :
+                           position === 'C' ? match.playerCId :
+                           match.playerDId;
+    
+    // Exclude already selected players in this match (except the current position)
+    const selectedIds = [match.playerAId, match.playerBId, match.playerCId, match.playerDId]
+      .filter(id => id && id > 0 && id !== currentPlayerId);
+    
+    let availablePlayers = participants.filter(p => !selectedIds.includes(p.id));
+    
+    // For doubles matches, apply team-based club filtering
+    if (isDoublesFormat) {
+      if (position === 'B') {
+        // Player B must be from same club as Player A (or both free agents)
+        if (match.playerAId && match.playerAId > 0) {
+          const playerA = participants.find(p => p.id === match.playerAId);
+          if (playerA) {
+            if (playerA.clubId) {
+              // Player A has a club - only show players from same club
+              availablePlayers = availablePlayers.filter(p => p.clubId === playerA.clubId);
+            } else {
+              // Player A is a free agent - only show free agents
+              availablePlayers = availablePlayers.filter(p => !p.clubId);
+            }
+          }
+        }
+      } else if (position === 'A') {
+        // If Player B is already selected, filter Player A by Player B's club
+        if (match.playerBId && match.playerBId > 0) {
+          const playerB = participants.find(p => p.id === match.playerBId);
+          if (playerB) {
+            if (playerB.clubId) {
+              // Player B has a club - only show players from same club
+              availablePlayers = availablePlayers.filter(p => p.clubId === playerB.clubId);
+            } else {
+              // Player B is a free agent - only show free agents
+              availablePlayers = availablePlayers.filter(p => !p.clubId);
+            }
+          }
+        }
+      } else if (position === 'D') {
+        // Player D must be from same club as Player C (or both free agents)
+        if (match.playerCId && match.playerCId > 0) {
+          const playerC = participants.find(p => p.id === match.playerCId);
+          if (playerC) {
+            if (playerC.clubId) {
+              // Player C has a club - only show players from same club
+              availablePlayers = availablePlayers.filter(p => p.clubId === playerC.clubId);
+            } else {
+              // Player C is a free agent - only show free agents
+              availablePlayers = availablePlayers.filter(p => !p.clubId);
+            }
+          }
+        }
+      } else if (position === 'C') {
+        // If Player D is already selected, filter Player C by Player D's club
+        if (match.playerDId && match.playerDId > 0) {
+          const playerD = participants.find(p => p.id === match.playerDId);
+          if (playerD) {
+            if (playerD.clubId) {
+              // Player D has a club - only show players from same club
+              availablePlayers = availablePlayers.filter(p => p.clubId === playerD.clubId);
+            } else {
+              // Player D is a free agent - only show free agents
+              availablePlayers = availablePlayers.filter(p => !p.clubId);
+            }
+          }
+        }
+      }
+    }
+    
+    return availablePlayers;
+  };
+
   const handleFormSubmit = async () => {
     // Validate form matches
     const validationErrors: string[] = [];
@@ -807,14 +886,9 @@ ${participants.map(p => p.name).join(', ')}`;
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-violet-500 focus:border-transparent bg-white text-gray-900"
                       >
                         <option value="0">Select Player A</option>
-                        {participants
-                          .filter(p => isDoublesFormat 
-                            ? p.id !== match.playerBId && p.id !== match.playerCId && p.id !== match.playerDId
-                            : p.id !== match.playerBId
-                          )
-                          .map(p => (
-                            <option key={p.id} value={String(p.id)}>{p.name}</option>
-                          ))}
+                        {getAvailablePlayersForMatch(match, 'A').map(p => (
+                          <option key={p.id} value={String(p.id)}>{p.name}</option>
+                        ))}
                       </select>
                     </div>
 
@@ -829,14 +903,9 @@ ${participants.map(p => p.name).join(', ')}`;
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-violet-500 focus:border-transparent bg-white text-gray-900"
                       >
                         <option value="0">Select Player B</option>
-                        {participants
-                          .filter(p => isDoublesFormat
-                            ? p.id !== match.playerAId && p.id !== match.playerCId && p.id !== match.playerDId
-                            : p.id !== match.playerAId
-                          )
-                          .map(p => (
-                            <option key={p.id} value={String(p.id)}>{p.name}</option>
-                          ))}
+                        {getAvailablePlayersForMatch(match, 'B').map(p => (
+                          <option key={p.id} value={String(p.id)}>{p.name}</option>
+                        ))}
                       </select>
                     </div>
 
@@ -863,11 +932,9 @@ ${participants.map(p => p.name).join(', ')}`;
                           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-violet-500 focus:border-transparent bg-white text-gray-900"
                         >
                           <option value="0">Select Player C</option>
-                          {participants
-                            .filter(p => p.id !== match.playerAId && p.id !== match.playerBId && p.id !== match.playerDId)
-                            .map(p => (
-                              <option key={p.id} value={String(p.id)}>{p.name}</option>
-                            ))}
+                          {getAvailablePlayersForMatch(match, 'C').map(p => (
+                            <option key={p.id} value={String(p.id)}>{p.name}</option>
+                          ))}
                         </select>
                       </div>
                     )}
@@ -884,11 +951,9 @@ ${participants.map(p => p.name).join(', ')}`;
                           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-violet-500 focus:border-transparent bg-white text-gray-900"
                         >
                           <option value="0">Select Player D</option>
-                          {participants
-                            .filter(p => p.id !== match.playerAId && p.id !== match.playerBId && p.id !== match.playerCId)
-                            .map(p => (
-                              <option key={p.id} value={String(p.id)}>{p.name}</option>
-                            ))}
+                          {getAvailablePlayersForMatch(match, 'D').map(p => (
+                            <option key={p.id} value={String(p.id)}>{p.name}</option>
+                          ))}
                         </select>
                       </div>
                     )}

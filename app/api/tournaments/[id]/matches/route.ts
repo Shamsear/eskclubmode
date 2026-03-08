@@ -125,6 +125,18 @@ export async function POST(
     // Determine if this is a team match based on tournament format
     const isTeamMatch = tournament.matchFormat === 'DOUBLES';
 
+    // Validate player count matches tournament format
+    if (isTeamMatch && results.length !== 4) {
+      throw new ValidationError(
+        `Doubles matches require exactly 4 players (2 teams of 2). Received ${results.length} player(s).`
+      );
+    }
+    if (!isTeamMatch && results.length !== 2) {
+      throw new ValidationError(
+        `Singles matches require exactly 2 players. Received ${results.length} player(s).`
+      );
+    }
+
     // Fetch point system configuration (stage-specific, template, or inline)
     let pointSystemConfig: PointSystemConfig;
     
@@ -344,38 +356,181 @@ export async function POST(
         },
       });
 
-      // Create match results
-      await tx.matchResult.createMany({
-        data: finalResultsWithPoints.map(result => ({
-          matchId: newMatch.id,
-          playerId: result.playerId,
-          outcome: result.outcome,
-          goalsScored: result.goalsScored,
-          goalsConceded: result.goalsConceded,
-          pointsEarned: result.pointsEarned,
-          basePoints: result.basePoints,
-          conditionalPoints: result.conditionalPoints,
-        })),
-      });
-
-      // Fetch the complete match with results
-      return await tx.match.findUnique({
-        where: { id: newMatch.id },
-        include: {
-          results: {
-            include: {
-              player: {
-                select: {
-                  id: true,
-                  name: true,
-                  email: true,
-                  photo: true,
+      if (isTeamMatch) {
+        // For doubles matches, create team match results
+        // Group players into teams based on the form structure:
+        // Players 0,1 = Team A, Players 2,3 = Team B
+        
+        // Validate we have exactly 4 results
+        if (finalResultsWithPoints.length !== 4) {
+          throw new ValidationError(
+            `Doubles matches require exactly 4 players. Received ${finalResultsWithPoints.length}.`
+          );
+        }
+        
+        // Get player details to determine clubs
+        const players = await tx.player.findMany({
+          where: { id: { in: playerIds } },
+          select: { id: true, clubId: true, name: true },
+        });
+        
+        const playerMap = new Map(players.map(p => [p.id, p]));
+        
+        // Team A: players 0 and 1
+        const teamAPlayer1 = finalResultsWithPoints[0];
+        const teamAPlayer2 = finalResultsWithPoints[1];
+        const teamAPlayer1Data = playerMap.get(teamAPlayer1.playerId);
+        const teamAPlayer2Data = playerMap.get(teamAPlayer2.playerId);
+        
+        // Team B: players 2 and 3
+        const teamBPlayer1 = finalResultsWithPoints[2];
+        const teamBPlayer2 = finalResultsWithPoints[3];
+        const teamBPlayer1Data = playerMap.get(teamBPlayer1.playerId);
+        const teamBPlayer2Data = playerMap.get(teamBPlayer2.playerId);
+        
+        // Validate Team A: both players must be from same club OR both must be free agents
+        const teamAClubId1 = teamAPlayer1Data?.clubId;
+        const teamAClubId2 = teamAPlayer2Data?.clubId;
+        
+        if (teamAClubId1 !== teamAClubId2) {
+          // One has club, other doesn't - or they have different clubs
+          if (!teamAClubId1 || !teamAClubId2) {
+            throw new ValidationError(
+              `Team A: Both players must be from the same club or both must be free agents. ${teamAPlayer1Data?.name} and ${teamAPlayer2Data?.name} have different club assignments.`
+            );
+          } else {
+            throw new ValidationError(
+              `Team A: Both players must be from the same club. ${teamAPlayer1Data?.name} and ${teamAPlayer2Data?.name} are from different clubs.`
+            );
+          }
+        }
+        
+        // Validate Team B: both players must be from same club OR both must be free agents
+        const teamBClubId1 = teamBPlayer1Data?.clubId;
+        const teamBClubId2 = teamBPlayer2Data?.clubId;
+        
+        if (teamBClubId1 !== teamBClubId2) {
+          // One has club, other doesn't - or they have different clubs
+          if (!teamBClubId1 || !teamBClubId2) {
+            throw new ValidationError(
+              `Team B: Both players must be from the same club or both must be free agents. ${teamBPlayer1Data?.name} and ${teamBPlayer2Data?.name} have different club assignments.`
+            );
+          } else {
+            throw new ValidationError(
+              `Team B: Both players must be from the same club. ${teamBPlayer1Data?.name} and ${teamBPlayer2Data?.name} are from different clubs.`
+            );
+          }
+        }
+        
+        // Use the club ID (or null for free agents)
+        const teamAClubId = teamAClubId1; // Both are same at this point
+        const teamBClubId = teamBClubId1; // Both are same at this point
+        
+        // Create Team A result (only if they have a club - free agents don't get team results)
+        if (teamAClubId) {
+          await tx.teamMatchResult.create({
+            data: {
+              matchId: newMatch.id,
+              clubId: teamAClubId,
+              teamPosition: 1,
+              playerAId: teamAPlayer1.playerId,
+              playerBId: teamAPlayer2.playerId,
+              outcome: teamAPlayer1.outcome,
+              goalsScored: teamAPlayer1.goalsScored,
+              goalsConceded: teamAPlayer1.goalsConceded,
+              pointsEarned: teamAPlayer1.pointsEarned,
+              basePoints: teamAPlayer1.basePoints,
+              conditionalPoints: teamAPlayer1.conditionalPoints,
+            },
+          });
+        }
+        
+        // Create Team B result (only if they have a club - free agents don't get team results)
+        if (teamBClubId) {
+          await tx.teamMatchResult.create({
+            data: {
+              matchId: newMatch.id,
+              clubId: teamBClubId,
+              teamPosition: 2,
+              playerAId: teamBPlayer1.playerId,
+              playerBId: teamBPlayer2.playerId,
+              outcome: teamBPlayer1.outcome,
+              goalsScored: teamBPlayer1.goalsScored,
+              goalsConceded: teamBPlayer1.goalsConceded,
+              pointsEarned: teamBPlayer1.pointsEarned,
+              basePoints: teamBPlayer1.basePoints,
+              conditionalPoints: teamBPlayer1.conditionalPoints,
+            },
+          });
+        }
+        
+        // Fetch the complete match with team results
+        return await tx.match.findUnique({
+          where: { id: newMatch.id },
+          include: {
+            teamResults: {
+              include: {
+                club: {
+                  select: {
+                    id: true,
+                    name: true,
+                    logo: true,
+                  },
+                },
+                playerA: {
+                  select: {
+                    id: true,
+                    name: true,
+                    email: true,
+                    photo: true,
+                  },
+                },
+                playerB: {
+                  select: {
+                    id: true,
+                    name: true,
+                    email: true,
+                    photo: true,
+                  },
                 },
               },
             },
           },
-        },
-      });
+        });
+      } else {
+        // For singles matches, create individual match results
+        await tx.matchResult.createMany({
+          data: finalResultsWithPoints.map(result => ({
+            matchId: newMatch.id,
+            playerId: result.playerId,
+            outcome: result.outcome,
+            goalsScored: result.goalsScored,
+            goalsConceded: result.goalsConceded,
+            pointsEarned: result.pointsEarned,
+            basePoints: result.basePoints,
+            conditionalPoints: result.conditionalPoints,
+          })),
+        });
+
+        // Fetch the complete match with results
+        return await tx.match.findUnique({
+          where: { id: newMatch.id },
+          include: {
+            results: {
+              include: {
+                player: {
+                  select: {
+                    id: true,
+                    name: true,
+                    email: true,
+                    photo: true,
+                  },
+                },
+              },
+            },
+          },
+        });
+      }
     });
 
     // Update player statistics (only for singles matches)

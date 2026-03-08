@@ -49,12 +49,41 @@ interface PlayerProfileData {
     goalsScored: number;
     goalsConceded: number;
     pointsEarned: number;
-    opponent: {
+    isTeamMatch?: boolean;
+    opponent?: {
       id: number;
       name: string;
       photo: string | null;
       goalsScored: number;
       goalsConceded: number;
+    } | null;
+    partner?: {
+      id: number;
+      name: string;
+      photo: string | null;
+    };
+    club?: {
+      id: number;
+      name: string;
+      logo: string | null;
+    } | null;
+    opponentTeam?: {
+      club: {
+        id: number;
+        name: string;
+        logo: string | null;
+      } | null;
+      playerA: {
+        id: number;
+        name: string;
+        photo: string | null;
+      };
+      playerB: {
+        id: number;
+        name: string;
+        photo: string | null;
+      };
+      goalsScored: number;
     } | null;
   }>;
   tournaments: Array<{
@@ -98,7 +127,7 @@ export default function PlayerProfileClient({ initialData }: PlayerProfileClient
   const goalDifference = stats.totalGoalsScored - stats.totalGoalsConceded;
 
   return (
-    <div className="bg-[#E4E5E7] min-h-screen">
+    <div className="bg-[#0D0D0D] min-h-screen">
       {/* Hero Section with Player Info */}
       <div className="relative bg-gradient-to-br from-[#1A1A1A] via-[#2D2D2D] to-[#1A1A1A] text-white overflow-hidden">
         {/* Animated Background Pattern */}
@@ -108,10 +137,10 @@ export default function PlayerProfileClient({ initialData }: PlayerProfileClient
             backgroundSize: '40px 40px'
           }}></div>
         </div>
-        
+
         {/* Orange Gradient Overlay */}
         <div className="absolute inset-0 bg-gradient-to-r from-[#FF6600]/20 via-transparent to-[#CC2900]/20"></div>
-        
+
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16">
           <div className="flex flex-col md:flex-row items-center md:items-start gap-8">
             {/* Player Photo */}
@@ -140,14 +169,14 @@ export default function PlayerProfileClient({ initialData }: PlayerProfileClient
               <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold mb-4 bg-gradient-to-r from-white to-[#FFB700] bg-clip-text text-transparent">
                 {player.name}
               </h1>
-              
+
               {/* Roles */}
               <div className="flex flex-wrap items-center justify-center md:justify-start gap-2 mb-6">
                 {player.roles.map((role) => (
                   <RoleBadge key={role} role={role} size="md" />
                 ))}
               </div>
-              
+
               {/* Contact & Location */}
               <div className="flex flex-wrap items-center justify-center md:justify-start gap-4 mb-6">
                 {player.place && (
@@ -170,32 +199,44 @@ export default function PlayerProfileClient({ initialData }: PlayerProfileClient
               </div>
 
               {/* Club Badge */}
-              <div 
-                onClick={() => router.push(`/clubs/${player.club.id}`)}
-                className="inline-flex items-center gap-3 bg-white/10 backdrop-blur-sm px-5 py-3 rounded-xl border border-white/20 hover:bg-white/20 transition-all cursor-pointer group"
-              >
-                {player.club.logo ? (
-                  <div className="w-12 h-12 rounded-lg border-2 border-[#FF6600] overflow-hidden bg-white">
-                    <OptimizedImage
-                      src={player.club.logo}
-                      alt={player.club.name}
-                      width={48}
-                      height={48}
-                      className="w-full h-full object-cover"
-                    />
+              {player.club ? (
+                <div
+                  onClick={() => router.push(`/clubs/${player.club.id}`)}
+                  className="inline-flex items-center gap-3 bg-white/10 backdrop-blur-sm px-5 py-3 rounded-xl border border-white/20 hover:bg-white/20 transition-all cursor-pointer group"
+                >
+                  {player.club.logo ? (
+                    <div className="w-12 h-12 rounded-lg border-2 border-[#FF6600] overflow-hidden bg-white">
+                      <OptimizedImage
+                        src={player.club.logo}
+                        alt={player.club.name}
+                        width={48}
+                        height={48}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  ) : (
+                    <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-[#FF6600] to-[#CC2900] flex items-center justify-center">
+                      <span className="text-xl font-bold text-white">
+                        {player.club.name.charAt(0)}
+                      </span>
+                    </div>
+                  )}
+                  <div className="text-left">
+                    <div className="text-xs text-white/70">Playing for</div>
+                    <div className="font-bold text-white group-hover:text-[#FFB700] transition-colors">{player.club.name}</div>
                   </div>
-                ) : (
-                  <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-[#FF6600] to-[#CC2900] flex items-center justify-center">
-                    <span className="text-xl font-bold text-white">
-                      {player.club.name.charAt(0)}
-                    </span>
-                  </div>
-                )}
-                <div className="text-left">
-                  <div className="text-xs text-white/70">Playing for</div>
-                  <div className="font-bold text-white group-hover:text-[#FFB700] transition-colors">{player.club.name}</div>
                 </div>
-              </div>
+              ) : (
+                <div className="inline-flex items-center gap-3 bg-white/10 backdrop-blur-sm px-5 py-3 rounded-xl border border-white/20">
+                  <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-gray-500 to-gray-700 flex items-center justify-center">
+                    <span className="text-xl font-bold text-white">F</span>
+                  </div>
+                  <div className="text-left">
+                    <div className="text-xs text-white/70">Status</div>
+                    <div className="font-bold text-white">Free Agent</div>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -204,205 +245,221 @@ export default function PlayerProfileClient({ initialData }: PlayerProfileClient
       {/* Stats Section */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-8 relative z-10">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {/* Tournaments */}
-          <div className="bg-white rounded-xl shadow-lg p-6 text-center border-t-4 border-[#FF6600] transform hover:-translate-y-1 transition-all duration-300">
-            <div className="w-12 h-12 bg-gradient-to-br from-[#FF6600] to-[#CC2900] rounded-lg flex items-center justify-center mx-auto mb-3">
-              <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M12 2L2 7v10c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V7l-10-5zm0 2.18l7 3.5v8.32c0 4.27-2.94 8.27-7 9.27-4.06-1-7-5-7-9.27V7.68l7-3.5z" />
-              </svg>
+          {[
+            { label: 'Tournaments', value: stats.totalTournaments, color: '#FF6600', icon: <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2L2 7v10c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V7l-10-5z" /></svg>, bg: '#FF6600' },
+            { label: 'Matches', value: stats.totalMatches, color: '#FFB700', icon: <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" strokeWidth="2" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01" /></svg>, bg: '#FFB700' },
+            { label: 'Total Points', value: stats.totalPoints, color: '#CC2900', icon: <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21 12 17.27z" /></svg>, bg: '#CC2900' },
+            { label: 'Win Rate', value: `${stats.winRate.toFixed(1)}%`, color: '#FF6600', icon: <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>, bg: '#FF6600' },
+          ].map(({ label, value, color, icon, bg }) => (
+            <div key={label} className="rounded-2xl border border-[#1E1E1E] p-5 text-center hover:-translate-y-1 transition-all duration-300" style={{ background: '#111' }}>
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center mx-auto mb-3" style={{ background: `linear-gradient(135deg,${bg},${bg}99)` }}>{icon}</div>
+              <div className="text-2xl font-black mb-1" style={{ color }}>{value}</div>
+              <div className="text-xs text-[#555] font-medium uppercase tracking-widest">{label}</div>
             </div>
-            <div className="text-3xl font-bold text-[#1A1A1A] mb-1">
-              {stats.totalTournaments}
-            </div>
-            <div className="text-sm text-gray-600 font-medium">Tournaments</div>
-          </div>
-
-          {/* Matches */}
-          <div className="bg-white rounded-xl shadow-lg p-6 text-center border-t-4 border-[#FFB700] transform hover:-translate-y-1 transition-all duration-300">
-            <div className="w-12 h-12 bg-gradient-to-br from-[#FFB700] to-[#FF6600] rounded-lg flex items-center justify-center mx-auto mb-3">
-              <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-13h2v6h-2zm0 8h2v2h-2z" />
-              </svg>
-            </div>
-            <div className="text-3xl font-bold text-[#1A1A1A] mb-1">
-              {stats.totalMatches}
-            </div>
-            <div className="text-sm text-gray-600 font-medium">Matches</div>
-          </div>
-
-          {/* Total Points */}
-          <div className="bg-white rounded-xl shadow-lg p-6 text-center border-t-4 border-[#CC2900] transform hover:-translate-y-1 transition-all duration-300">
-            <div className="w-12 h-12 bg-gradient-to-br from-[#CC2900] to-[#FF6600] rounded-lg flex items-center justify-center mx-auto mb-3">
-              <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21 12 17.27z" />
-              </svg>
-            </div>
-            <div className="text-3xl font-bold text-[#1A1A1A] mb-1">
-              {stats.totalPoints}
-            </div>
-            <div className="text-sm text-gray-600 font-medium">Total Points</div>
-          </div>
-
-          {/* Win Rate */}
-          <div className="bg-white rounded-xl shadow-lg p-6 text-center border-t-4 border-[#FF6600] transform hover:-translate-y-1 transition-all duration-300">
-            <div className="w-12 h-12 bg-gradient-to-br from-[#FF6600] to-[#FFB700] rounded-lg flex items-center justify-center mx-auto mb-3">
-              <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-            </div>
-            <div className="text-3xl font-bold text-[#1A1A1A] mb-1">
-              {stats.winRate.toFixed(1)}%
-            </div>
-            <div className="text-sm text-gray-600 font-medium">Win Rate</div>
-          </div>
+          ))}
         </div>
       </div>
 
       {/* Performance Stats */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="mb-8">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="w-1 h-8 bg-gradient-to-b from-[#FF6600] to-[#CC2900] rounded-full"></div>
-            <h2 className="text-3xl font-bold text-[#1A1A1A]">
-              Performance Statistics
-            </h2>
-          </div>
-          <p className="text-gray-600 ml-7">
-            Detailed breakdown of match performance
-          </p>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+        <div className="flex items-center gap-3 mb-6">
+          <div className="w-1 h-8 rounded-full" style={{ background: "linear-gradient(180deg,#FF6600,#CC2900)" }} />
+          <h2 className="text-2xl font-black text-white font-['Outfit',sans-serif]">Performance Statistics</h2>
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 mb-12">
-          {/* Wins */}
-          <div className="bg-white rounded-xl shadow-md p-6 text-center border-l-4 border-green-500 hover:shadow-lg transition-shadow">
-            <div className="text-4xl font-bold text-green-600 mb-2">{stats.totalWins}</div>
-            <div className="text-sm text-gray-600 font-medium">Wins</div>
-          </div>
-
-          {/* Draws */}
-          <div className="bg-white rounded-xl shadow-md p-6 text-center border-l-4 border-yellow-500 hover:shadow-lg transition-shadow">
-            <div className="text-4xl font-bold text-yellow-600 mb-2">{stats.totalDraws}</div>
-            <div className="text-sm text-gray-600 font-medium">Draws</div>
-          </div>
-
-          {/* Losses */}
-          <div className="bg-white rounded-xl shadow-md p-6 text-center border-l-4 border-red-500 hover:shadow-lg transition-shadow">
-            <div className="text-4xl font-bold text-red-600 mb-2">{stats.totalLosses}</div>
-            <div className="text-sm text-gray-600 font-medium">Losses</div>
-          </div>
-
-          {/* Goals Scored */}
-          <div className="bg-white rounded-xl shadow-md p-6 text-center border-l-4 border-[#FF6600] hover:shadow-lg transition-shadow">
-            <div className="text-4xl font-bold text-[#FF6600] mb-2">{stats.totalGoalsScored}</div>
-            <div className="text-sm text-gray-600 font-medium">Goals Scored</div>
-          </div>
-
-          {/* Goals Conceded */}
-          <div className="bg-white rounded-xl shadow-md p-6 text-center border-l-4 border-[#CC2900] hover:shadow-lg transition-shadow">
-            <div className="text-4xl font-bold text-[#CC2900] mb-2">{stats.totalGoalsConceded}</div>
-            <div className="text-sm text-gray-600 font-medium">Goals Conceded</div>
-          </div>
-
-          {/* Goal Difference */}
-          <div className="bg-white rounded-xl shadow-md p-6 text-center border-l-4 border-[#FFB700] hover:shadow-lg transition-shadow">
-            <div className={`text-4xl font-bold mb-2 ${goalDifference >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-              {goalDifference > 0 ? '+' : ''}{goalDifference}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-10">
+          {[
+            { label: 'Wins', value: stats.totalWins, color: '#22C55E' },
+            { label: 'Draws', value: stats.totalDraws, color: '#EAB308' },
+            { label: 'Losses', value: stats.totalLosses, color: '#EF4444' },
+            { label: 'Goals Scored', value: stats.totalGoalsScored, color: '#FF6600' },
+            { label: 'Goals Conceded', value: stats.totalGoalsConceded, color: '#CC2900' },
+            { label: 'Goal Diff', value: `${goalDifference > 0 ? '+' : ''}${goalDifference}`, color: goalDifference >= 0 ? '#22C55E' : '#EF4444' },
+          ].map(({ label, value, color }) => (
+            <div key={label} className="rounded-2xl border border-[#1E1E1E] p-5 text-center hover:shadow-lg transition-shadow" style={{ background: '#111' }}>
+              <div className="text-3xl font-black mb-2" style={{ color }}>{value}</div>
+              <div className="text-xs text-[#555] font-medium">{label}</div>
             </div>
-            <div className="text-sm text-gray-600 font-medium">Goal Diff</div>
-          </div>
+          ))}
         </div>
 
         {/* Performance Heatmap */}
-        <div className="bg-white rounded-xl shadow-lg p-6 sm:p-8 mb-12">
-          <div className="mb-6">
-            <h3 className="text-2xl font-bold text-[#1A1A1A] mb-2">Performance Heatmap</h3>
-            <p className="text-gray-600">Visual representation of recent performance</p>
+        <div className="rounded-2xl border border-[#1E1E1E] p-6 sm:p-8 mb-10" style={{ background: '#111' }}>
+          <div className="mb-5">
+            <h3 className="text-xl font-black text-white mb-1">Performance Heatmap</h3>
+            <p className="text-xs text-[#555]">Visual representation of recent performance</p>
           </div>
           <PerformanceHeatmap matches={recentMatches} />
         </div>
 
         {/* Match History Timeline */}
-        <div className="mb-8">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="w-1 h-8 bg-gradient-to-b from-[#FF6600] to-[#CC2900] rounded-full"></div>
-            <h2 className="text-3xl font-bold text-[#1A1A1A]">
-              Recent Match History
-            </h2>
+        <div className="mb-6">
+          <div className="flex items-center gap-3">
+            <div className="w-1 h-8 rounded-full" style={{ background: "linear-gradient(180deg,#FF6600,#CC2900)" }} />
+            <h2 className="text-2xl font-black text-white font-['Outfit',sans-serif]">Recent Match History</h2>
           </div>
         </div>
 
         {recentMatches.length > 0 ? (
-          <div className="grid gap-4 mb-12">
+          <div className="grid gap-3 mb-10">
             {recentMatches.map((match) => {
               const config = outcomeConfig[match.outcome];
+              const isTeamMatch = match.isTeamMatch;
+              
               return (
-                <div
-                  key={match.id}
-                  className="bg-white rounded-xl shadow-md hover:shadow-xl transition-all duration-300 overflow-hidden border-2 border-transparent hover:border-[#FF6600] group"
-                >
+                <div key={match.id} className="rounded-2xl border border-[#1E1E1E] hover:border-[#FF6600]/40 transition-all duration-300 overflow-hidden group" style={{ background: '#111' }}>
                   <Link href={`/matches/${match.matchId}`} className="block">
-                    <div className="flex flex-col p-6">
+                    <div className="flex flex-col p-5">
                       {/* Tournament & Date */}
-                      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-0 mb-4">
+                      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-0 mb-3">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <span className={`px-2 sm:px-3 py-1 rounded-full text-xs font-bold ${config.color} border`}>
-                            {config.label}
-                          </span>
-                          {match.stageName && (
-                            <span className="text-xs text-gray-500">{match.stageName}</span>
-                          )}
+                          <span className={`px-2.5 py-1 rounded-lg text-xs font-bold border ${config.color}`}>{config.label}</span>
+                          {isTeamMatch && <span className="px-2 py-0.5 rounded bg-purple-500/20 text-purple-300 text-xs font-bold">2v2</span>}
+                          {match.stageName && <span className="text-xs text-[#555]">{match.stageName}</span>}
                         </div>
-                        <div className="text-xs sm:text-sm text-gray-600">
-                          {new Date(match.date).toLocaleDateString('en-US', {
-                            month: 'short',
-                            day: 'numeric',
-                            year: 'numeric',
-                          })}
-                        </div>
+                        <div className="text-xs text-[#555]">{new Date(match.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</div>
                       </div>
 
-                      {/* Match Score */}
-                      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-3">
-                        {/* Current Player */}
-                        <div className="flex items-center gap-2 sm:gap-3 flex-1 w-full sm:w-auto">
-                          {player.photo ? (
-                            <img src={player.photo} alt={player.name} className="w-10 h-10 sm:w-12 sm:h-12 rounded-full object-cover border-2 border-[#FF6600] flex-shrink-0" />
-                          ) : (
-                            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-gradient-to-br from-[#FF6600] to-[#CC2900] flex items-center justify-center flex-shrink-0">
-                              <span className="text-base sm:text-lg font-bold text-white">{player.name.charAt(0)}</span>
+                      {isTeamMatch ? (
+                        /* Team Match Display */
+                        <div className="flex flex-col gap-3 mb-3">
+                          {/* Your Team */}
+                          <div className="flex flex-col gap-2">
+                            {match.club && (
+                              <div className="flex items-center gap-2 justify-center">
+                                {match.club.logo && <img src={match.club.logo} alt={match.club.name} className="w-5 h-5 object-contain" />}
+                                <span className="text-xs font-bold text-white/70">Your Team: {match.club.name}</span>
+                              </div>
+                            )}
+                            
+                            <div className="flex items-center justify-center gap-4">
+                              <div className="flex items-center gap-2">
+                                {player.photo ? (
+                                  <img src={player.photo} alt={player.name} className="w-10 h-10 rounded-full object-cover border border-[#FF6600]/50 flex-shrink-0" />
+                                ) : (
+                                  <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: "linear-gradient(135deg,#FF6600,#CC2900)" }}>
+                                    <span className="text-base font-bold text-white">{player.name.charAt(0)}</span>
+                                  </div>
+                                )}
+                                <div className="text-left">
+                                  <div className="font-bold text-sm text-white">{player.name}</div>
+                                  <div className="text-xs text-[#555]">You</div>
+                                </div>
+                              </div>
+
+                              <div className="text-xs text-[#555]">&</div>
+
+                              {match.partner && (
+                                <div className="flex items-center gap-2">
+                                  {match.partner.photo ? (
+                                    <img src={match.partner.photo} alt={match.partner.name} className="w-10 h-10 rounded-full object-cover border border-purple-500/50 flex-shrink-0" />
+                                  ) : (
+                                    <div className="w-10 h-10 rounded-full bg-purple-500/20 flex items-center justify-center flex-shrink-0">
+                                      <span className="text-base font-bold text-purple-300">{match.partner.name.charAt(0)}</span>
+                                    </div>
+                                  )}
+                                  <div className="text-left">
+                                    <div className="font-bold text-sm text-white">{match.partner.name}</div>
+                                    <div className="text-xs text-[#555]">Partner</div>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Score */}
+                          <div className="flex items-center justify-center gap-4 px-6">
+                            <div className="text-3xl font-bold text-[#FF6600]">{match.goalsScored}</div>
+                            <div className="text-2xl font-bold text-gray-400">-</div>
+                            <div className="text-3xl font-bold text-[#CC2900]">{match.goalsConceded}</div>
+                          </div>
+
+                          {/* Opponent Team */}
+                          {match.opponentTeam && (
+                            <div className="flex flex-col gap-2 pt-2 border-t border-[#1A1A1A]">
+                              {match.opponentTeam.club && (
+                                <div className="flex items-center gap-2 justify-center">
+                                  {match.opponentTeam.club.logo && <img src={match.opponentTeam.club.logo} alt={match.opponentTeam.club.name} className="w-5 h-5 object-contain" />}
+                                  <span className="text-xs font-bold text-white/70">Opponent: {match.opponentTeam.club.name}</span>
+                                </div>
+                              )}
+                              
+                              <div className="flex items-center justify-center gap-4">
+                                <div className="flex items-center gap-2">
+                                  {match.opponentTeam.playerA.photo ? (
+                                    <img src={match.opponentTeam.playerA.photo} alt={match.opponentTeam.playerA.name} className="w-8 h-8 rounded-full object-cover border border-[#333] flex-shrink-0" />
+                                  ) : (
+                                    <div className="w-8 h-8 rounded-full bg-[#1A1A1A] flex items-center justify-center flex-shrink-0">
+                                      <span className="text-xs font-bold text-[#555]">{match.opponentTeam.playerA.name.charAt(0)}</span>
+                                    </div>
+                                  )}
+                                  <div className="text-left">
+                                    <div className="text-xs text-white">{match.opponentTeam.playerA.name}</div>
+                                  </div>
+                                </div>
+
+                                <div className="text-xs text-[#555]">&</div>
+
+                                <div className="flex items-center gap-2">
+                                  {match.opponentTeam.playerB.photo ? (
+                                    <img src={match.opponentTeam.playerB.photo} alt={match.opponentTeam.playerB.name} className="w-8 h-8 rounded-full object-cover border border-[#333] flex-shrink-0" />
+                                  ) : (
+                                    <div className="w-8 h-8 rounded-full bg-[#1A1A1A] flex items-center justify-center flex-shrink-0">
+                                      <span className="text-xs font-bold text-[#555]">{match.opponentTeam.playerB.name.charAt(0)}</span>
+                                    </div>
+                                  )}
+                                  <div className="text-left">
+                                    <div className="text-xs text-white">{match.opponentTeam.playerB.name}</div>
+                                  </div>
+                                </div>
+                              </div>
                             </div>
                           )}
-                          <div className="text-left min-w-0 flex-1">
-                            <div className="font-bold text-sm sm:text-base text-[#1A1A1A] truncate">{player.name}</div>
-                            <div className="text-xs text-gray-500 truncate">{player.club?.name || 'Free Agent'}</div>
-                          </div>
                         </div>
-
-                        {/* Score */}
-                        <div className="flex items-center gap-2 sm:gap-4 px-3 sm:px-6 flex-shrink-0">
-                          <div className="text-2xl sm:text-3xl font-bold text-[#FF6600]">{match.goalsScored}</div>
-                          <div className="text-xl sm:text-2xl font-bold text-gray-400">-</div>
-                          <div className="text-2xl sm:text-3xl font-bold text-[#CC2900]">{match.goalsConceded}</div>
-                        </div>
-
-                        {/* Opponent */}
-                        <div className="flex items-center gap-2 sm:gap-3 flex-1 justify-end w-full sm:w-auto">
-                          <div className="text-right min-w-0 flex-1">
-                            <div className="font-bold text-sm sm:text-base text-[#1A1A1A] truncate">{match.opponent?.name || 'Walkover'}</div>
-                            <div className="text-xs text-gray-500 truncate">Opponent</div>
-                          </div>
-                          {match.opponent?.photo ? (
-                            <img src={match.opponent.photo} alt={match.opponent.name} className="w-10 h-10 sm:w-12 sm:h-12 rounded-full object-cover border-2 border-gray-300 flex-shrink-0" />
-                          ) : (
-                            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-gray-200 flex items-center justify-center flex-shrink-0">
-                              <span className="text-base sm:text-lg font-bold text-gray-600">{match.opponent?.name.charAt(0) || '?'}</span>
+                      ) : (
+                        /* Singles Match Display */
+                        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-3">
+                          {/* Current Player */}
+                          <div className="flex items-center gap-2 sm:gap-3 flex-1 w-full sm:w-auto">
+                            {player.photo ? (
+                              <img src={player.photo} alt={player.name} className="w-10 h-10 sm:w-12 sm:h-12 rounded-full object-cover border border-[#FF6600]/50 flex-shrink-0" />
+                            ) : (
+                              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: "linear-gradient(135deg,#FF6600,#CC2900)" }}>
+                                <span className="text-base sm:text-lg font-bold text-white">{player.name.charAt(0)}</span>
+                              </div>
+                            )}
+                            <div className="text-left min-w-0 flex-1">
+                              <div className="font-bold text-sm sm:text-base text-white truncate group-hover:text-[#FFB700] transition-colors">{player.name}</div>
+                              <div className="text-xs text-[#555] truncate">{player.club?.name || 'Free Agent'}</div>
                             </div>
-                          )}
+                          </div>
+
+                          {/* Score */}
+                          <div className="flex items-center gap-2 sm:gap-4 px-3 sm:px-6 flex-shrink-0">
+                            <div className="text-2xl sm:text-3xl font-bold text-[#FF6600]">{match.goalsScored}</div>
+                            <div className="text-xl sm:text-2xl font-bold text-gray-400">-</div>
+                            <div className="text-2xl sm:text-3xl font-bold text-[#CC2900]">{match.goalsConceded}</div>
+                          </div>
+
+                          {/* Opponent */}
+                          <div className="flex items-center gap-2 sm:gap-3 flex-1 justify-end w-full sm:w-auto">
+                            <div className="text-right min-w-0 flex-1">
+                              <div className="font-bold text-sm sm:text-base text-white truncate">{match.opponent?.name || 'Walkover'}</div>
+                              <div className="text-xs text-[#555] truncate">Opponent</div>
+                            </div>
+                            {match.opponent?.photo ? (
+                              <img src={match.opponent.photo} alt={match.opponent.name} className="w-10 h-10 sm:w-12 sm:h-12 rounded-full object-cover border border-[#333] flex-shrink-0" />
+                            ) : (
+                              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-[#1A1A1A] flex items-center justify-center flex-shrink-0">
+                                <span className="text-base sm:text-lg font-bold text-[#555]">{match.opponent?.name.charAt(0) || '?'}</span>
+                              </div>
+                            )}
+                          </div>
                         </div>
-                      </div>
+                      )}
 
                       {/* Tournament Name */}
-                      <div className="text-xs sm:text-sm text-gray-600 text-center pt-3 border-t border-gray-100">
+                      <div className="text-xs text-[#555] text-center pt-3 border-t border-[#1A1A1A]">
                         <span className="block sm:inline">{match.tournament.name}</span>
                         <span className="hidden sm:inline"> • </span>
                         <span className="block sm:inline mt-1 sm:mt-0">{match.pointsEarned} points earned</span>
@@ -410,95 +467,68 @@ export default function PlayerProfileClient({ initialData }: PlayerProfileClient
                     </div>
                   </Link>
 
-                  {/* Hover Effect Bar */}
-                  <div className="h-1 bg-gradient-to-r from-[#FF6600] via-[#FFB700] to-[#CC2900] transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-left"></div>
+                  {/* Hover bar */}
+                  <div className="h-px bg-gradient-to-r from-transparent via-[#FF6600] to-transparent transform scale-x-0 group-hover:scale-x-100 transition-transform duration-500 origin-left" />
                 </div>
               );
             })}
           </div>
         ) : (
-          <div className="bg-white rounded-xl shadow-lg border-2 border-dashed border-gray-300 text-center py-16 mb-12">
-            <div className="w-24 h-24 bg-gradient-to-br from-[#FF6600]/10 to-[#CC2900]/10 rounded-full flex items-center justify-center mx-auto mb-6">
-              <svg className="w-12 h-12 text-[#FF6600]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-              </svg>
+          <div className="rounded-2xl border border-dashed border-[#1E1E1E] text-center py-16 mb-10" style={{ background: '#111' }}>
+            <div className="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-5" style={{ background: 'rgba(255,102,0,0.08)' }}>
+              <svg className="w-10 h-10 text-[#FF6600]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>
             </div>
-            <h3 className="text-2xl font-bold text-[#1A1A1A] mb-2">
-              No Match History
-            </h3>
-            <p className="text-gray-600">
-              No recent matches to display
-            </p>
+            <h3 className="text-xl font-black text-white mb-2">No Match History</h3>
+            <p className="text-sm text-[#555]">No recent matches to display</p>
           </div>
         )}
 
         {/* Tournament Participation */}
-        <div className="mb-8">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="w-1 h-8 bg-gradient-to-b from-[#FF6600] to-[#CC2900] rounded-full"></div>
-            <h2 className="text-3xl font-bold text-[#1A1A1A]">
-              Tournament Participation
-            </h2>
+        <div className="mb-6">
+          <div className="flex items-center gap-3">
+            <div className="w-1 h-8 rounded-full" style={{ background: "linear-gradient(180deg,#FF6600,#CC2900)" }} />
+            <h2 className="text-2xl font-black text-white font-['Outfit',sans-serif]">Tournament Participation</h2>
           </div>
         </div>
 
         {tournaments.length > 0 ? (
-          <div className="grid gap-4">
+          <div className="grid gap-3">
             {tournaments.map((tournament) => (
-              <div
-                key={tournament.id}
-                onClick={() => router.push(`/tournaments/${tournament.id}`)}
-                className="bg-white rounded-xl shadow-md hover:shadow-xl transition-all duration-300 overflow-hidden cursor-pointer border-2 border-transparent hover:border-[#FF6600] group"
-              >
-                <div className="flex flex-col sm:flex-row items-center justify-between gap-6 p-6">
+              <div key={tournament.id} onClick={() => router.push(`/tournaments/${tournament.id}`)}
+                className="rounded-2xl border border-[#1E1E1E] hover:border-[#FF6600]/40 transition-all duration-300 overflow-hidden cursor-pointer group" style={{ background: '#111' }}>
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-5 p-5">
                   <div className="flex-1 text-center sm:text-left">
-                    <div className="font-bold text-xl text-[#1A1A1A] mb-2 group-hover:text-[#FF6600] transition-colors">
-                      {tournament.name}
-                    </div>
-                    <div className="flex items-center justify-center sm:justify-start gap-2 text-sm text-gray-600">
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                      </svg>
-                      Started {new Date(tournament.startDate).toLocaleDateString('en-US', {
-                        year: 'numeric',
-                        month: 'long',
-                        day: 'numeric',
-                      })}
+                    <div className="font-black text-base text-white mb-1.5 group-hover:text-[#FFB700] transition-colors">{tournament.name}</div>
+                    <div className="flex items-center justify-center sm:justify-start gap-2 text-xs text-[#555]">
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                      {new Date(tournament.startDate).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-6">
+                  <div className="flex items-center gap-4">
                     {tournament.rank && (
-                      <div className="bg-gradient-to-br from-[#FFB700] to-[#FF6600] text-white px-6 py-3 rounded-xl shadow-lg">
-                        <div className="text-xs font-medium mb-1">Rank</div>
-                        <div className="text-2xl font-bold">#{tournament.rank}</div>
+                      <div className="text-white px-5 py-2.5 rounded-xl shadow-lg" style={{ background: "linear-gradient(135deg,#FFB700,#FF6600)" }}>
+                        <div className="text-xs font-medium mb-0.5">Rank</div>
+                        <div className="text-xl font-black">#{tournament.rank}</div>
                       </div>
                     )}
-                    <div className="text-center bg-gradient-to-br from-[#FF6600] to-[#CC2900] text-white px-6 py-3 rounded-xl shadow-lg">
-                      <div className="text-xs font-medium mb-1">Points</div>
-                      <div className="text-2xl font-bold">{tournament.totalPoints}</div>
+                    <div className="text-center text-white px-5 py-2.5 rounded-xl shadow-lg" style={{ background: "linear-gradient(135deg,#FF6600,#CC2900)" }}>
+                      <div className="text-xs font-medium mb-0.5">Points</div>
+                      <div className="text-xl font-black">{tournament.totalPoints}</div>
                     </div>
                   </div>
                 </div>
-
-                {/* Hover Effect Bar */}
-                <div className="h-1 bg-gradient-to-r from-[#FF6600] via-[#FFB700] to-[#CC2900] transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-left"></div>
+                <div className="h-px bg-gradient-to-r from-transparent via-[#FF6600] to-transparent transform scale-x-0 group-hover:scale-x-100 transition-transform duration-500 origin-left" />
               </div>
             ))}
           </div>
         ) : (
-          <div className="bg-white rounded-xl shadow-lg border-2 border-dashed border-gray-300 text-center py-16">
-            <div className="w-24 h-24 bg-gradient-to-br from-[#FF6600]/10 to-[#CC2900]/10 rounded-full flex items-center justify-center mx-auto mb-6">
-              <svg className="w-12 h-12 text-[#FF6600]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 2L2 7v10c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V7l-10-5z" />
-              </svg>
+          <div className="rounded-2xl border border-dashed border-[#1E1E1E] text-center py-16" style={{ background: '#111' }}>
+            <div className="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-5" style={{ background: 'rgba(255,102,0,0.08)' }}>
+              <svg className="w-10 h-10 text-[#FF6600]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 2L2 7v10c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V7l-10-5z" /></svg>
             </div>
-            <h3 className="text-2xl font-bold text-[#1A1A1A] mb-2">
-              No Tournament Participation
-            </h3>
-            <p className="text-gray-600">
-              This player hasn't participated in any tournaments yet
-            </p>
+            <h3 className="text-xl font-black text-white mb-2">No Tournament Participation</h3>
+            <p className="text-sm text-[#555]">This player hasn\'t participated in any tournaments yet</p>
           </div>
         )}
       </div>

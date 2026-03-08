@@ -38,6 +38,7 @@ export async function GET(
         stageId: true,
         stageName: true,
         matchDate: true,
+        isTeamMatch: true,
         walkoverWinnerId: true,
         createdAt: true,
         updatedAt: true,
@@ -46,6 +47,7 @@ export async function GET(
             id: true,
             name: true,
             clubId: true,
+            matchFormat: true,
             pointSystemTemplateId: true,
             pointsPerWin: true,
             pointsPerDraw: true,
@@ -69,6 +71,36 @@ export async function GET(
             player: {
               name: "asc",
             },
+          },
+        },
+        teamResults: {
+          include: {
+            club: {
+              select: {
+                id: true,
+                name: true,
+                logo: true,
+              },
+            },
+            playerA: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+                photo: true,
+              },
+            },
+            playerB: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+                photo: true,
+              },
+            },
+          },
+          orderBy: {
+            teamPosition: "asc",
           },
         },
       },
@@ -303,24 +335,134 @@ export async function PUT(
 
       // If results are being updated, delete old results and create new ones
       if (results) {
-        // Delete existing results
-        await tx.matchResult.deleteMany({
-          where: { matchId },
-        });
+        if (isTeamMatch) {
+          // Delete existing team results
+          await tx.teamMatchResult.deleteMany({
+            where: { matchId },
+          });
 
-        // Create new results
-        await tx.matchResult.createMany({
-          data: resultsWithPoints.map(result => ({
-            matchId,
-            playerId: result.playerId,
-            outcome: result.outcome,
-            goalsScored: result.goalsScored,
-            goalsConceded: result.goalsConceded,
-            pointsEarned: result.pointsEarned,
-            basePoints: result.basePoints,
-            conditionalPoints: result.conditionalPoints,
-          })),
-        });
+          // Validate we have exactly 4 results
+          if (resultsWithPoints.length !== 4) {
+            throw new ValidationError(
+              `Doubles matches require exactly 4 players. Received ${resultsWithPoints.length}.`
+            );
+          }
+
+          // Get player details to determine clubs
+          const players = await tx.player.findMany({
+            where: { id: { in: newPlayerIds } },
+            select: { id: true, clubId: true, name: true },
+          });
+          
+          const playerMap = new Map(players.map(p => [p.id, p]));
+          
+          // Team A: players 0 and 1
+          const teamAPlayer1 = resultsWithPoints[0];
+          const teamAPlayer2 = resultsWithPoints[1];
+          const teamAPlayer1Data = playerMap.get(teamAPlayer1.playerId);
+          const teamAPlayer2Data = playerMap.get(teamAPlayer2.playerId);
+          
+          // Team B: players 2 and 3
+          const teamBPlayer1 = resultsWithPoints[2];
+          const teamBPlayer2 = resultsWithPoints[3];
+          const teamBPlayer1Data = playerMap.get(teamBPlayer1.playerId);
+          const teamBPlayer2Data = playerMap.get(teamBPlayer2.playerId);
+          
+          // Validate Team A: both players must be from same club OR both must be free agents
+          const teamAClubId1 = teamAPlayer1Data?.clubId;
+          const teamAClubId2 = teamAPlayer2Data?.clubId;
+          
+          if (teamAClubId1 !== teamAClubId2) {
+            // One has club, other doesn't - or they have different clubs
+            if (!teamAClubId1 || !teamAClubId2) {
+              throw new ValidationError(
+                `Team A: Both players must be from the same club or both must be free agents. ${teamAPlayer1Data?.name} and ${teamAPlayer2Data?.name} have different club assignments.`
+              );
+            } else {
+              throw new ValidationError(
+                `Team A: Both players must be from the same club. ${teamAPlayer1Data?.name} and ${teamAPlayer2Data?.name} are from different clubs.`
+              );
+            }
+          }
+          
+          // Validate Team B: both players must be from same club OR both must be free agents
+          const teamBClubId1 = teamBPlayer1Data?.clubId;
+          const teamBClubId2 = teamBPlayer2Data?.clubId;
+          
+          if (teamBClubId1 !== teamBClubId2) {
+            // One has club, other doesn't - or they have different clubs
+            if (!teamBClubId1 || !teamBClubId2) {
+              throw new ValidationError(
+                `Team B: Both players must be from the same club or both must be free agents. ${teamBPlayer1Data?.name} and ${teamBPlayer2Data?.name} have different club assignments.`
+              );
+            } else {
+              throw new ValidationError(
+                `Team B: Both players must be from the same club. ${teamBPlayer1Data?.name} and ${teamBPlayer2Data?.name} are from different clubs.`
+              );
+            }
+          }
+          
+          // Use the club ID (or null for free agents)
+          const teamAClubId = teamAClubId1; // Both are same at this point
+          const teamBClubId = teamBClubId1; // Both are same at this point
+          
+          // Create Team A result (only if they have a club - free agents don't get team results)
+          if (teamAClubId) {
+            await tx.teamMatchResult.create({
+              data: {
+                matchId,
+                clubId: teamAClubId,
+                teamPosition: 1,
+                playerAId: teamAPlayer1.playerId,
+                playerBId: teamAPlayer2.playerId,
+                outcome: teamAPlayer1.outcome,
+                goalsScored: teamAPlayer1.goalsScored,
+                goalsConceded: teamAPlayer1.goalsConceded,
+                pointsEarned: teamAPlayer1.pointsEarned,
+                basePoints: teamAPlayer1.basePoints,
+                conditionalPoints: teamAPlayer1.conditionalPoints,
+              },
+            });
+          }
+          
+          // Create Team B result (only if they have a club - free agents don't get team results)
+          if (teamBClubId) {
+            await tx.teamMatchResult.create({
+              data: {
+                matchId,
+                clubId: teamBClubId,
+                teamPosition: 2,
+                playerAId: teamBPlayer1.playerId,
+                playerBId: teamBPlayer2.playerId,
+                outcome: teamBPlayer1.outcome,
+                goalsScored: teamBPlayer1.goalsScored,
+                goalsConceded: teamBPlayer1.goalsConceded,
+                pointsEarned: teamBPlayer1.pointsEarned,
+                basePoints: teamBPlayer1.basePoints,
+                conditionalPoints: teamBPlayer1.conditionalPoints,
+              },
+            });
+          }
+        } else {
+          // Delete existing results
+          await tx.matchResult.deleteMany({
+            where: { matchId },
+          });
+
+          // Create new results
+          await tx.matchResult.createMany({
+            data: resultsWithPoints.map(result => ({
+              matchId,
+              playerId: result.playerId,
+              outcome: result.outcome,
+              goalsScored: result.goalsScored,
+              goalsConceded: result.goalsConceded,
+              pointsEarned: result.pointsEarned,
+              basePoints: result.basePoints,
+              conditionalPoints: result.conditionalPoints,
+            })),
+          });
+        }
       }
 
       // Fetch the complete updated match
@@ -336,6 +478,33 @@ export async function PUT(
           results: {
             include: {
               player: {
+                select: {
+                  id: true,
+                  name: true,
+                  email: true,
+                  photo: true,
+                },
+              },
+            },
+          },
+          teamResults: {
+            include: {
+              club: {
+                select: {
+                  id: true,
+                  name: true,
+                  logo: true,
+                },
+              },
+              playerA: {
+                select: {
+                  id: true,
+                  name: true,
+                  email: true,
+                  photo: true,
+                },
+              },
+              playerB: {
                 select: {
                   id: true,
                   name: true,
@@ -395,6 +564,12 @@ export async function DELETE(
             playerId: true,
           },
         },
+        teamResults: {
+          select: {
+            playerAId: true,
+            playerBId: true,
+          },
+        },
       },
     });
 
@@ -404,8 +579,10 @@ export async function DELETE(
 
     const tournamentId = existingMatch.tournament.id;
     const isTeamMatch = existingMatch.tournament.matchFormat === 'DOUBLES';
-    const playerIds = existingMatch.results.map(r => r.playerId);
-    const resultCount = existingMatch.results.length;
+    const playerIds = isTeamMatch 
+      ? existingMatch.teamResults.flatMap(tr => [tr.playerAId, tr.playerBId])
+      : existingMatch.results.map(r => r.playerId);
+    const resultCount = isTeamMatch ? existingMatch.teamResults.length : existingMatch.results.length;
 
     // Delete the match (cascade will delete results)
     await prisma.match.delete({

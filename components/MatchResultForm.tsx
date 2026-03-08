@@ -41,6 +41,7 @@ interface Participant {
   id: number;
   name: string;
   photo?: string | null;
+  clubId?: number | null;
 }
 
 interface PlayerResult {
@@ -174,6 +175,14 @@ export function MatchResultForm({
           ]
   );
 
+  // Debug logging for participants
+  useEffect(() => {
+    console.log('=== Participants Data ===');
+    console.log('Match Format:', matchFormat);
+    console.log('Participants:', participants);
+    console.log('Sample participant:', participants[0]);
+  }, [participants, matchFormat]);
+
   // Fetch participants if not provided
   useEffect(() => {
     if (!participantsProp) {
@@ -187,6 +196,7 @@ export function MatchResultForm({
               id: p.player?.id || p.playerId,
               name: p.player?.name || p.name,
               photo: p.player?.photo || p.photo,
+              clubId: p.player?.clubId || p.clubId,
             }));
             setParticipants(transformedParticipants);
           } else {
@@ -329,11 +339,55 @@ export function MatchResultForm({
 
   // Update a specific player result field
   const updatePlayerResult = (index: number, field: keyof PlayerResult, value: any) => {
+    console.log('updatePlayerResult called:', { index, field, value });
+    console.log('Current playerResults:', playerResults);
+    console.log('matchFormat:', matchFormat);
+    
     const newResults = [...playerResults];
     newResults[index] = { ...newResults[index], [field]: value };
     
-    // Auto-calculate for 2-player matches (only if not a walkover)
-    if (playerResults.length === 2 && walkoverWinnerId === null) {
+    console.log('After update, newResults[index]:', newResults[index]);
+    
+    // Auto-calculate for doubles matches (4 players)
+    if (matchFormat === 'DOUBLES' && playerResults.length === 4 && walkoverWinnerId === null) {
+      // Team A: players 0 and 1, Team B: players 2 and 3
+      if (field === 'goalsScored') {
+        if (index === 0 || index === 1) {
+          // Team A scored, update Team B's conceded
+          newResults[2] = { ...newResults[2], goalsConceded: value };
+          newResults[3] = { ...newResults[3], goalsConceded: value };
+        } else {
+          // Team B scored, update Team A's conceded
+          newResults[0] = { ...newResults[0], goalsConceded: value };
+          newResults[1] = { ...newResults[1], goalsConceded: value };
+        }
+      }
+      
+      // Auto-calculate outcomes based on team goals
+      const teamAGoals = newResults[0].goalsScored;
+      const teamBGoals = newResults[2].goalsScored;
+      
+      if (teamAGoals !== undefined && teamBGoals !== undefined) {
+        if (teamAGoals > teamBGoals) {
+          newResults[0].outcome = 'WIN';
+          newResults[1].outcome = 'WIN';
+          newResults[2].outcome = 'LOSS';
+          newResults[3].outcome = 'LOSS';
+        } else if (teamAGoals < teamBGoals) {
+          newResults[0].outcome = 'LOSS';
+          newResults[1].outcome = 'LOSS';
+          newResults[2].outcome = 'WIN';
+          newResults[3].outcome = 'WIN';
+        } else {
+          newResults[0].outcome = 'DRAW';
+          newResults[1].outcome = 'DRAW';
+          newResults[2].outcome = 'DRAW';
+          newResults[3].outcome = 'DRAW';
+        }
+      }
+    }
+    // Auto-calculate for singles matches (2 players)
+    else if (playerResults.length === 2 && walkoverWinnerId === null) {
       const otherIndex = index === 0 ? 1 : 0;
       
       // If updating goals scored, update opponent's goals conceded
@@ -356,6 +410,7 @@ export function MatchResultForm({
       }
     }
     
+    console.log('Final newResults:', newResults);
     setPlayerResults(newResults);
     
     // Clear error for this field
@@ -432,9 +487,36 @@ export function MatchResultForm({
         }),
       });
 
+      console.log('=== Match Submission Data ===');
+      console.log('Match Format:', matchFormat);
+      console.log('Player Results:', playerResults);
+      console.log('Number of players:', playerResults.length);
+      console.log('Is Team Match:', matchFormat === 'DOUBLES');
+      console.log('Request Body:', JSON.stringify({
+        matchDate: new Date(matchDate).toISOString(),
+        stageId: selectedStageId,
+        stageName: selectedStageId ? stages.find(s => s.id === selectedStageId)?.name : null,
+        walkoverWinnerId: walkoverWinnerId,
+        results: playerResults.map((r, idx) => ({
+          playerId: r.playerId,
+          outcome: r.outcome,
+          goalsScored: r.goalsScored,
+          goalsConceded: r.goalsConceded,
+          ...(pointOverrides[idx]?.enabled && {
+            customPoints: pointOverrides[idx].customPoints,
+          }),
+        })),
+      }, null, 2));
+
       const data = await response.json();
+      
+      console.log('=== API Response ===');
+      console.log('Status:', response.status);
+      console.log('Response data:', data);
 
       if (!response.ok) {
+        console.error('=== API Error ===');
+        console.error('Error details:', data);
         if (data.details) {
           setErrors(data.details);
         } else {
@@ -489,7 +571,47 @@ export function MatchResultForm({
       .map((r, i) => i !== currentIndex ? r.playerId : 0)
       .filter(id => id > 0);
     
-    return participants.filter(p => !selectedPlayerIds.includes(p.id));
+    let availablePlayers = participants.filter(p => !selectedPlayerIds.includes(p.id));
+    
+    // For doubles matches, apply team-based filtering
+    if (matchFormat === 'DOUBLES' && playerResults.length === 4) {
+      // Determine which team this player belongs to
+      // Team A: indices 0, 1
+      // Team B: indices 2, 3
+      const isTeamA = currentIndex === 0 || currentIndex === 1;
+      const teamMateIndex = isTeamA ? (currentIndex === 0 ? 1 : 0) : (currentIndex === 2 ? 3 : 2);
+      const teamMatePlayerId = playerResults[teamMateIndex]?.playerId;
+      
+      console.log('=== Player Filtering Debug ===');
+      console.log('Current Index:', currentIndex);
+      console.log('Team:', isTeamA ? 'A' : 'B');
+      console.log('Teammate Index:', teamMateIndex);
+      console.log('Teammate Player ID:', teamMatePlayerId);
+      
+      // If teammate is selected, filter by their club
+      if (teamMatePlayerId && teamMatePlayerId > 0) {
+        const teamMate = participants.find(p => p.id === teamMatePlayerId);
+        console.log('Teammate found:', teamMate);
+        
+        if (teamMate) {
+          const teamMateClubId = teamMate.clubId;
+          console.log('Teammate Club ID:', teamMateClubId);
+          
+          if (teamMateClubId) {
+            // Teammate has a club - only show players from same club
+            console.log('Filtering to same club:', teamMateClubId);
+            availablePlayers = availablePlayers.filter(p => p.clubId === teamMateClubId);
+          } else {
+            // Teammate is a free agent - only show free agents
+            console.log('Filtering to free agents only');
+            availablePlayers = availablePlayers.filter(p => !p.clubId);
+          }
+          console.log('Available players after filtering:', availablePlayers.length);
+        }
+      }
+    }
+    
+    return availablePlayers;
   };
 
   // Calculate points for a player result
@@ -727,11 +849,12 @@ export function MatchResultForm({
                       id="player-0"
                       value={playerResults[0]?.playerId || 0}
                       onChange={(e) => updatePlayerResult(0, 'playerId', parseInt(e.target.value))}
-                      className="block w-full px-3 py-2.5 min-h-[44px] border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors text-base text-gray-900 bg-white"
+                      disabled={walkoverWinnerId !== null}
+                      className="block w-full px-3 py-2.5 min-h-[44px] border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors text-base text-gray-900 bg-white disabled:bg-gray-100 disabled:cursor-not-allowed"
                       required
                     >
                       <option value="0">Select a player</option>
-                      {participants.map(player => (
+                      {getAvailablePlayers(0).map(player => (
                         <option key={player.id} value={player.id}>
                           {player.name}
                         </option>
@@ -748,11 +871,12 @@ export function MatchResultForm({
                       id="player-1"
                       value={playerResults[1]?.playerId || 0}
                       onChange={(e) => updatePlayerResult(1, 'playerId', parseInt(e.target.value))}
-                      className="block w-full px-3 py-2.5 min-h-[44px] border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors text-base text-gray-900 bg-white"
+                      disabled={walkoverWinnerId !== null}
+                      className="block w-full px-3 py-2.5 min-h-[44px] border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors text-base text-gray-900 bg-white disabled:bg-gray-100 disabled:cursor-not-allowed"
                       required
                     >
                       <option value="0">Select a player</option>
-                      {participants.map(player => (
+                      {getAvailablePlayers(1).map(player => (
                         <option key={player.id} value={player.id}>
                           {player.name}
                         </option>
@@ -762,20 +886,54 @@ export function MatchResultForm({
 
                   {/* Team A Goals */}
                   <div className="grid grid-cols-2 gap-4 pt-2">
-                    <Input
-                      label="Goals Scored"
-                      type="number"
-                      min="0"
-                      value={playerResults[0]?.goalsScored?.toString() || '0'}
-                      onChange={(e) => {
-                        const value = e.target.value === '' ? 0 : parseInt(e.target.value, 10);
-                        if (!isNaN(value)) {
-                          updatePlayerResult(0, 'goalsScored', value);
-                          updatePlayerResult(1, 'goalsScored', value);
-                        }
-                      }}
-                      required
-                    />
+                    <div>
+                      <label htmlFor="team-a-goals" className="block text-sm font-medium text-gray-700 mb-1">
+                        Goals Scored *
+                      </label>
+                      <input
+                        id="team-a-goals"
+                        type="number"
+                        min="0"
+                        value={playerResults[0]?.goalsScored ?? 0}
+                        onChange={(e) => {
+                          const value = e.target.value === '' ? 0 : parseInt(e.target.value, 10);
+                          if (!isNaN(value)) {
+                            // Update both Team A players at once
+                            const newResults = [...playerResults];
+                            newResults[0] = { ...newResults[0], goalsScored: value };
+                            newResults[1] = { ...newResults[1], goalsScored: value };
+                            
+                            // Update Team B's goals conceded
+                            newResults[2] = { ...newResults[2], goalsConceded: value };
+                            newResults[3] = { ...newResults[3], goalsConceded: value };
+                            
+                            // Auto-calculate outcomes
+                            const teamBGoals = newResults[2].goalsScored;
+                            if (value > teamBGoals) {
+                              newResults[0].outcome = 'WIN';
+                              newResults[1].outcome = 'WIN';
+                              newResults[2].outcome = 'LOSS';
+                              newResults[3].outcome = 'LOSS';
+                            } else if (value < teamBGoals) {
+                              newResults[0].outcome = 'LOSS';
+                              newResults[1].outcome = 'LOSS';
+                              newResults[2].outcome = 'WIN';
+                              newResults[3].outcome = 'WIN';
+                            } else {
+                              newResults[0].outcome = 'DRAW';
+                              newResults[1].outcome = 'DRAW';
+                              newResults[2].outcome = 'DRAW';
+                              newResults[3].outcome = 'DRAW';
+                            }
+                            
+                            setPlayerResults(newResults);
+                          }
+                        }}
+                        disabled={walkoverWinnerId !== null}
+                        className="block w-full px-3 py-2.5 min-h-[44px] border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors text-base text-gray-900 bg-white disabled:bg-gray-100 disabled:cursor-not-allowed"
+                        required
+                      />
+                    </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
                         Goals Conceded
@@ -783,6 +941,7 @@ export function MatchResultForm({
                       <div className="px-3 py-2.5 min-h-[44px] border border-gray-200 rounded-md bg-gray-50 text-gray-600 flex items-center">
                         {playerResults[0]?.goalsConceded || 0}
                       </div>
+                      <p className="text-xs text-gray-500 mt-1">Auto-calculated from opponent's goals</p>
                     </div>
                   </div>
                 </div>
@@ -816,11 +975,12 @@ export function MatchResultForm({
                       id="player-2"
                       value={playerResults[2]?.playerId || 0}
                       onChange={(e) => updatePlayerResult(2, 'playerId', parseInt(e.target.value))}
-                      className="block w-full px-3 py-2.5 min-h-[44px] border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-colors text-base text-gray-900 bg-white"
+                      disabled={walkoverWinnerId !== null}
+                      className="block w-full px-3 py-2.5 min-h-[44px] border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-colors text-base text-gray-900 bg-white disabled:bg-gray-100 disabled:cursor-not-allowed"
                       required
                     >
                       <option value="0">Select a player</option>
-                      {participants.map(player => (
+                      {getAvailablePlayers(2).map(player => (
                         <option key={player.id} value={player.id}>
                           {player.name}
                         </option>
@@ -837,11 +997,12 @@ export function MatchResultForm({
                       id="player-3"
                       value={playerResults[3]?.playerId || 0}
                       onChange={(e) => updatePlayerResult(3, 'playerId', parseInt(e.target.value))}
-                      className="block w-full px-3 py-2.5 min-h-[44px] border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-colors text-base text-gray-900 bg-white"
+                      disabled={walkoverWinnerId !== null}
+                      className="block w-full px-3 py-2.5 min-h-[44px] border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-colors text-base text-gray-900 bg-white disabled:bg-gray-100 disabled:cursor-not-allowed"
                       required
                     >
                       <option value="0">Select a player</option>
-                      {participants.map(player => (
+                      {getAvailablePlayers(3).map(player => (
                         <option key={player.id} value={player.id}>
                           {player.name}
                         </option>
@@ -851,20 +1012,54 @@ export function MatchResultForm({
 
                   {/* Team B Goals */}
                   <div className="grid grid-cols-2 gap-4 pt-2">
-                    <Input
-                      label="Goals Scored"
-                      type="number"
-                      min="0"
-                      value={playerResults[2]?.goalsScored?.toString() || '0'}
-                      onChange={(e) => {
-                        const value = e.target.value === '' ? 0 : parseInt(e.target.value, 10);
-                        if (!isNaN(value)) {
-                          updatePlayerResult(2, 'goalsScored', value);
-                          updatePlayerResult(3, 'goalsScored', value);
-                        }
-                      }}
-                      required
-                    />
+                    <div>
+                      <label htmlFor="team-b-goals" className="block text-sm font-medium text-gray-700 mb-1">
+                        Goals Scored *
+                      </label>
+                      <input
+                        id="team-b-goals"
+                        type="number"
+                        min="0"
+                        value={playerResults[2]?.goalsScored ?? 0}
+                        onChange={(e) => {
+                          const value = e.target.value === '' ? 0 : parseInt(e.target.value, 10);
+                          if (!isNaN(value)) {
+                            // Update both Team B players at once
+                            const newResults = [...playerResults];
+                            newResults[2] = { ...newResults[2], goalsScored: value };
+                            newResults[3] = { ...newResults[3], goalsScored: value };
+                            
+                            // Update Team A's goals conceded
+                            newResults[0] = { ...newResults[0], goalsConceded: value };
+                            newResults[1] = { ...newResults[1], goalsConceded: value };
+                            
+                            // Auto-calculate outcomes
+                            const teamAGoals = newResults[0].goalsScored;
+                            if (teamAGoals > value) {
+                              newResults[0].outcome = 'WIN';
+                              newResults[1].outcome = 'WIN';
+                              newResults[2].outcome = 'LOSS';
+                              newResults[3].outcome = 'LOSS';
+                            } else if (teamAGoals < value) {
+                              newResults[0].outcome = 'LOSS';
+                              newResults[1].outcome = 'LOSS';
+                              newResults[2].outcome = 'WIN';
+                              newResults[3].outcome = 'WIN';
+                            } else {
+                              newResults[0].outcome = 'DRAW';
+                              newResults[1].outcome = 'DRAW';
+                              newResults[2].outcome = 'DRAW';
+                              newResults[3].outcome = 'DRAW';
+                            }
+                            
+                            setPlayerResults(newResults);
+                          }
+                        }}
+                        disabled={walkoverWinnerId !== null}
+                        className="block w-full px-3 py-2.5 min-h-[44px] border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-colors text-base text-gray-900 bg-white disabled:bg-gray-100 disabled:cursor-not-allowed"
+                        required
+                      />
+                    </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
                         Goals Conceded
@@ -872,6 +1067,7 @@ export function MatchResultForm({
                       <div className="px-3 py-2.5 min-h-[44px] border border-gray-200 rounded-md bg-gray-50 text-gray-600 flex items-center">
                         {playerResults[2]?.goalsConceded || 0}
                       </div>
+                      <p className="text-xs text-gray-500 mt-1">Auto-calculated from opponent's goals</p>
                     </div>
                   </div>
                 </div>

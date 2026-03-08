@@ -3,18 +3,21 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { Badge } from './Badge';
 import { RankAnimation, StaggerContainer, StaggerItem, AnimatedCounter } from '@/lib/animations';
 
 interface Player {
   id: number;
   name: string;
   photo: string | null;
-  club: {
-    id: number;
-    name: string;
-    logo: string | null;
-  } | null;
+  club: { id: number; name: string; logo: string | null } | null;
+}
+
+interface Team {
+  clubId: number;
+  clubName: string;
+  clubLogo: string | null;
+  playerA: { id: number; name: string; photo: string | null } | null;
+  playerB: { id: number; name: string; photo: string | null } | null;
 }
 
 interface PlayerStats {
@@ -30,93 +33,161 @@ interface PlayerStats {
 
 interface LeaderboardEntry {
   rank: number;
-  player: Player;
+  isTeam?: boolean;
+  team?: Team | null;
+  player: Player | null;
   stats: PlayerStats;
 }
 
 interface LeaderboardStreamProps {
-  tournament: {
-    id: number;
-    name: string;
-  };
+  tournament: { id: number; name: string };
   rankings: LeaderboardEntry[];
 }
 
+/* ─── Rank Badge ─── */
 function RankBadge({ rank }: { rank: number }) {
-  let badgeClass = 'bg-gray-100 text-gray-800 border-gray-300';
-  let icon = null;
-
-  if (rank === 1) {
-    badgeClass = 'bg-yellow-100 text-yellow-800 border-yellow-300';
-    icon = '🥇';
-  } else if (rank === 2) {
-    badgeClass = 'bg-gray-200 text-gray-800 border-gray-400';
-    icon = '🥈';
-  } else if (rank === 3) {
-    badgeClass = 'bg-orange-100 text-orange-800 border-orange-300';
-    icon = '🥉';
-  }
-
+  if (rank === 1) return <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center flex-shrink-0 text-xl border-2 border-yellow-500/40" style={{ background: 'rgba(251,191,36,0.15)' }}>🥇</div>;
+  if (rank === 2) return <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center flex-shrink-0 text-xl border-2 border-slate-400/40" style={{ background: 'rgba(148,163,184,0.15)' }}>🥈</div>;
+  if (rank === 3) return <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center flex-shrink-0 text-xl border-2 border-orange-500/40" style={{ background: 'rgba(251,146,60,0.15)' }}>🥉</div>;
   return (
-    <div
-      className={`
-        flex items-center justify-center
-        w-10 h-10 sm:w-12 sm:h-12
-        rounded-full border-2 font-bold text-sm sm:text-base
-        flex-shrink-0
-        ${badgeClass}
-      `}
-      aria-label={`Rank ${rank}`}
-    >
-      {icon || `#${rank}`}
+    <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center flex-shrink-0 font-black text-sm border border-[#333] text-[#555]" style={{ background: '#1A1A1A' }}>
+      #{rank}
     </div>
   );
 }
 
-function StatDisplay({ label, value, className = '' }: { label: string; value: number | string; className?: string }) {
+/* ─── Stat column ─── */
+function StatDisplay({ label, value, highlight }: { label: string; value: number | string; highlight?: string }) {
   return (
-    <div className={`text-center min-w-[60px] ${className}`}>
-      <div className="text-xs text-gray-500 mb-1">{label}</div>
-      <div className="text-sm sm:text-base font-semibold text-gray-900">{value}</div>
+    <div className="text-center min-w-[52px]">
+      <div className="text-[10px] text-[#444] mb-1 uppercase tracking-widest font-medium">{label}</div>
+      <div className={`text-sm sm:text-base font-black ${highlight ?? 'text-white'}`}>{value}</div>
     </div>
   );
 }
 
+/* ─── Expanded mini stat card ─── */
+function MiniStat({ label, value, color }: { label: string; value: React.ReactNode; color: string }) {
+  return (
+    <div className="rounded-xl border border-[#1E1E1E] p-3 text-center" style={{ background: '#0D0D0D' }}>
+      <div className="text-[10px] text-[#444] mb-1 uppercase tracking-wider">{label}</div>
+      <div className={`text-xl font-black ${color}`}>{value}</div>
+    </div>
+  );
+}
+
+/* ─── Single Row ─── */
 function LeaderboardRow({ entry, isExpanded, onToggle }: {
   entry: LeaderboardEntry;
   isExpanded: boolean;
   onToggle: () => void;
 }) {
-  const { rank, player, stats } = entry;
+  const { rank, isTeam, team, player, stats } = entry;
+  const topThree = rank <= 3;
+
+  /* ── TEAM ROW ── */
+  if (isTeam && team) {
+    return (
+      <div
+        className={`rounded-2xl border overflow-hidden transition-all duration-300 ${topThree ? 'border-[#FF6600]/30' : 'border-[#1E1E1E]'} hover:border-[#FF6600]/40`}
+        style={{ background: topThree ? 'linear-gradient(135deg,#130800,#111)' : '#111' }}
+      >
+        <button
+          onClick={onToggle}
+          className="w-full min-h-[56px] p-4 flex items-center gap-3 sm:gap-4 text-left hover:bg-white/[0.02] transition-colors focus:outline-none"
+          aria-expanded={isExpanded}
+        >
+          <RankBadge rank={rank} />
+
+          {/* Team Info */}
+          <div className="flex-1 min-w-0 mr-2">
+            <div className="flex items-center gap-2 mb-1">
+              {team.clubLogo && <img src={team.clubLogo} alt={team.clubName} className="w-5 h-5 object-contain" />}
+              <div className="font-black text-white text-sm sm:text-base truncate">{team.clubName}</div>
+            </div>
+            <div className="flex items-center gap-2 text-xs text-[#555]">
+              {[team.playerA, team.playerB].filter(Boolean).map((p, i) => p && (
+                <span key={i} className="flex items-center gap-1">
+                  {p.photo
+                    ? <img src={p.photo} alt={p.name} className="w-4 h-4 rounded-full object-cover" />
+                    : <div className="w-4 h-4 rounded-full flex items-center justify-center text-[8px] font-black text-white" style={{ background: 'linear-gradient(135deg,#A78BFA,#7C3AED)' }}>{p.name.charAt(0)}</div>
+                  }
+                  {p.name}
+                  {i === 0 && <span className="text-[#333]">&amp;</span>}
+                </span>
+              ))}
+            </div>
+          </div>
+
+          {/* Key Stats */}
+          <div className="hidden md:flex items-center gap-3 lg:gap-5 flex-shrink-0">
+            <StatDisplay label="MP" value={stats.matchesPlayed} />
+            <StatDisplay label="W" value={stats.wins} highlight="text-green-400" />
+            <StatDisplay label="D" value={stats.draws} highlight="text-[#555]" />
+            <StatDisplay label="L" value={stats.losses} highlight="text-red-400" />
+            <StatDisplay label="GD" value={stats.goalDifference > 0 ? `+${stats.goalDifference}` : stats.goalDifference} highlight={stats.goalDifference >= 0 ? 'text-green-400' : 'text-red-400'} />
+          </div>
+
+          {/* Points pill */}
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <div className="px-3 py-1.5 rounded-full text-sm font-black text-white" style={{ background: 'linear-gradient(135deg,#FF6600,#CC2900)' }}>
+              <AnimatedCounter value={stats.totalPoints} format={(v) => `${Math.round(v)} pts`} />
+            </div>
+            <svg className={`w-4 h-4 text-[#333] transition-transform ${isExpanded ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+          </div>
+        </button>
+
+        {isExpanded && (
+          <div className="px-4 pb-4 pt-3 border-t border-[#1A1A1A]">
+            <div className="grid grid-cols-2 sm:grid-cols-4 xl:grid-cols-8 gap-2 mb-4">
+              <MiniStat label="Matches" value={stats.matchesPlayed} color="text-white" />
+              <MiniStat label="Wins" value={stats.wins} color="text-green-400" />
+              <MiniStat label="Draws" value={stats.draws} color="text-[#555]" />
+              <MiniStat label="Losses" value={stats.losses} color="text-red-400" />
+              <MiniStat label="Goals Scored" value={stats.goalsScored} color="text-[#FF6600]" />
+              <MiniStat label="Goals Conceded" value={stats.goalsConceded} color="text-[#CC2900]" />
+              <MiniStat label="Goal Diff" value={stats.goalDifference > 0 ? `+${stats.goalDifference}` : stats.goalDifference} color={stats.goalDifference >= 0 ? 'text-green-400' : 'text-red-400'} />
+              <MiniStat label="Points" value={stats.totalPoints} color="text-[#FFB700]" />
+            </div>
+            <div>
+              <div className="flex items-center justify-between text-xs text-[#555] mb-2">
+                <span>Win Rate</span>
+                <span className="font-bold text-white">{stats.matchesPlayed > 0 ? `${((stats.wins / stats.matchesPlayed) * 100).toFixed(1)}%` : '0%'}</span>
+              </div>
+              <div className="w-full rounded-full h-1.5 overflow-hidden" style={{ background: '#1A1A1A' }}>
+                <div className="h-full rounded-full transition-all duration-500" style={{ width: stats.matchesPlayed > 0 ? `${(stats.wins / stats.matchesPlayed) * 100}%` : '0%', background: 'linear-gradient(90deg,#FF6600,#FFB700)' }} />
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  /* ── SINGLES ROW ── */
+  if (!player) return null;
 
   return (
     <div
-      className="
-        bg-white border border-gray-200 rounded-lg overflow-hidden
-        transition-all duration-300 hover:shadow-md
-      "
+      className={`rounded-2xl border overflow-hidden transition-all duration-300 ${topThree ? 'border-[#FF6600]/30' : 'border-[#1E1E1E]'} hover:border-[#FF6600]/40`}
+      style={{ background: topThree ? 'linear-gradient(135deg,#130800,#111)' : '#111' }}
     >
-      {/* Main Row - Touch optimized */}
       <button
         onClick={onToggle}
-        className="w-full min-h-[44px] p-3 sm:p-4 flex items-center gap-3 sm:gap-4 text-left hover:bg-gray-50 transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-inset"
+        className="w-full min-h-[56px] p-4 flex items-center gap-3 sm:gap-4 text-left hover:bg-white/[0.02] transition-colors focus:outline-none"
         aria-expanded={isExpanded}
-        aria-label={`${player.name} - Rank ${rank}, ${stats.totalPoints} points. Click to ${isExpanded ? 'collapse' : 'expand'} details`}
+        aria-label={`${player.name} - Rank ${rank}, ${stats.totalPoints} points`}
       >
-        {/* Rank Badge */}
         <RankBadge rank={rank} />
 
-        {/* Player Photo */}
-        <div className="relative w-12 h-12 sm:w-14 sm:h-14 rounded-full overflow-hidden bg-gray-200 flex-shrink-0">
+        {/* Photo */}
+        <div className="relative w-11 h-11 sm:w-13 sm:h-13 rounded-full overflow-hidden flex-shrink-0 border border-[#FF6600]/30" style={{ minWidth: '44px', minHeight: '44px' }}>
           {player.photo ? (
-            <Image
-              src={player.photo}
-              alt={player.name}
-              fill
-              className="object-cover"
-            />
+            <Image src={player.photo} alt={player.name} fill className="object-cover" />
           ) : (
-            <div className="w-full h-full flex items-center justify-center text-gray-400 text-xl font-bold">
+            <div className="w-full h-full flex items-center justify-center font-black text-white text-lg" style={{ background: 'linear-gradient(135deg,#FF6600,#CC2900)' }}>
               {player.name.charAt(0).toUpperCase()}
             </div>
           )}
@@ -126,110 +197,59 @@ function LeaderboardRow({ entry, isExpanded, onToggle }: {
         <div className="flex-1 min-w-0 mr-2">
           <Link
             href={`/players/${player.id}`}
-            className="font-semibold text-gray-900 hover:text-primary-600 transition-colors block truncate"
+            className="font-black text-white hover:text-[#FFB700] transition-colors block truncate text-sm sm:text-base"
             onClick={(e) => e.stopPropagation()}
           >
             {player.name}
           </Link>
           {player.club && (
-            <div className="text-xs sm:text-sm text-gray-600 truncate">
-              {player.club.name}
-            </div>
+            <div className="text-xs text-[#555] truncate">{player.club.name}</div>
           )}
         </div>
 
-        {/* Key Stats - Responsive visibility */}
-        <div className="hidden md:flex items-center gap-3 lg:gap-6 flex-shrink-0">
+        {/* Key Stats */}
+        <div className="hidden md:flex items-center gap-3 lg:gap-5 flex-shrink-0">
           <StatDisplay label="MP" value={stats.matchesPlayed} />
-          <StatDisplay label="W" value={stats.wins} className="text-green-600" />
-          <StatDisplay label="D" value={stats.draws} className="text-gray-600" />
-          <StatDisplay label="L" value={stats.losses} className="text-red-600" />
-          <StatDisplay label="GD" value={stats.goalDifference > 0 ? `+${stats.goalDifference}` : stats.goalDifference} />
+          <StatDisplay label="W" value={stats.wins} highlight="text-green-400" />
+          <StatDisplay label="D" value={stats.draws} highlight="text-[#555]" />
+          <StatDisplay label="L" value={stats.losses} highlight="text-red-400" />
+          <StatDisplay label="GD" value={stats.goalDifference > 0 ? `+${stats.goalDifference}` : stats.goalDifference} highlight={stats.goalDifference >= 0 ? 'text-green-400' : 'text-red-400'} />
         </div>
 
-        {/* Points Badge */}
+        {/* Points pill */}
         <div className="flex items-center gap-2 flex-shrink-0">
-          <Badge variant="primary" size="lg" className="font-bold">
+          <div className="px-3 py-1.5 rounded-full text-sm font-black text-white" style={{ background: 'linear-gradient(135deg,#FF6600,#CC2900)' }}>
             <AnimatedCounter value={stats.totalPoints} format={(v) => `${Math.round(v)} pts`} />
-          </Badge>
-          <svg
-            className={`w-5 h-5 text-gray-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-            aria-hidden="true"
-          >
+          </div>
+          <svg className={`w-4 h-4 text-[#333] transition-transform ${isExpanded ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
           </svg>
         </div>
       </button>
 
-      {/* Expanded Details */}
       {isExpanded && (
-        <div
-          className="px-3 sm:px-4 pb-3 sm:pb-4 pt-2 border-t border-gray-200 bg-gray-50"
-          role="region"
-          aria-label="Detailed statistics"
-        >
-          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-4 xl:grid-cols-8 gap-3 sm:gap-4">
-            <div className="bg-white rounded-lg p-3 border border-gray-200">
-              <div className="text-xs text-gray-500 mb-1">Matches Played</div>
-              <div className="text-xl font-bold text-gray-900">{stats.matchesPlayed}</div>
-            </div>
-            <div className="bg-white rounded-lg p-3 border border-green-200">
-              <div className="text-xs text-gray-500 mb-1">Wins</div>
-              <div className="text-xl font-bold text-green-600">{stats.wins}</div>
-            </div>
-            <div className="bg-white rounded-lg p-3 border border-gray-200">
-              <div className="text-xs text-gray-500 mb-1">Draws</div>
-              <div className="text-xl font-bold text-gray-600">{stats.draws}</div>
-            </div>
-            <div className="bg-white rounded-lg p-3 border border-red-200">
-              <div className="text-xs text-gray-500 mb-1">Losses</div>
-              <div className="text-xl font-bold text-red-600">{stats.losses}</div>
-            </div>
-            <div className="bg-white rounded-lg p-3 border border-blue-200">
-              <div className="text-xs text-gray-500 mb-1">Goals Scored</div>
-              <div className="text-xl font-bold text-blue-600">{stats.goalsScored}</div>
-            </div>
-            <div className="bg-white rounded-lg p-3 border border-orange-200">
-              <div className="text-xs text-gray-500 mb-1">Goals Conceded</div>
-              <div className="text-xl font-bold text-orange-600">{stats.goalsConceded}</div>
-            </div>
-            <div className="bg-white rounded-lg p-3 border border-purple-200">
-              <div className="text-xs text-gray-500 mb-1">Goal Difference</div>
-              <div className={`text-xl font-bold ${stats.goalDifference >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                {stats.goalDifference > 0 ? `+${stats.goalDifference}` : stats.goalDifference}
-              </div>
-            </div>
-            <div className="bg-white rounded-lg p-3 border border-primary-200">
-              <div className="text-xs text-gray-500 mb-1">Total Points</div>
-              <div className="text-xl font-bold text-primary-600">{stats.totalPoints}</div>
-            </div>
+        <div className="px-4 pb-4 pt-3 border-t border-[#1A1A1A]" role="region" aria-label="Detailed statistics">
+          <div className="grid grid-cols-2 sm:grid-cols-4 xl:grid-cols-8 gap-2 mb-4">
+            <MiniStat label="Matches" value={stats.matchesPlayed} color="text-white" />
+            <MiniStat label="Wins" value={stats.wins} color="text-green-400" />
+            <MiniStat label="Draws" value={stats.draws} color="text-[#555]" />
+            <MiniStat label="Losses" value={stats.losses} color="text-red-400" />
+            <MiniStat label="Goals Scored" value={stats.goalsScored} color="text-[#FF6600]" />
+            <MiniStat label="Goals Conceded" value={stats.goalsConceded} color="text-[#CC2900]" />
+            <MiniStat label="Goal Diff" value={stats.goalDifference > 0 ? `+${stats.goalDifference}` : stats.goalDifference} color={stats.goalDifference >= 0 ? 'text-green-400' : 'text-red-400'} />
+            <MiniStat label="Points" value={stats.totalPoints} color="text-[#FFB700]" />
           </div>
-
-          {/* Win Rate */}
-          <div className="mt-4">
-            <div className="flex items-center justify-between text-xs text-gray-600 mb-2">
+          <div>
+            <div className="flex items-center justify-between text-xs text-[#555] mb-2">
               <span>Win Rate</span>
-              <span className="font-semibold">
-                {stats.matchesPlayed > 0
-                  ? `${((stats.wins / stats.matchesPlayed) * 100).toFixed(1)}%`
-                  : '0%'}
-              </span>
+              <span className="font-bold text-white">{stats.matchesPlayed > 0 ? `${((stats.wins / stats.matchesPlayed) * 100).toFixed(1)}%` : '0%'}</span>
             </div>
-            <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
-              <div
-                className="bg-green-500 h-full rounded-full transition-all duration-500"
-                style={{
-                  width: stats.matchesPlayed > 0
-                    ? `${(stats.wins / stats.matchesPlayed) * 100}%`
-                    : '0%',
-                }}
+            <div className="w-full rounded-full h-1.5 overflow-hidden" style={{ background: '#1A1A1A' }}>
+              <div className="h-full rounded-full transition-all duration-500"
+                style={{ width: stats.matchesPlayed > 0 ? `${(stats.wins / stats.matchesPlayed) * 100}%` : '0%', background: 'linear-gradient(90deg,#FF6600,#FFB700)' }}
                 role="progressbar"
                 aria-valuenow={stats.matchesPlayed > 0 ? (stats.wins / stats.matchesPlayed) * 100 : 0}
-                aria-valuemin={0}
-                aria-valuemax={100}
+                aria-valuemin={0} aria-valuemax={100}
               />
             </div>
           </div>
@@ -244,35 +264,27 @@ export default function LeaderboardStream({ tournament, rankings }: LeaderboardS
 
   const toggleRow = (rank: number) => {
     setExpandedRows((prev) => {
-      const newSet = new Set(prev);
-      if (newSet.has(rank)) {
-        newSet.delete(rank);
-      } else {
-        newSet.add(rank);
-      }
-      return newSet;
+      const next = new Set(prev);
+      next.has(rank) ? next.delete(rank) : next.add(rank);
+      return next;
     });
   };
 
   if (rankings.length === 0) {
     return (
-      <div className="bg-white rounded-2xl border border-gray-200 p-12 text-center">
-        <div className="text-6xl mb-4">📊</div>
-        <h3 className="text-xl font-semibold text-gray-900 mb-2">
-          No Rankings Yet
-        </h3>
-        <p className="text-gray-600">
-          The leaderboard will be populated once matches are completed.
-        </p>
+      <div className="rounded-2xl border border-dashed border-[#1E1E1E] text-center py-20" style={{ background: '#111' }}>
+        <div className="text-5xl mb-4">📊</div>
+        <h3 className="text-xl font-black text-white mb-2">No Rankings Yet</h3>
+        <p className="text-sm text-[#555]">The leaderboard will be populated once matches are completed.</p>
       </div>
     );
   }
 
   return (
     <StaggerContainer speed="fast">
-      <div className="space-y-3">
+      <div className="space-y-2">
         {rankings.map((entry) => (
-          <StaggerItem key={entry.player.id}>
+          <StaggerItem key={entry.isTeam ? `team-${entry.team?.clubId}-${entry.team?.playerA?.id}-${entry.team?.playerB?.id}` : `player-${entry.player?.id}`}>
             <RankAnimation currentRank={entry.rank}>
               <LeaderboardRow
                 entry={entry}

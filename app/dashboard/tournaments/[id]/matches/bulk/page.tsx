@@ -30,6 +30,7 @@ async function getTournamentWithParticipants(id: string) {
               select: {
                 id: true,
                 name: true,
+                clubId: true,
               },
             },
           },
@@ -44,6 +45,7 @@ async function getTournamentWithParticipants(id: string) {
     const participants = tournament.participants.map((p) => ({
       id: p.player.id,
       name: p.player.name,
+      clubId: p.player.clubId,
     }));
 
     // Fetch walkover points from template if available
@@ -166,20 +168,38 @@ export default async function BulkAddMatchesPage({
         </div>
       </div>
 
-      <BulkMatchUpload 
-        tournamentId={tournament.id}
-        matchFormat={tournament.matchFormat}
-        participants={tournament.participants}
-        pointSystem={{
-          pointsPerWin: tournament.pointsPerWin,
-          pointsPerDraw: tournament.pointsPerDraw,
-          pointsPerLoss: tournament.pointsPerLoss,
-          pointsPerGoalScored: tournament.pointsPerGoalScored,
-          pointsPerGoalConceded: tournament.pointsPerGoalConceded,
-          pointsForWalkoverWin: tournament.pointsForWalkoverWin,
-          pointsForWalkoverLoss: tournament.pointsForWalkoverLoss,
-        }}
-      />
+      {/* Form Card */}
+      <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
+        <div className="bg-gradient-to-r from-orange-50 via-red-50 to-pink-50 px-6 py-5 border-b border-gray-200">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-gradient-to-br from-orange-600 to-red-600 rounded-xl flex items-center justify-center">
+              <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+              </svg>
+            </div>
+            <div>
+              <h2 className="text-lg font-bold text-gray-900">Bulk Upload</h2>
+              <p className="text-sm text-gray-600 mt-0.5">Upload CSV or enter matches manually</p>
+            </div>
+          </div>
+        </div>
+        <div className="p-6 sm:p-8">
+          <BulkMatchUpload 
+            tournamentId={tournament.id}
+            matchFormat={tournament.matchFormat}
+            participants={tournament.participants}
+            pointSystem={{
+              pointsPerWin: tournament.pointsPerWin,
+              pointsPerDraw: tournament.pointsPerDraw,
+              pointsPerLoss: tournament.pointsPerLoss,
+              pointsPerGoalScored: tournament.pointsPerGoalScored,
+              pointsPerGoalConceded: tournament.pointsPerGoalConceded,
+              pointsForWalkoverWin: tournament.pointsForWalkoverWin,
+              pointsForWalkoverLoss: tournament.pointsForWalkoverLoss,
+            }}
+          />
+        </div>
+      </div>
     </div>
   );
 }

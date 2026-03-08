@@ -56,6 +56,34 @@ async function getMatchData(id: string) {
             id: 'asc',
           },
         },
+        teamResults: {
+          include: {
+            club: {
+              select: {
+                id: true,
+                name: true,
+                logo: true,
+              },
+            },
+            playerA: {
+              select: {
+                id: true,
+                name: true,
+                photo: true,
+              },
+            },
+            playerB: {
+              select: {
+                id: true,
+                name: true,
+                photo: true,
+              },
+            },
+          },
+          orderBy: {
+            teamPosition: 'asc',
+          },
+        },
       },
     });
 
@@ -63,7 +91,39 @@ async function getMatchData(id: string) {
       return null;
     }
 
-    // Transform to expected format
+    // Check if it's a team match (doubles)
+    if (match.isTeamMatch && match.teamResults.length > 0) {
+      return {
+        match: {
+          id: match.id,
+          date: match.matchDate.toISOString(),
+          stageName: match.stage ? match.stage.stageName : match.stageName,
+          tournament: {
+            id: match.tournament.id,
+            name: match.tournament.name,
+          },
+          isTeamMatch: true,
+        },
+        teamResults: match.teamResults.map(result => ({
+          team: {
+            clubId: result.clubId,
+            clubName: result.club?.name || 'Team',
+            clubLogo: result.club?.logo,
+            playerA: result.playerA,
+            playerB: result.playerB,
+          },
+          outcome: result.outcome as 'WIN' | 'DRAW' | 'LOSS',
+          goalsScored: result.goalsScored,
+          goalsConceded: result.goalsConceded,
+          pointsEarned: result.pointsEarned,
+          basePoints: result.basePoints,
+          conditionalPoints: result.conditionalPoints,
+        })),
+        results: [],
+      };
+    }
+
+    // Singles match - Transform to expected format
     return {
       match: {
         id: match.id,
@@ -73,6 +133,7 @@ async function getMatchData(id: string) {
           id: match.tournament.id,
           name: match.tournament.name,
         },
+        isTeamMatch: false,
       },
       results: match.results.map(result => ({
         player: {
@@ -92,6 +153,7 @@ async function getMatchData(id: string) {
         basePoints: result.basePoints,
         conditionalPoints: result.conditionalPoints,
       })),
+      teamResults: [],
     };
   } catch (error) {
     console.error('Error fetching match data:', error);

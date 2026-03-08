@@ -63,6 +63,34 @@ async function getTournamentDetails(id: string) {
                 },
               },
             },
+            teamResults: {
+              include: {
+                club: {
+                  select: {
+                    id: true,
+                    name: true,
+                    logo: true,
+                  },
+                },
+                playerA: {
+                  select: {
+                    id: true,
+                    name: true,
+                    photo: true,
+                  },
+                },
+                playerB: {
+                  select: {
+                    id: true,
+                    name: true,
+                    photo: true,
+                  },
+                },
+              },
+              orderBy: {
+                teamPosition: 'asc',
+              },
+            },
           },
           orderBy: {
             matchDate: "desc",
@@ -98,6 +126,90 @@ async function getTournamentDetails(id: string) {
         },
       },
     });
+
+    // If it's a doubles tournament, aggregate team stats
+    if (tournament && tournament.matchFormat === 'DOUBLES') {
+      const teamStats = await prisma.teamMatchResult.groupBy({
+        by: ['clubId', 'playerAId', 'playerBId'],
+        where: {
+          match: {
+            tournamentId: tournamentId,
+          },
+        },
+        _sum: {
+          pointsEarned: true,
+          goalsScored: true,
+          goalsConceded: true,
+        },
+        _count: {
+          id: true,
+        },
+      });
+
+      // Get detailed info for each team
+      const enrichedTeamStats = await Promise.all(
+        teamStats.map(async (team) => {
+          const [club, playerA, playerB, outcomes] = await Promise.all([
+            prisma.club.findUnique({
+              where: { id: team.clubId },
+              select: { id: true, name: true, logo: true },
+            }),
+            prisma.player.findUnique({
+              where: { id: team.playerAId },
+              select: { id: true, name: true, photo: true },
+            }),
+            prisma.player.findUnique({
+              where: { id: team.playerBId },
+              select: { id: true, name: true, photo: true },
+            }),
+            prisma.teamMatchResult.groupBy({
+              by: ['outcome'],
+              where: {
+                clubId: team.clubId,
+                playerAId: team.playerAId,
+                playerBId: team.playerBId,
+                match: {
+                  tournamentId: tournamentId,
+                },
+              },
+              _count: {
+                outcome: true,
+              },
+            }),
+          ]);
+
+          const wins = outcomes.find(o => o.outcome === 'WIN')?._count.outcome || 0;
+          const draws = outcomes.find(o => o.outcome === 'DRAW')?._count.outcome || 0;
+          const losses = outcomes.find(o => o.outcome === 'LOSS')?._count.outcome || 0;
+
+          return {
+            id: `${team.clubId}-${team.playerAId}-${team.playerBId}`,
+            clubId: team.clubId,
+            club,
+            playerA,
+            playerB,
+            matchesPlayed: team._count.id,
+            wins,
+            draws,
+            losses,
+            goalsScored: team._sum.goalsScored || 0,
+            goalsConceded: team._sum.goalsConceded || 0,
+            totalPoints: team._sum.pointsEarned || 0,
+          };
+        })
+      );
+
+      // Sort by points, then goal difference, then goals scored
+      enrichedTeamStats.sort((a, b) => {
+        if (b.totalPoints !== a.totalPoints) return b.totalPoints - a.totalPoints;
+        const gdA = a.goalsScored - a.goalsConceded;
+        const gdB = b.goalsScored - b.goalsConceded;
+        if (gdB !== gdA) return gdB - gdA;
+        return b.goalsScored - a.goalsScored;
+      });
+
+      return { ...tournament, teamStats: enrichedTeamStats };
+    }
 
     return tournament;
   } catch (error) {

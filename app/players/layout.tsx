@@ -4,20 +4,14 @@ import { SkipToContent } from "@/components/public/SkipToContent";
 import { NavigationProgress } from "@/components/public/NavigationProgress";
 import { PageTransitionWrapper } from "@/components/public/PageTransitionWrapper";
 
-export default function PublicLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function PublicLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="min-h-screen flex flex-col bg-gradient-to-br from-gray-50 via-blue-50/30 to-gray-50">
+    <div className="min-h-screen flex flex-col bg-[#0D0D0D]">
       <NavigationProgress />
       <SkipToContent />
       <PublicNavigation />
       <main id="main-content" className="flex-1" tabIndex={-1}>
-        <PageTransitionWrapper>
-          {children}
-        </PageTransitionWrapper>
+        <PageTransitionWrapper>{children}</PageTransitionWrapper>
       </main>
       <PublicFooter />
     </div>

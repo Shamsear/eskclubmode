@@ -19,10 +19,12 @@ export interface ConditionalRule {
 
 export interface PointSystemConfig extends PointSystem {
   conditionalRules?: ConditionalRule[];
+  pointsForWalkoverWin?: number;
+  pointsForWalkoverLoss?: number;
 }
 
 export interface MatchResultData {
-  playerId: number;
+  playerId?: number;
   outcome: MatchOutcome;
   goalsScored: number;
   goalsConceded: number;

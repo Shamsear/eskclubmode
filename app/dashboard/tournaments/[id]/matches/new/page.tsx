@@ -34,6 +34,7 @@ async function getTournamentWithParticipants(id: string) {
                 id: true,
                 name: true,
                 photo: true,
+                clubId: true,
               },
             },
           },
@@ -50,6 +51,7 @@ async function getTournamentWithParticipants(id: string) {
       id: p.player.id,
       name: p.player.name,
       photo: p.player.photo,
+      clubId: p.player.clubId,
     }));
 
     // Fetch walkover points from template if available

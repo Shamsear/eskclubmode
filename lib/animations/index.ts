@@ -36,7 +36,7 @@ export {
 export { AnimatedContainer } from './AnimatedContainer';
 export { StaggerContainer, StaggerItem } from './StaggerContainer';
 export { PageTransition, AnimatedPage } from './PageTransition';
-export { ScrollReveal, Parallax, ScrollProgress } from './ScrollReveal';
+export { ScrollReveal, Parallax, ScrollProgress, FadeInWhenVisible } from './ScrollReveal';
 export { RankAnimation, AnimatedCounter } from './RankAnimation';
 
 // Re-export commonly used Framer Motion utilities

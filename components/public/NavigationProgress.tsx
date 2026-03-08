@@ -52,8 +52,12 @@ export function NavigationProgress() {
           animate={{ scaleX: progress / 100, opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.3, ease: 'easeOut' }}
-          className="fixed top-0 left-0 right-0 h-1 bg-gradient-to-r from-primary-500 via-primary-600 to-primary-700 z-[100] origin-left shadow-lg"
-          style={{ transformOrigin: 'left' }}
+          className="fixed top-0 left-0 right-0 h-[3px] z-[100] origin-left"
+          style={{
+            transformOrigin: 'left',
+            background: 'linear-gradient(90deg,#FF6600,#FFB700,#FF6600)',
+            boxShadow: '0 0 10px rgba(255,102,0,0.7), 0 0 20px rgba(255,183,0,0.4)',
+          }}
         />
       )}
     </AnimatePresence>
