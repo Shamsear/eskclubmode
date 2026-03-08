@@ -6,6 +6,19 @@ const prisma = new PrismaClient();
 async function main() {
   console.log('Starting database seed...');
 
+  // Create admin user
+  const hashedPassword = await bcrypt.hash('admin123', 10);
+  const admin = await prisma.admin.upsert({
+    where: { email: 'admin@example.com' },
+    update: {},
+    create: {
+      username: 'admin',
+      email: 'admin@example.com',
+      password: hashedPassword,
+    },
+  });
+  console.log('Created admin user:', admin.email);
+
   // Create point system templates
   const standardTemplate = await prisma.pointSystemTemplate.upsert({
     where: { name: 'Standard Football Scoring' },
