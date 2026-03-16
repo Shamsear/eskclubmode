@@ -168,94 +168,92 @@ export function ClubLeaderboardClient({ clubs, tournaments }: ClubLeaderboardCli
       </div>
 
       {/* Leaderboard Table */}
-      <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden -mx-4 sm:mx-0">
-        <div className="overflow-x-auto">
-          <table className="w-full divide-y divide-gray-200 min-w-[600px]">
-            <thead className="bg-gradient-to-r from-gray-50 to-white">
-              <tr>
-                <th className="px-2 sm:px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider w-16">Rank</th>
-                <th className="px-2 sm:px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider min-w-[140px]">Club</th>
-                <th className="px-2 sm:px-4 py-3 text-center text-xs font-bold text-gray-700 uppercase tracking-wider w-20">Players</th>
-                <th className="px-2 sm:px-4 py-3 text-center text-xs font-bold text-gray-700 uppercase tracking-wider w-20">Matches</th>
-                <th className="px-2 sm:px-4 py-3 text-center text-xs font-bold text-gray-700 uppercase tracking-wider w-24">W/D/L</th>
-                <th className="px-2 sm:px-4 py-3 text-center text-xs font-bold text-gray-700 uppercase tracking-wider w-20">Goals</th>
-                <th className="px-2 sm:px-4 py-3 text-center text-xs font-bold text-gray-700 uppercase tracking-wider w-16">GD</th>
-                <th className="px-2 sm:px-4 py-3 text-center text-xs font-bold text-gray-700 uppercase tracking-wider w-20">Avg Pts</th>
-                <th className="px-2 sm:px-4 py-3 text-center text-xs font-bold text-gray-700 uppercase tracking-wider w-24">Total Pts</th>
+      <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
+        <table className="w-full table-fixed divide-y divide-gray-200">
+          <thead className="bg-gradient-to-r from-gray-50 to-white">
+            <tr>
+              <th className="w-[8%] px-2 py-3 text-left text-xs font-bold text-gray-700 uppercase">Rank</th>
+              <th className="w-[25%] px-2 py-3 text-left text-xs font-bold text-gray-700 uppercase">Club</th>
+              <th className="w-[8%] px-2 py-3 text-center text-xs font-bold text-gray-700 uppercase hidden sm:table-cell">P</th>
+              <th className="w-[8%] px-2 py-3 text-center text-xs font-bold text-gray-700 uppercase hidden md:table-cell">M</th>
+              <th className="w-[18%] px-2 py-3 text-center text-xs font-bold text-gray-700 uppercase hidden lg:table-cell">W/D/L</th>
+              <th className="w-[12%] px-2 py-3 text-center text-xs font-bold text-gray-700 uppercase hidden xl:table-cell">Goals</th>
+              <th className="w-[8%] px-2 py-3 text-center text-xs font-bold text-gray-700 uppercase hidden xl:table-cell">GD</th>
+              <th className="w-[10%] px-2 py-3 text-center text-xs font-bold text-gray-700 uppercase hidden sm:table-cell">Avg</th>
+              <th className="w-[13%] px-2 py-3 text-center text-xs font-bold text-gray-700 uppercase">Pts</th>
+            </tr>
+          </thead>
+          <tbody className="bg-white divide-y divide-gray-200">
+            {filteredClubs.map((club, index) => (
+              <tr key={club.id} className="hover:bg-gray-50 transition-colors group">
+                <td className="px-2 py-3">
+                  <div className="flex items-center justify-center">
+                    {index === 0 && (
+                      <div className="w-6 h-6 sm:w-7 sm:h-7 bg-gradient-to-br from-yellow-400 to-yellow-600 rounded-full flex items-center justify-center shadow-lg">
+                        <span className="text-white font-bold text-xs">🥇</span>
+                      </div>
+                    )}
+                    {index === 1 && (
+                      <div className="w-6 h-6 sm:w-7 sm:h-7 bg-gradient-to-br from-gray-300 to-gray-500 rounded-full flex items-center justify-center shadow-lg">
+                        <span className="text-white font-bold text-xs">🥈</span>
+                      </div>
+                    )}
+                    {index === 2 && (
+                      <div className="w-6 h-6 sm:w-7 sm:h-7 bg-gradient-to-br from-orange-400 to-orange-600 rounded-full flex items-center justify-center shadow-lg">
+                        <span className="text-white font-bold text-xs">🥉</span>
+                      </div>
+                    )}
+                    {index > 2 && (
+                      <span className="text-xs sm:text-sm font-bold text-gray-600">#{index + 1}</span>
+                    )}
+                  </div>
+                </td>
+                <td className="px-2 py-3">
+                  <Link href={`/dashboard/clubs/${club.id}`} className="flex items-center gap-1.5 group-hover:text-emerald-600 transition-colors">
+                    {club.logo ? (
+                      <img src={club.logo} alt={club.name} className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg object-cover flex-shrink-0" />
+                    ) : (
+                      <div className="w-7 h-7 sm:w-8 sm:h-8 bg-gradient-to-br from-emerald-100 to-teal-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                        <span className="text-xs font-bold text-emerald-700">{club.name.charAt(0)}</span>
+                      </div>
+                    )}
+                    <span className="font-semibold text-gray-900 text-xs sm:text-sm truncate">{club.name}</span>
+                  </Link>
+                </td>
+                <td className="px-2 py-3 text-center text-xs text-gray-600 hidden sm:table-cell">{club.playerCount}</td>
+                <td className="px-2 py-3 text-center text-xs text-gray-600 hidden md:table-cell">{club.totalMatches}</td>
+                <td className="px-2 py-3 text-center hidden lg:table-cell">
+                  <div className="flex items-center justify-center gap-0.5 text-xs">
+                    <span className="text-green-600 font-semibold">{club.totalWins}</span>
+                    <span className="text-gray-400">/</span>
+                    <span className="text-yellow-600 font-semibold">{club.totalDraws}</span>
+                    <span className="text-gray-400">/</span>
+                    <span className="text-red-600 font-semibold">{club.totalLosses}</span>
+                  </div>
+                </td>
+                <td className="px-2 py-3 text-center text-xs text-gray-600 hidden xl:table-cell">
+                  {club.totalGoalsScored} - {club.totalGoalsConceded}
+                </td>
+                <td className="px-2 py-3 text-center hidden xl:table-cell">
+                  <span className={`font-semibold text-xs ${
+                    club.goalDifference > 0 ? 'text-green-600' : 
+                    club.goalDifference < 0 ? 'text-red-600' : 'text-gray-600'
+                  }`}>
+                    {club.goalDifference > 0 ? '+' : ''}{club.goalDifference}
+                  </span>
+                </td>
+                <td className="px-2 py-3 text-center text-xs font-medium text-gray-900 hidden sm:table-cell">
+                  {club.avgPointsPerMatch}
+                </td>
+                <td className="px-2 py-3 text-center">
+                  <span className="inline-block px-2 py-1 bg-gradient-to-r from-emerald-500 to-teal-600 text-white rounded-full text-xs font-bold shadow-md">
+                    {club.totalPoints}
+                  </span>
+                </td>
               </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {filteredClubs.map((club, index) => (
-                <tr key={club.id} className="hover:bg-gray-50 transition-colors group">
-                  <td className="px-2 sm:px-4 py-3 whitespace-nowrap">
-                    <div className="flex items-center justify-center">
-                      {index === 0 && (
-                        <div className="w-7 h-7 bg-gradient-to-br from-yellow-400 to-yellow-600 rounded-full flex items-center justify-center shadow-lg">
-                          <span className="text-white font-bold text-xs">🥇</span>
-                        </div>
-                      )}
-                      {index === 1 && (
-                        <div className="w-7 h-7 bg-gradient-to-br from-gray-300 to-gray-500 rounded-full flex items-center justify-center shadow-lg">
-                          <span className="text-white font-bold text-xs">🥈</span>
-                        </div>
-                      )}
-                      {index === 2 && (
-                        <div className="w-7 h-7 bg-gradient-to-br from-orange-400 to-orange-600 rounded-full flex items-center justify-center shadow-lg">
-                          <span className="text-white font-bold text-xs">🥉</span>
-                        </div>
-                      )}
-                      {index > 2 && (
-                        <span className="text-sm font-bold text-gray-600">#{index + 1}</span>
-                      )}
-                    </div>
-                  </td>
-                  <td className="px-2 sm:px-4 py-3 whitespace-nowrap">
-                    <Link href={`/dashboard/clubs/${club.id}`} className="flex items-center gap-2 group-hover:text-emerald-600 transition-colors">
-                      {club.logo ? (
-                        <img src={club.logo} alt={club.name} className="w-8 h-8 rounded-lg object-cover flex-shrink-0" />
-                      ) : (
-                        <div className="w-8 h-8 bg-gradient-to-br from-emerald-100 to-teal-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                          <span className="text-sm font-bold text-emerald-700">{club.name.charAt(0)}</span>
-                        </div>
-                      )}
-                      <span className="font-semibold text-gray-900 text-sm truncate max-w-[100px]">{club.name}</span>
-                    </Link>
-                  </td>
-                  <td className="px-2 sm:px-4 py-3 whitespace-nowrap text-center text-sm text-gray-600">{club.playerCount}</td>
-                  <td className="px-2 sm:px-4 py-3 whitespace-nowrap text-center text-sm text-gray-600">{club.totalMatches}</td>
-                  <td className="px-2 sm:px-4 py-3 whitespace-nowrap text-center text-xs">
-                    <div className="flex items-center justify-center gap-0.5">
-                      <span className="text-green-600 font-semibold">{club.totalWins}</span>
-                      <span className="text-gray-400">/</span>
-                      <span className="text-yellow-600 font-semibold">{club.totalDraws}</span>
-                      <span className="text-gray-400">/</span>
-                      <span className="text-red-600 font-semibold">{club.totalLosses}</span>
-                    </div>
-                  </td>
-                  <td className="px-2 sm:px-4 py-3 whitespace-nowrap text-center text-sm text-gray-600">
-                    {club.totalGoalsScored} - {club.totalGoalsConceded}
-                  </td>
-                  <td className="px-2 sm:px-4 py-3 whitespace-nowrap text-center">
-                    <span className={`font-semibold text-sm ${
-                      club.goalDifference > 0 ? 'text-green-600' : 
-                      club.goalDifference < 0 ? 'text-red-600' : 'text-gray-600'
-                    }`}>
-                      {club.goalDifference > 0 ? '+' : ''}{club.goalDifference}
-                    </span>
-                  </td>
-                  <td className="px-2 sm:px-4 py-3 whitespace-nowrap text-center text-sm font-medium text-gray-900">
-                    {club.avgPointsPerMatch}
-                  </td>
-                  <td className="px-2 sm:px-4 py-3 whitespace-nowrap text-center">
-                    <span className="px-2 py-1 bg-gradient-to-r from-emerald-500 to-teal-600 text-white rounded-full text-xs font-bold shadow-md">
-                      {club.totalPoints}
-                    </span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+            ))}
+          </tbody>
+        </table>
       </div>
 
       {filteredClubs.length === 0 && (

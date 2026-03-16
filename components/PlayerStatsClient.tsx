@@ -20,6 +20,7 @@ interface Player {
   totalLosses: number;
   totalGoalsScored: number;
   totalGoalsConceded: number;
+  cleanSheets: number;
   goalDifference: number;
   winRate: number;
   avgPointsPerMatch: number;
@@ -123,79 +124,82 @@ export function PlayerStatsClient({ players: initialPlayers, tournaments }: Play
             </div>
           </div>
         ) : (
-          <div className="overflow-x-auto scrollbar-thin">
-            <table className="w-full divide-y divide-gray-200">
+          <div>
+            <table className="w-full table-fixed divide-y divide-gray-200">
             <thead className="bg-gradient-to-r from-gray-50 to-white">
               <tr>
-                <th className="px-2 sm:px-4 md:px-6 py-3 sm:py-4 text-left text-xs font-bold text-gray-700 uppercase">Rank</th>
-                <th className="px-2 sm:px-4 md:px-6 py-3 sm:py-4 text-left text-xs font-bold text-gray-700 uppercase">Player</th>
-                <th className="px-2 sm:px-4 md:px-6 py-3 sm:py-4 text-center text-xs font-bold text-gray-700 uppercase hidden lg:table-cell">Club</th>
-                <th className="px-2 sm:px-4 md:px-6 py-3 sm:py-4 text-center text-xs font-bold text-gray-700 uppercase hidden md:table-cell">Matches</th>
-                <th className="px-2 sm:px-4 md:px-6 py-3 sm:py-4 text-center text-xs font-bold text-gray-700 uppercase hidden sm:table-cell">W/D/L</th>
-                <th className="px-2 sm:px-4 md:px-6 py-3 sm:py-4 text-center text-xs font-bold text-gray-700 uppercase">Pts</th>
+                <th className="w-[10%] px-2 py-3 text-left text-xs font-bold text-gray-700 uppercase">Rank</th>
+                <th className="w-[30%] px-2 py-3 text-left text-xs font-bold text-gray-700 uppercase">Player</th>
+                <th className="w-[20%] px-2 py-3 text-center text-xs font-bold text-gray-700 uppercase hidden lg:table-cell">Club</th>
+                <th className="w-[10%] px-2 py-3 text-center text-xs font-bold text-gray-700 uppercase hidden md:table-cell">M</th>
+                <th className="w-[15%] px-2 py-3 text-center text-xs font-bold text-gray-700 uppercase hidden sm:table-cell">W/D/L</th>
+                <th className="w-[10%] px-2 py-3 text-center text-xs font-bold text-gray-700 uppercase hidden xl:table-cell">GS</th>
+                <th className="w-[10%] px-2 py-3 text-center text-xs font-bold text-gray-700 uppercase hidden xl:table-cell">GC</th>
+                <th className="w-[10%] px-2 py-3 text-center text-xs font-bold text-gray-700 uppercase hidden xl:table-cell">CS</th>
+                <th className="w-[10%] px-2 py-3 text-center text-xs font-bold text-gray-700 uppercase">Pts</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {players.map((player, index) => (
                 <tr key={player.id} className="hover:bg-gray-50 transition-colors group">
-                  <td className="px-2 sm:px-4 md:px-6 py-3 sm:py-4 whitespace-nowrap">
+                  <td className="px-2 py-3">
                     <div className="flex items-center justify-center">
                       {index === 0 && (
-                        <div className="w-6 h-6 sm:w-7 sm:h-7 md:w-8 md:h-8 bg-gradient-to-br from-yellow-400 to-yellow-600 rounded-full flex items-center justify-center shadow-lg">
+                        <div className="w-6 h-6 sm:w-7 sm:h-7 bg-gradient-to-br from-yellow-400 to-yellow-600 rounded-full flex items-center justify-center shadow-lg">
                           <span className="text-white font-bold text-xs">🥇</span>
                         </div>
                       )}
                       {index === 1 && (
-                        <div className="w-6 h-6 sm:w-7 sm:h-7 md:w-8 md:h-8 bg-gradient-to-br from-gray-300 to-gray-500 rounded-full flex items-center justify-center shadow-lg">
+                        <div className="w-6 h-6 sm:w-7 sm:h-7 bg-gradient-to-br from-gray-300 to-gray-500 rounded-full flex items-center justify-center shadow-lg">
                           <span className="text-white font-bold text-xs">🥈</span>
                         </div>
                       )}
                       {index === 2 && (
-                        <div className="w-6 h-6 sm:w-7 sm:h-7 md:w-8 md:h-8 bg-gradient-to-br from-orange-400 to-orange-600 rounded-full flex items-center justify-center shadow-lg">
+                        <div className="w-6 h-6 sm:w-7 sm:h-7 bg-gradient-to-br from-orange-400 to-orange-600 rounded-full flex items-center justify-center shadow-lg">
                           <span className="text-white font-bold text-xs">🥉</span>
                         </div>
                       )}
                       {index > 2 && (
-                        <span className="text-sm sm:text-base md:text-lg font-bold text-gray-600">#{index + 1}</span>
+                        <span className="text-xs sm:text-sm font-bold text-gray-600">#{index + 1}</span>
                       )}
                     </div>
                   </td>
-                  <td className="px-2 sm:px-4 md:px-6 py-3 sm:py-4">
-                    <div className="flex items-center gap-1.5 sm:gap-2 md:gap-3">
+                  <td className="px-2 py-3">
+                    <div className="flex items-center gap-1.5 sm:gap-2">
                       {player.photo ? (
-                        <img src={player.photo} alt={player.name} className="w-8 h-8 sm:w-9 sm:h-9 md:w-10 md:h-10 rounded-lg sm:rounded-xl object-cover ring-1 sm:ring-2 ring-gray-100 flex-shrink-0" />
+                        <img src={player.photo} alt={player.name} className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg object-cover ring-1 ring-gray-100 flex-shrink-0" />
                       ) : (
-                        <div className="w-8 h-8 sm:w-9 sm:h-9 md:w-10 md:h-10 bg-gradient-to-br from-purple-100 to-pink-100 rounded-lg sm:rounded-xl flex items-center justify-center ring-1 sm:ring-2 ring-gray-100 flex-shrink-0">
-                          <span className="text-sm sm:text-base md:text-lg font-bold text-purple-700">{player.name.charAt(0).toUpperCase()}</span>
+                        <div className="w-7 h-7 sm:w-8 sm:h-8 bg-gradient-to-br from-purple-100 to-pink-100 rounded-lg flex items-center justify-center ring-1 ring-gray-100 flex-shrink-0">
+                          <span className="text-xs sm:text-sm font-bold text-purple-700">{player.name.charAt(0).toUpperCase()}</span>
                         </div>
                       )}
                       <div className="min-w-0 flex-1">
-                        <div className="font-semibold text-gray-900 text-xs sm:text-sm md:text-base truncate">{player.name}</div>
+                        <div className="font-semibold text-gray-900 text-xs sm:text-sm truncate">{player.name}</div>
                         <div className="text-xs text-gray-500 truncate lg:hidden">
                           {player.club ? player.club.name : "Free Agent"}
                         </div>
                       </div>
                     </div>
                   </td>
-                  <td className="px-2 sm:px-4 md:px-6 py-3 sm:py-4 hidden lg:table-cell">
+                  <td className="px-2 py-3 hidden lg:table-cell">
                     {player.club ? (
-                      <Link href={`/dashboard/clubs/${player.club.id}`} className="flex items-center gap-2 group-hover:text-purple-600 transition-colors">
+                      <Link href={`/dashboard/clubs/${player.club.id}`} className="flex items-center gap-1.5 group-hover:text-purple-600 transition-colors">
                         {player.club.logo ? (
-                          <img src={player.club.logo} alt={player.club.name} className="w-6 h-6 rounded object-cover flex-shrink-0" />
+                          <img src={player.club.logo} alt={player.club.name} className="w-5 h-5 rounded object-cover flex-shrink-0" />
                         ) : (
-                          <div className="w-6 h-6 bg-gradient-to-br from-purple-100 to-pink-100 rounded flex items-center justify-center flex-shrink-0">
+                          <div className="w-5 h-5 bg-gradient-to-br from-purple-100 to-pink-100 rounded flex items-center justify-center flex-shrink-0">
                             <span className="text-xs font-bold text-purple-700">{player.club.name.charAt(0)}</span>
                           </div>
                         )}
-                        <span className="text-sm font-medium text-gray-700 truncate max-w-[120px]">{player.club.name}</span>
+                        <span className="text-xs font-medium text-gray-700 truncate">{player.club.name}</span>
                       </Link>
                     ) : (
-                      <span className="text-sm text-gray-500">Free Agent</span>
+                      <span className="text-xs text-gray-500">Free Agent</span>
                     )}
                   </td>
-                  <td className="px-2 sm:px-4 md:px-6 py-3 sm:py-4 text-center text-xs sm:text-sm text-gray-600 hidden md:table-cell">{player.totalMatches}</td>
-                  <td className="px-2 sm:px-4 md:px-6 py-3 sm:py-4 text-center hidden sm:table-cell">
-                    <div className="flex items-center justify-center gap-0.5 text-xs sm:text-sm">
+                  <td className="px-2 py-3 text-center text-xs text-gray-600 hidden md:table-cell">{player.totalMatches}</td>
+                  <td className="px-2 py-3 text-center hidden sm:table-cell">
+                    <div className="flex items-center justify-center gap-0.5 text-xs">
                       <span className="text-green-600 font-semibold">{player.totalWins}</span>
                       <span className="text-gray-400">/</span>
                       <span className="text-yellow-600 font-semibold">{player.totalDraws}</span>
@@ -203,8 +207,32 @@ export function PlayerStatsClient({ players: initialPlayers, tournaments }: Play
                       <span className="text-red-600 font-semibold">{player.totalLosses}</span>
                     </div>
                   </td>
-                  <td className="px-2 sm:px-4 md:px-6 py-3 sm:py-4 text-center">
-                    <span className="inline-block px-2 sm:px-3 py-1 bg-gradient-to-r from-purple-500 to-pink-600 text-white rounded-full text-xs sm:text-sm font-bold shadow-md whitespace-nowrap">
+                  <td className="px-2 py-3 text-center hidden xl:table-cell">
+                    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-green-50 text-green-700 rounded-lg text-xs font-semibold">
+                      <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                      </svg>
+                      {player.totalGoalsScored}
+                    </span>
+                  </td>
+                  <td className="px-2 py-3 text-center hidden xl:table-cell">
+                    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-red-50 text-red-700 rounded-lg text-xs font-semibold">
+                      <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                      </svg>
+                      {player.totalGoalsConceded}
+                    </span>
+                  </td>
+                  <td className="px-2 py-3 text-center hidden xl:table-cell">
+                    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-blue-50 text-blue-700 rounded-lg text-xs font-semibold">
+                      <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M2.166 4.999A11.954 11.954 0 0010 1.944 11.954 11.954 0 0017.834 5c.11.65.166 1.32.166 2.001 0 5.225-3.34 9.67-8 11.317C5.34 16.67 2 12.225 2 7c0-.682.057-1.35.166-2.001zm11.541 3.708a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                      </svg>
+                      {player.cleanSheets}
+                    </span>
+                  </td>
+                  <td className="px-2 py-3 text-center">
+                    <span className="inline-block px-2 py-1 bg-gradient-to-r from-purple-500 to-pink-600 text-white rounded-full text-xs font-bold shadow-md">
                       {player.totalPoints}
                     </span>
                   </td>

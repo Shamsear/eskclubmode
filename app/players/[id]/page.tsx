@@ -10,7 +10,7 @@ interface PageProps {
 async function getPlayerData(id: number) {
   try {
     // Fetch player data and recent matches in parallel
-    const [player, singlesMatches, teamMatches, tournamentStats, roles] = await Promise.all([
+    const [player, singlesMatches, teamMatches, roles] = await Promise.all([
       prisma.player.findUnique({
         where: { id },
         select: {
@@ -40,6 +40,7 @@ async function getPlayerData(id: number) {
               matchDate: true,
               stageName: true,
               isTeamMatch: true,
+              tournamentId: true,
               tournament: {
                 select: {
                   id: true,
@@ -65,7 +66,6 @@ async function getPlayerData(id: number) {
             matchDate: 'desc',
           },
         },
-        take: 10,
       }),
       // Fetch team matches (doubles)
       prisma.teamMatchResult.findMany({
@@ -82,6 +82,7 @@ async function getPlayerData(id: number) {
               matchDate: true,
               stageName: true,
               isTeamMatch: true,
+              tournamentId: true,
               tournament: {
                 select: {
                   id: true,
@@ -145,20 +146,6 @@ async function getPlayerData(id: number) {
             matchDate: 'desc',
           },
         },
-        take: 10,
-      }),
-      // Fetch tournament stats
-      prisma.tournamentPlayerStats.findMany({
-        where: { playerId: id },
-        include: {
-          tournament: {
-            select: {
-              id: true,
-              name: true,
-              startDate: true,
-            },
-          },
-        },
       }),
       // Fetch player roles
       prisma.playerRole.findMany({
@@ -182,11 +169,116 @@ async function getPlayerData(id: number) {
     const totalGoalsScored = clubStats.reduce((sum, stat) => sum + stat.goalsScored, 0);
     const totalGoalsConceded = clubStats.reduce((sum, stat) => sum + stat.goalsConceded, 0);
     const totalPoints = clubStats.reduce((sum, stat) => sum + stat.totalPoints, 0);
-    const totalCleanSheets = singlesMatches.filter(result => result.goalsConceded === 0).length +
-                             teamMatches.filter(result => result.goalsConceded === 0).length;
+    // Clean sheets only from singles matches
+    const totalCleanSheets = singlesMatches.filter(result => result.goalsConceded === 0).length;
+
+    // Calculate total tournaments from both singles and doubles matches
+    const tournamentIds = new Set<number>();
+    singlesMatches.forEach(match => {
+      if (match.match.tournamentId) {
+        tournamentIds.add(match.match.tournamentId);
+      }
+    });
+    teamMatches.forEach(match => {
+      if (match.match.tournamentId) {
+        tournamentIds.add(match.match.tournamentId);
+      }
+    });
+    const totalTournaments = tournamentIds.size;
+
+    // Get tournament stats for the breakdown
+    const tournamentStatsMap = new Map<number, {
+      id: number;
+      name: string;
+      startDate: string;
+      matchesPlayed: number;
+      wins: number;
+      draws: number;
+      losses: number;
+      goalsScored: number;
+      goalsConceded: number;
+      totalPoints: number;
+    }>();
+
+    // Process singles matches for tournament stats
+    for (const match of singlesMatches) {
+      if (match.match.tournament) {
+        const tournamentId = match.match.tournament.id;
+        if (!tournamentStatsMap.has(tournamentId)) {
+          tournamentStatsMap.set(tournamentId, {
+            id: tournamentId,
+            name: match.match.tournament.name,
+            startDate: new Date().toISOString(), // Will be updated from DB
+            matchesPlayed: 0,
+            wins: 0,
+            draws: 0,
+            losses: 0,
+            goalsScored: 0,
+            goalsConceded: 0,
+            totalPoints: 0,
+          });
+        }
+        const stats = tournamentStatsMap.get(tournamentId)!;
+        stats.matchesPlayed++;
+        stats.goalsScored += match.goalsScored;
+        stats.goalsConceded += match.goalsConceded;
+        stats.totalPoints += match.pointsEarned;
+        if (match.outcome === 'WIN') stats.wins++;
+        else if (match.outcome === 'DRAW') stats.draws++;
+        else if (match.outcome === 'LOSS') stats.losses++;
+      }
+    }
+
+    // Process team matches for tournament stats
+    for (const match of teamMatches) {
+      if (match.match.tournament) {
+        const tournamentId = match.match.tournament.id;
+        if (!tournamentStatsMap.has(tournamentId)) {
+          tournamentStatsMap.set(tournamentId, {
+            id: tournamentId,
+            name: match.match.tournament.name,
+            startDate: new Date().toISOString(), // Will be updated from DB
+            matchesPlayed: 0,
+            wins: 0,
+            draws: 0,
+            losses: 0,
+            goalsScored: 0,
+            goalsConceded: 0,
+            totalPoints: 0,
+          });
+        }
+        const stats = tournamentStatsMap.get(tournamentId)!;
+        stats.matchesPlayed++;
+        stats.goalsScored += match.goalsScored;
+        stats.goalsConceded += match.goalsConceded;
+        stats.totalPoints += match.pointsEarned;
+        if (match.outcome === 'WIN') stats.wins++;
+        else if (match.outcome === 'DRAW') stats.draws++;
+        else if (match.outcome === 'LOSS') stats.losses++;
+      }
+    }
+
+    // Get tournament start dates
+    const tournaments = await prisma.tournament.findMany({
+      where: {
+        id: { in: Array.from(tournamentIds) }
+      },
+      select: {
+        id: true,
+        startDate: true,
+      }
+    });
+
+    // Update start dates
+    for (const tournament of tournaments) {
+      const stats = tournamentStatsMap.get(tournament.id);
+      if (stats && tournament.startDate) {
+        stats.startDate = tournament.startDate.toISOString();
+      }
+    }
 
     // Process singles matches
-    const processedSinglesMatches = singlesMatches.map(result => {
+    const processedSinglesMatches = singlesMatches.slice(0, 10).map(result => {
       const opponent = result.match.results.find(r => r.playerId !== id);
       
       return {
@@ -211,7 +303,7 @@ async function getPlayerData(id: number) {
     });
 
     // Process team matches
-    const processedTeamMatches = teamMatches.map(result => {
+    const processedTeamMatches = teamMatches.slice(0, 10).map(result => {
       // Find partner (the other player in the team)
       const partner = result.playerAId === id ? result.playerB : result.playerA;
       
@@ -264,7 +356,7 @@ async function getPlayerData(id: number) {
         roles: roles.map(r => r.role as 'PLAYER' | 'CAPTAIN' | 'MENTOR' | 'MANAGER'),
       },
       stats: {
-        totalTournaments: tournamentStats.length,
+        totalTournaments,
         totalMatches,
         totalWins,
         totalDraws,
@@ -276,10 +368,10 @@ async function getPlayerData(id: number) {
         winRate: totalMatches > 0 ? (totalWins / totalMatches) * 100 : 0,
       },
       recentMatches: allMatches,
-      tournaments: tournamentStats.map(stat => ({
-        id: stat.tournament.id,
-        name: stat.tournament.name,
-        startDate: stat.tournament.startDate?.toISOString() || new Date().toISOString(),
+      tournaments: Array.from(tournamentStatsMap.values()).map(stat => ({
+        id: stat.id,
+        name: stat.name,
+        startDate: stat.startDate,
         rank: null, // Rank would need to be calculated separately
         matchesPlayed: stat.matchesPlayed,
         wins: stat.wins,

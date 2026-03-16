@@ -3,65 +3,83 @@ import { prisma } from "@/lib/prisma";
 import Link from "next/link";
 import { Breadcrumb } from "@/components/Breadcrumb";
 import { PlayerStatsClient } from "@/components/PlayerStatsClient";
+import { getPlayerStatsWithClub } from "@/lib/stats-utils";
 
 async function getPlayerOverallStats() {
   try {
-    const players = await prisma.player.findMany({
+    // Get stats calculated from match results with transfer date awareness
+    const playerStatsData = await getPlayerStatsWithClub();
+
+    // Get all match results to calculate tournaments played and clean sheets
+    const allMatchResults = await prisma.matchResult.findMany({
       include: {
-        club: {
+        match: {
           select: {
-            id: true,
-            name: true,
-            logo: true,
-          },
-        },
-        tournamentStats: {
-          include: {
-            tournament: {
-              select: {
-                id: true,
-                name: true,
-              },
-            },
-          },
-        },
-      },
+            tournamentId: true
+          }
+        }
+      }
     });
 
-    // Calculate overall stats for each player
-    const playerStats = players.map((player) => {
-      const stats = player.tournamentStats;
-      
-      const totalPoints = stats.reduce((sum, stat) => sum + stat.totalPoints, 0);
-      const totalMatches = stats.reduce((sum, stat) => sum + stat.matchesPlayed, 0);
-      const totalWins = stats.reduce((sum, stat) => sum + stat.wins, 0);
-      const totalDraws = stats.reduce((sum, stat) => sum + stat.draws, 0);
-      const totalLosses = stats.reduce((sum, stat) => sum + stat.losses, 0);
-      const totalGoalsScored = stats.reduce((sum, stat) => sum + stat.goalsScored, 0);
-      const totalGoalsConceded = stats.reduce((sum, stat) => sum + stat.goalsConceded, 0);
-      const goalDifference = totalGoalsScored - totalGoalsConceded;
-      const winRate = totalMatches > 0 ? ((totalWins / totalMatches) * 100).toFixed(1) : '0.0';
-      const avgPointsPerMatch = totalMatches > 0 ? (totalPoints / totalMatches).toFixed(2) : '0.00';
-      const avgGoalsPerMatch = totalMatches > 0 ? (totalGoalsScored / totalMatches).toFixed(2) : '0.00';
+    // Calculate tournaments played per player (distinct tournament IDs)
+    const tournamentCountMap = new Map<number, number>();
+    const playerTournaments = new Map<number, Set<number>>();
+    
+    for (const result of allMatchResults) {
+      if (result.match.tournamentId) {
+        if (!playerTournaments.has(result.playerId)) {
+          playerTournaments.set(result.playerId, new Set());
+        }
+        playerTournaments.get(result.playerId)!.add(result.match.tournamentId);
+      }
+    }
+    
+    for (const [playerId, tournaments] of playerTournaments.entries()) {
+      tournamentCountMap.set(playerId, tournaments.size);
+    }
+
+    // Calculate clean sheets per player
+    const cleanSheetsMap = new Map<number, number>();
+    for (const result of allMatchResults) {
+      if (result.goalsConceded === 0) {
+        cleanSheetsMap.set(result.playerId, (cleanSheetsMap.get(result.playerId) || 0) + 1);
+      }
+    }
+
+    // Transform to match the expected format
+    const playerStats = playerStatsData.map((data) => {
+      const goalDifference = data.stats.goalsScored - data.stats.goalsConceded;
+      const winRate = data.stats.matchesPlayed > 0 
+        ? (data.stats.wins / data.stats.matchesPlayed) * 100 
+        : 0;
+      const avgPointsPerMatch = data.stats.matchesPlayed > 0 
+        ? data.stats.totalPoints / data.stats.matchesPlayed 
+        : 0;
+      const avgGoalsPerMatch = data.stats.matchesPlayed > 0 
+        ? data.stats.goalsScored / data.stats.matchesPlayed 
+        : 0;
+      const cleanSheets = cleanSheetsMap.get(data.player.id) || 0;
+      const tournamentsPlayed = tournamentCountMap.get(data.player.id) || 0;
 
       return {
-        id: player.id,
-        name: player.name,
-        email: player.email,
-        photo: player.photo,
-        club: player.club,
-        totalPoints,
-        totalMatches,
-        totalWins,
-        totalDraws,
-        totalLosses,
-        totalGoalsScored,
-        totalGoalsConceded,
+        id: data.player.id,
+        name: data.player.name,
+        email: data.player.email,
+        photo: data.player.photo,
+        club: data.player.club,
+        totalPoints: data.stats.totalPoints,
+        totalMatches: data.stats.matchesPlayed,
+        totalWins: data.stats.wins,
+        totalDraws: data.stats.draws,
+        totalLosses: data.stats.losses,
+        totalGoalsScored: data.stats.goalsScored,
+        totalGoalsConceded: data.stats.goalsConceded,
+        cleanSheets,
         goalDifference,
-        winRate: parseFloat(winRate),
-        avgPointsPerMatch: parseFloat(avgPointsPerMatch),
-        avgGoalsPerMatch: parseFloat(avgGoalsPerMatch),
-        tournamentsPlayed: stats.length,
+        winRate,
+        avgPointsPerMatch,
+        avgGoalsPerMatch,
+        tournamentsPlayed,
       };
     });
 

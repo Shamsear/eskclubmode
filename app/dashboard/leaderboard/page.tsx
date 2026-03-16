@@ -66,16 +66,26 @@ async function getClubLeaderboard() {
       // Tournament-specific stats
       const tournamentStats: Record<number, any> = {};
       
-      // Get singles matches grouped by tournament
+      // Get ALL players who are currently in this club OR were ever in this club
+      const currentPlayers = await prisma.player.findMany({
+        where: { clubId: club.id },
+        select: { id: true }
+      });
+
+      const formerPlayers = await prisma.playerClubStats.findMany({
+        where: { clubId: club.id },
+        select: { playerId: true }
+      });
+
+      const allPlayerIds = [...new Set([
+        ...currentPlayers.map(p => p.id),
+        ...formerPlayers.map(p => p.playerId)
+      ])];
+
+      // Get all singles match results for these players
       const singlesMatchResults = await prisma.matchResult.findMany({
         where: {
-          player: {
-            clubStats: {
-              some: {
-                clubId: club.id
-              }
-            }
-          }
+          playerId: { in: allPlayerIds }
         },
         include: {
           match: {
@@ -87,9 +97,10 @@ async function getClubLeaderboard() {
           player: {
             select: {
               id: true,
+              clubId: true,
               clubStats: {
-                where: { clubId: club.id },
                 select: {
+                  clubId: true,
                   joinedAt: true,
                   leftAt: true
                 }
@@ -99,14 +110,24 @@ async function getClubLeaderboard() {
         }
       });
 
-      // Filter singles matches that happened while player was in this club
+      // Filter singles matches that belong to this club
       const clubSinglesMatches = singlesMatchResults.filter(matchResult => {
         const matchDate = matchResult.match.matchDate;
-        const playerPeriod = matchResult.player.clubStats.find(period =>
-          matchDate >= period.joinedAt &&
-          (!period.leftAt || matchDate < period.leftAt)
-        );
-        return !!playerPeriod;
+        const player = matchResult.player;
+        
+        // Check if player has transfer records
+        if (player.clubStats && player.clubStats.length > 0) {
+          // Use transfer date logic
+          const playerPeriod = player.clubStats.find(period =>
+            period.clubId === club.id &&
+            matchDate >= period.joinedAt &&
+            (!period.leftAt || matchDate < period.leftAt)
+          );
+          return !!playerPeriod;
+        } else {
+          // No transfer records - use current club
+          return player.clubId === club.id;
+        }
       });
 
       // Add singles to tournament stats

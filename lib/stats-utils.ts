@@ -125,7 +125,12 @@ export async function calculatePlayerStatsByClub(playerId: number, tournamentId?
  * Calculate club stats from all players, considering transfer dates
  */
 export async function calculateClubStats(clubId: number, tournamentId?: number) {
-  // Get all players who were ever in this club
+  // Get all players who are currently in this club OR were ever in this club
+  const currentPlayers = await prisma.player.findMany({
+    where: { clubId },
+    select: { id: true }
+  });
+
   const clubPeriods = await prisma.playerClubStats.findMany({
     where: { clubId },
     select: {
@@ -135,12 +140,15 @@ export async function calculateClubStats(clubId: number, tournamentId?: number) 
     }
   });
 
-  const playerIds = [...new Set(clubPeriods.map(p => p.playerId))];
+  const allPlayerIds = [...new Set([
+    ...currentPlayers.map(p => p.id),
+    ...clubPeriods.map(p => p.playerId)
+  ])];
 
   // Get all match results for these players
   const matchResults = await prisma.matchResult.findMany({
     where: {
-      playerId: { in: playerIds },
+      playerId: { in: allPlayerIds },
       ...(tournamentId ? { match: { tournamentId } } : {})
     },
     include: {
@@ -149,19 +157,41 @@ export async function calculateClubStats(clubId: number, tournamentId?: number) 
           matchDate: true,
           tournamentId: true
         }
+      },
+      player: {
+        select: {
+          id: true,
+          clubId: true,
+          clubStats: {
+            select: {
+              clubId: true,
+              joinedAt: true,
+              leftAt: true
+            }
+          }
+        }
       }
     }
   });
 
-  // Filter matches that happened while player was in this club
+  // Filter matches that belong to this club
   const clubMatches = matchResults.filter(matchResult => {
     const matchDate = matchResult.match.matchDate;
-    const playerPeriod = clubPeriods.find(period => 
-      period.playerId === matchResult.playerId &&
-      matchDate >= period.joinedAt &&
-      (!period.leftAt || matchDate < period.leftAt)
-    );
-    return !!playerPeriod;
+    const player = matchResult.player;
+    
+    // Check if player has transfer records
+    if (player.clubStats && player.clubStats.length > 0) {
+      // Use transfer date logic
+      const playerPeriod = player.clubStats.find(period => 
+        period.clubId === clubId &&
+        matchDate >= period.joinedAt &&
+        (!period.leftAt || matchDate < period.leftAt)
+      );
+      return !!playerPeriod;
+    } else {
+      // No transfer records - use current club
+      return player.clubId === clubId;
+    }
   });
 
   // Calculate stats
@@ -196,6 +226,7 @@ export async function getPlayerStatsWithClub(tournamentId?: number) {
         select: {
           id: true,
           name: true,
+          email: true,
           photo: true,
           clubId: true,
           club: {
@@ -259,6 +290,7 @@ export async function getPlayerStatsWithClub(tournamentId?: number) {
     player: {
       id: data.player.id,
       name: data.player.name,
+      email: data.player.email,
       photo: data.player.photo,
       club: data.currentClub
     },
