@@ -79,29 +79,28 @@ export default function TransfersList({ transfers }: TransfersListProps) {
   }
 
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full">
-        <thead className="bg-gray-50 border-b border-gray-200">
+    <table className="w-full table-fixed">
+      <thead className="bg-gray-50 border-b border-gray-200">
           <tr>
-            <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+            <th className="w-[25%] px-3 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
               Player
             </th>
-            <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+            <th className="w-[15%] px-2 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
               From
             </th>
-            <th className="px-6 py-4 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">
+            <th className="w-[5%] px-1 py-3 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">
               →
             </th>
-            <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+            <th className="w-[15%] px-2 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
               To
             </th>
-            <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+            <th className="w-[15%] px-2 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
               Date
             </th>
-            <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+            <th className="w-[15%] px-2 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
               Notes
             </th>
-            <th className="px-6 py-4 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">
+            <th className="w-[10%] px-2 py-3 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">
               Actions
             </th>
           </tr>
@@ -109,74 +108,78 @@ export default function TransfersList({ transfers }: TransfersListProps) {
         <tbody className="divide-y divide-gray-200">
           {transfers.map((transfer) => (
             <tr key={transfer.id} className="hover:bg-gray-50 transition-colors">
-              <td className="px-6 py-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center text-white font-semibold">
+              <td className="px-3 py-3">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center text-white text-xs font-semibold flex-shrink-0">
                     {transfer.player.name.charAt(0).toUpperCase()}
                   </div>
-                  <div>
-                    <p className="font-medium text-gray-900">{transfer.player.name}</p>
-                    <p className="text-sm text-gray-500">{transfer.player.email}</p>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs font-medium text-gray-900 truncate">{transfer.player.name}</p>
+                    <p className="text-xs text-gray-500 truncate">{transfer.player.email}</p>
                   </div>
                 </div>
               </td>
-              <td className="px-6 py-4">
+              <td className="px-2 py-3">
                 {transfer.fromClub ? (
-                  <span className="inline-flex px-3 py-1 text-sm font-medium bg-blue-100 text-blue-700 rounded-full">
+                  <span className="inline-flex px-2 py-1 text-xs font-medium bg-blue-100 text-blue-700 rounded-full truncate max-w-full">
                     {transfer.fromClub.name}
                   </span>
                 ) : (
-                  <span className="inline-flex px-3 py-1 text-sm font-medium bg-gray-100 text-gray-700 rounded-full">
+                  <span className="inline-flex px-2 py-1 text-xs font-medium bg-gray-100 text-gray-700 rounded-full">
                     Free Agent
                   </span>
                 )}
               </td>
-              <td className="px-6 py-4 text-center">
-                <svg className="w-5 h-5 text-gray-400 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <td className="px-1 py-3 text-center">
+                <svg className="w-4 h-4 text-gray-400 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
                 </svg>
               </td>
-              <td className="px-6 py-4">
+              <td className="px-2 py-3">
                 {transfer.toClub ? (
-                  <span className="inline-flex px-3 py-1 text-sm font-medium bg-green-100 text-green-700 rounded-full">
+                  <span className="inline-flex px-2 py-1 text-xs font-medium bg-green-100 text-green-700 rounded-full truncate max-w-full">
                     {transfer.toClub.name}
                   </span>
                 ) : (
-                  <span className="inline-flex px-3 py-1 text-sm font-medium bg-orange-100 text-orange-700 rounded-full">
+                  <span className="inline-flex px-2 py-1 text-xs font-medium bg-orange-100 text-orange-700 rounded-full">
                     Free Agent
                   </span>
                 )}
               </td>
-              <td className="px-6 py-4">
+              <td className="px-2 py-3">
                 {editingId === transfer.id ? (
                   <input
                     type="date"
                     value={editDate}
                     onChange={(e) => setEditDate(e.target.value)}
                     max={new Date().toISOString().split('T')[0]}
-                    className="px-2 py-1 border border-purple-300 rounded focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm"
+                    className="w-full px-2 py-1 border border-purple-300 rounded focus:ring-2 focus:ring-purple-500 focus:border-transparent text-xs"
                   />
                 ) : (
-                  <p className="text-sm text-gray-900">
-                    {new Date(transfer.transferDate).toLocaleDateString()}
+                  <p className="text-xs text-gray-900 truncate">
+                    {new Date(transfer.transferDate).toLocaleDateString('en-US', { 
+                      year: 'numeric', 
+                      month: 'short', 
+                      day: 'numeric' 
+                    })}
                   </p>
                 )}
               </td>
-              <td className="px-6 py-4">
-                <p className="text-sm text-gray-600 max-w-xs truncate">
+              <td className="px-2 py-3">
+                <p className="text-xs text-gray-600 truncate" title={transfer.notes || undefined}>
                   {transfer.notes || "-"}
                 </p>
               </td>
-              <td className="px-6 py-4">
+              <td className="px-2 py-3">
                 {editingId === transfer.id ? (
-                  <div className="flex items-center justify-center gap-2">
+                  <div className="flex items-center justify-center gap-1">
                     <button
                       onClick={() => handleSave(transfer.id)}
                       disabled={saving}
                       className="p-1 text-green-600 hover:bg-green-50 rounded transition-colors disabled:opacity-50"
                       title="Save"
                     >
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                       </svg>
                     </button>
@@ -186,7 +189,7 @@ export default function TransfersList({ transfers }: TransfersListProps) {
                       className="p-1 text-red-600 hover:bg-red-50 rounded transition-colors disabled:opacity-50"
                       title="Cancel"
                     >
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                       </svg>
                     </button>
@@ -197,7 +200,7 @@ export default function TransfersList({ transfers }: TransfersListProps) {
                     className="p-1 text-purple-600 hover:bg-purple-50 rounded transition-colors mx-auto block"
                     title="Edit date"
                   >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                     </svg>
                   </button>
@@ -207,6 +210,5 @@ export default function TransfersList({ transfers }: TransfersListProps) {
           ))}
         </tbody>
       </table>
-    </div>
   );
 }
