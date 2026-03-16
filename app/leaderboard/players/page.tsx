@@ -17,7 +17,7 @@ interface PageProps {
 
 interface PlayerStats {
   player: { id: number; name: string; photo: string | null; club: { id: number; name: string; logo: string | null } | null };
-  stats: { totalMatches: number; totalWins: number; totalDraws: number; totalLosses: number; totalGoalsScored: number; totalGoalsConceded: number; totalPoints: number; winRate: number };
+  stats: { matchesPlayed: number; wins: number; draws: number; losses: number; goalsScored: number; goalsConceded: number; totalPoints: number; winRate: number };
 }
 
 async function getPlayersLeaderboard(tournamentId?: string) {
@@ -125,15 +125,15 @@ async function PlayersLeaderboardContent({ tournamentId }: { tournamentId?: stri
                         </div>
                       </Link>
                     </td>
-                    <td className="px-5 py-4 text-center text-white font-semibold text-sm">{item.stats.totalMatches}</td>
+                    <td className="px-5 py-4 text-center text-white font-semibold text-sm">{item.stats.matchesPlayed}</td>
                     <td className="px-5 py-4 text-center text-sm">
-                      <span className="text-green-400 font-semibold">{item.stats.totalWins}</span>
+                      <span className="text-green-400 font-semibold">{item.stats.wins}</span>
                       <span className="text-[#333] mx-1">/</span>
-                      <span className="text-yellow-400 font-semibold">{item.stats.totalDraws}</span>
+                      <span className="text-yellow-400 font-semibold">{item.stats.draws}</span>
                       <span className="text-[#333] mx-1">/</span>
-                      <span className="text-red-400 font-semibold">{item.stats.totalLosses}</span>
+                      <span className="text-red-400 font-semibold">{item.stats.losses}</span>
                     </td>
-                    <td className="px-5 py-4 text-center text-white font-semibold text-sm">{item.stats.totalGoalsScored}–{item.stats.totalGoalsConceded}</td>
+                    <td className="px-5 py-4 text-center text-white font-semibold text-sm">{item.stats.goalsScored}–{item.stats.goalsConceded}</td>
                     <td className="px-5 py-4 text-center">
                       <span className="text-[#FFB700] font-bold text-sm">{item.stats.winRate.toFixed(1)}%</span>
                     </td>
@@ -175,8 +175,8 @@ async function PlayersLeaderboardContent({ tournamentId }: { tournamentId?: stri
                   </div>
                 </div>
                 <div className="grid grid-cols-3 gap-2 pt-3 border-t border-[#1A1A1A] text-center">
-                  <div><div className="text-[#555] text-xs mb-0.5">Matches</div><div className="text-white font-bold text-sm">{item.stats.totalMatches}</div></div>
-                  <div><div className="text-[#555] text-xs mb-0.5">W/D/L</div><div className="text-xs font-semibold"><span className="text-green-400">{item.stats.totalWins}</span>/<span className="text-yellow-400">{item.stats.totalDraws}</span>/<span className="text-red-400">{item.stats.totalLosses}</span></div></div>
+                  <div><div className="text-[#555] text-xs mb-0.5">Matches</div><div className="text-white font-bold text-sm">{item.stats.matchesPlayed}</div></div>
+                  <div><div className="text-[#555] text-xs mb-0.5">W/D/L</div><div className="text-xs font-semibold"><span className="text-green-400">{item.stats.wins}</span>/<span className="text-yellow-400">{item.stats.draws}</span>/<span className="text-red-400">{item.stats.losses}</span></div></div>
                   <div><div className="text-[#555] text-xs mb-0.5">Win Rate</div><div className="text-[#FFB700] font-bold text-sm">{item.stats.winRate.toFixed(1)}%</div></div>
                 </div>
               </div>
