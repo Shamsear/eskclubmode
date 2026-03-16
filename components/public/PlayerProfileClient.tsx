@@ -34,6 +34,7 @@ interface PlayerProfileData {
     totalGoalsScored: number;
     totalGoalsConceded: number;
     totalPoints: number;
+    totalCleanSheets: number;
     winRate: number;
   };
   recentMatches: Array<{
@@ -91,6 +92,12 @@ interface PlayerProfileData {
     name: string;
     startDate: string;
     rank: number | null;
+    matchesPlayed: number;
+    wins: number;
+    draws: number;
+    losses: number;
+    goalsScored: number;
+    goalsConceded: number;
     totalPoints: number;
   }>;
 }
@@ -267,13 +274,14 @@ export default function PlayerProfileClient({ initialData }: PlayerProfileClient
           <h2 className="text-2xl font-black text-white font-['Outfit',sans-serif]">Performance Statistics</h2>
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-10">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-3 mb-10">
           {[
             { label: 'Wins', value: stats.totalWins, color: '#22C55E' },
             { label: 'Draws', value: stats.totalDraws, color: '#EAB308' },
             { label: 'Losses', value: stats.totalLosses, color: '#EF4444' },
             { label: 'Goals Scored', value: stats.totalGoalsScored, color: '#FF6600' },
             { label: 'Goals Conceded', value: stats.totalGoalsConceded, color: '#CC2900' },
+            { label: 'Clean Sheets', value: stats.totalCleanSheets, color: '#3B82F6' },
             { label: 'Goal Diff', value: `${goalDifference > 0 ? '+' : ''}${goalDifference}`, color: goalDifference >= 0 ? '#22C55E' : '#EF4444' },
           ].map(({ label, value, color }) => (
             <div key={label} className="rounded-2xl border border-[#1E1E1E] p-5 text-center hover:shadow-lg transition-shadow" style={{ background: '#111' }}>
@@ -291,6 +299,114 @@ export default function PlayerProfileClient({ initialData }: PlayerProfileClient
           </div>
           <PerformanceHeatmap matches={recentMatches} />
         </div>
+
+        {/* Tournament Statistics */}
+        <div className="mb-6">
+          <div className="flex items-center gap-3">
+            <div className="w-1 h-8 rounded-full" style={{ background: "linear-gradient(180deg,#FF6600,#CC2900)" }} />
+            <h2 className="text-2xl font-black text-white font-['Outfit',sans-serif]">Tournament Statistics</h2>
+          </div>
+        </div>
+
+        {tournaments.length > 0 ? (
+          <div className="grid gap-3 mb-10">
+            {tournaments.map((tournament) => {
+              const tournamentGoalDiff = tournament.goalsScored - tournament.goalsConceded;
+              const tournamentWinRate = tournament.matchesPlayed > 0 ? (tournament.wins / tournament.matchesPlayed) * 100 : 0;
+              
+              return (
+                <div key={tournament.id} onClick={() => router.push(`/tournaments/${tournament.id}`)}
+                  className="rounded-2xl border border-[#1E1E1E] hover:border-[#FF6600]/40 transition-all duration-300 overflow-hidden cursor-pointer group" style={{ background: '#111' }}>
+                  <div className="p-5">
+                    {/* Tournament Header */}
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-4 pb-4 border-b border-[#1A1A1A]">
+                      <div className="flex-1">
+                        <div className="font-black text-lg text-white mb-1.5 group-hover:text-[#FFB700] transition-colors">{tournament.name}</div>
+                        <div className="flex items-center gap-2 text-xs text-[#555]">
+                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                          {new Date(tournament.startDate).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-3">
+                        {tournament.rank && (
+                          <div className="text-white px-4 py-2 rounded-xl shadow-lg" style={{ background: "linear-gradient(135deg,#FFB700,#FF6600)" }}>
+                            <div className="text-xs font-medium mb-0.5">Rank</div>
+                            <div className="text-xl font-black">#{tournament.rank}</div>
+                          </div>
+                        )}
+                        <div className="text-center text-white px-4 py-2 rounded-xl shadow-lg" style={{ background: "linear-gradient(135deg,#FF6600,#CC2900)" }}>
+                          <div className="text-xs font-medium mb-0.5">Points</div>
+                          <div className="text-xl font-black">{tournament.totalPoints}</div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Tournament Stats Grid */}
+                    <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
+                      <div className="rounded-xl border border-[#1A1A1A] p-3 text-center" style={{ background: '#0D0D0D' }}>
+                        <div className="text-xl font-bold text-[#FFB700]">{tournament.matchesPlayed}</div>
+                        <div className="text-xs text-[#555] mt-1">Matches</div>
+                      </div>
+                      <div className="rounded-xl border border-[#1A1A1A] p-3 text-center" style={{ background: '#0D0D0D' }}>
+                        <div className="text-xl font-bold text-[#22C55E]">{tournament.wins}</div>
+                        <div className="text-xs text-[#555] mt-1">Wins</div>
+                      </div>
+                      <div className="rounded-xl border border-[#1A1A1A] p-3 text-center" style={{ background: '#0D0D0D' }}>
+                        <div className="text-xl font-bold text-[#EAB308]">{tournament.draws}</div>
+                        <div className="text-xs text-[#555] mt-1">Draws</div>
+                      </div>
+                      <div className="rounded-xl border border-[#1A1A1A] p-3 text-center" style={{ background: '#0D0D0D' }}>
+                        <div className="text-xl font-bold text-[#EF4444]">{tournament.losses}</div>
+                        <div className="text-xs text-[#555] mt-1">Losses</div>
+                      </div>
+                      <div className="rounded-xl border border-[#1A1A1A] p-3 text-center" style={{ background: '#0D0D0D' }}>
+                        <div className="text-xl font-bold text-[#FF6600]">{tournament.goalsScored}</div>
+                        <div className="text-xs text-[#555] mt-1">Goals For</div>
+                      </div>
+                      <div className="rounded-xl border border-[#1A1A1A] p-3 text-center" style={{ background: '#0D0D0D' }}>
+                        <div className="text-xl font-bold text-[#CC2900]">{tournament.goalsConceded}</div>
+                        <div className="text-xs text-[#555] mt-1">Goals Against</div>
+                      </div>
+                      <div className="rounded-xl border border-[#1A1A1A] p-3 text-center" style={{ background: '#0D0D0D' }}>
+                        <div className={`text-xl font-bold ${tournamentGoalDiff >= 0 ? 'text-[#22C55E]' : 'text-[#EF4444]'}`}>
+                          {tournamentGoalDiff > 0 ? '+' : ''}{tournamentGoalDiff}
+                        </div>
+                        <div className="text-xs text-[#555] mt-1">Goal Diff</div>
+                      </div>
+                    </div>
+
+                    {/* Win Rate Bar */}
+                    <div className="mt-4 pt-4 border-t border-[#1A1A1A]">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-xs text-[#555]">Win Rate</span>
+                        <span className="text-xs font-bold text-white">{tournamentWinRate.toFixed(1)}%</span>
+                      </div>
+                      <div className="w-full h-2 rounded-full bg-[#1A1A1A] overflow-hidden">
+                        <div 
+                          className="h-full rounded-full transition-all duration-500" 
+                          style={{ 
+                            width: `${tournamentWinRate}%`,
+                            background: "linear-gradient(90deg,#22C55E,#16A34A)"
+                          }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                  <div className="h-px bg-gradient-to-r from-transparent via-[#FF6600] to-transparent transform scale-x-0 group-hover:scale-x-100 transition-transform duration-500 origin-left" />
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="rounded-2xl border border-dashed border-[#1E1E1E] text-center py-16 mb-10" style={{ background: '#111' }}>
+            <div className="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-5" style={{ background: 'rgba(255,102,0,0.08)' }}>
+              <svg className="w-10 h-10 text-[#FF6600]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 2L2 7v10c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V7l-10-5z" /></svg>
+            </div>
+            <h3 className="text-xl font-black text-white mb-2">No Tournament Participation</h3>
+            <p className="text-sm text-[#555]">This player hasn't participated in any tournaments yet</p>
+          </div>
+        )}
 
         {/* Match History Timeline */}
         <div className="mb-6">
@@ -487,40 +603,99 @@ export default function PlayerProfileClient({ initialData }: PlayerProfileClient
         <div className="mb-6">
           <div className="flex items-center gap-3">
             <div className="w-1 h-8 rounded-full" style={{ background: "linear-gradient(180deg,#FF6600,#CC2900)" }} />
-            <h2 className="text-2xl font-black text-white font-['Outfit',sans-serif]">Tournament Participation</h2>
+            <h2 className="text-2xl font-black text-white font-['Outfit',sans-serif]">Tournament Statistics</h2>
           </div>
         </div>
 
         {tournaments.length > 0 ? (
           <div className="grid gap-3">
-            {tournaments.map((tournament) => (
-              <div key={tournament.id} onClick={() => router.push(`/tournaments/${tournament.id}`)}
-                className="rounded-2xl border border-[#1E1E1E] hover:border-[#FF6600]/40 transition-all duration-300 overflow-hidden cursor-pointer group" style={{ background: '#111' }}>
-                <div className="flex flex-col sm:flex-row items-center justify-between gap-5 p-5">
-                  <div className="flex-1 text-center sm:text-left">
-                    <div className="font-black text-base text-white mb-1.5 group-hover:text-[#FFB700] transition-colors">{tournament.name}</div>
-                    <div className="flex items-center justify-center sm:justify-start gap-2 text-xs text-[#555]">
-                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
-                      {new Date(tournament.startDate).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-4">
-                    {tournament.rank && (
-                      <div className="text-white px-5 py-2.5 rounded-xl shadow-lg" style={{ background: "linear-gradient(135deg,#FFB700,#FF6600)" }}>
-                        <div className="text-xs font-medium mb-0.5">Rank</div>
-                        <div className="text-xl font-black">#{tournament.rank}</div>
+            {tournaments.map((tournament) => {
+              const tournamentGoalDiff = tournament.goalsScored - tournament.goalsConceded;
+              const tournamentWinRate = tournament.matchesPlayed > 0 ? (tournament.wins / tournament.matchesPlayed) * 100 : 0;
+              
+              return (
+                <div key={tournament.id} onClick={() => router.push(`/tournaments/${tournament.id}`)}
+                  className="rounded-2xl border border-[#1E1E1E] hover:border-[#FF6600]/40 transition-all duration-300 overflow-hidden cursor-pointer group" style={{ background: '#111' }}>
+                  <div className="p-5">
+                    {/* Tournament Header */}
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-4 pb-4 border-b border-[#1A1A1A]">
+                      <div className="flex-1">
+                        <div className="font-black text-lg text-white mb-1.5 group-hover:text-[#FFB700] transition-colors">{tournament.name}</div>
+                        <div className="flex items-center gap-2 text-xs text-[#555]">
+                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                          {new Date(tournament.startDate).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
+                        </div>
                       </div>
-                    )}
-                    <div className="text-center text-white px-5 py-2.5 rounded-xl shadow-lg" style={{ background: "linear-gradient(135deg,#FF6600,#CC2900)" }}>
-                      <div className="text-xs font-medium mb-0.5">Points</div>
-                      <div className="text-xl font-black">{tournament.totalPoints}</div>
+
+                      <div className="flex items-center gap-3">
+                        {tournament.rank && (
+                          <div className="text-white px-4 py-2 rounded-xl shadow-lg" style={{ background: "linear-gradient(135deg,#FFB700,#FF6600)" }}>
+                            <div className="text-xs font-medium mb-0.5">Rank</div>
+                            <div className="text-xl font-black">#{tournament.rank}</div>
+                          </div>
+                        )}
+                        <div className="text-center text-white px-4 py-2 rounded-xl shadow-lg" style={{ background: "linear-gradient(135deg,#FF6600,#CC2900)" }}>
+                          <div className="text-xs font-medium mb-0.5">Points</div>
+                          <div className="text-xl font-black">{tournament.totalPoints}</div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Tournament Stats Grid */}
+                    <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
+                      <div className="rounded-xl border border-[#1A1A1A] p-3 text-center" style={{ background: '#0D0D0D' }}>
+                        <div className="text-xl font-bold text-[#FFB700]">{tournament.matchesPlayed}</div>
+                        <div className="text-xs text-[#555] mt-1">Matches</div>
+                      </div>
+                      <div className="rounded-xl border border-[#1A1A1A] p-3 text-center" style={{ background: '#0D0D0D' }}>
+                        <div className="text-xl font-bold text-[#22C55E]">{tournament.wins}</div>
+                        <div className="text-xs text-[#555] mt-1">Wins</div>
+                      </div>
+                      <div className="rounded-xl border border-[#1A1A1A] p-3 text-center" style={{ background: '#0D0D0D' }}>
+                        <div className="text-xl font-bold text-[#EAB308]">{tournament.draws}</div>
+                        <div className="text-xs text-[#555] mt-1">Draws</div>
+                      </div>
+                      <div className="rounded-xl border border-[#1A1A1A] p-3 text-center" style={{ background: '#0D0D0D' }}>
+                        <div className="text-xl font-bold text-[#EF4444]">{tournament.losses}</div>
+                        <div className="text-xs text-[#555] mt-1">Losses</div>
+                      </div>
+                      <div className="rounded-xl border border-[#1A1A1A] p-3 text-center" style={{ background: '#0D0D0D' }}>
+                        <div className="text-xl font-bold text-[#FF6600]">{tournament.goalsScored}</div>
+                        <div className="text-xs text-[#555] mt-1">Goals For</div>
+                      </div>
+                      <div className="rounded-xl border border-[#1A1A1A] p-3 text-center" style={{ background: '#0D0D0D' }}>
+                        <div className="text-xl font-bold text-[#CC2900]">{tournament.goalsConceded}</div>
+                        <div className="text-xs text-[#555] mt-1">Goals Against</div>
+                      </div>
+                      <div className="rounded-xl border border-[#1A1A1A] p-3 text-center" style={{ background: '#0D0D0D' }}>
+                        <div className={`text-xl font-bold ${tournamentGoalDiff >= 0 ? 'text-[#22C55E]' : 'text-[#EF4444]'}`}>
+                          {tournamentGoalDiff > 0 ? '+' : ''}{tournamentGoalDiff}
+                        </div>
+                        <div className="text-xs text-[#555] mt-1">Goal Diff</div>
+                      </div>
+                    </div>
+
+                    {/* Win Rate Bar */}
+                    <div className="mt-4 pt-4 border-t border-[#1A1A1A]">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-xs text-[#555]">Win Rate</span>
+                        <span className="text-xs font-bold text-white">{tournamentWinRate.toFixed(1)}%</span>
+                      </div>
+                      <div className="w-full h-2 rounded-full bg-[#1A1A1A] overflow-hidden">
+                        <div 
+                          className="h-full rounded-full transition-all duration-500" 
+                          style={{ 
+                            width: `${tournamentWinRate}%`,
+                            background: "linear-gradient(90deg,#22C55E,#16A34A)"
+                          }}
+                        />
+                      </div>
                     </div>
                   </div>
+                  <div className="h-px bg-gradient-to-r from-transparent via-[#FF6600] to-transparent transform scale-x-0 group-hover:scale-x-100 transition-transform duration-500 origin-left" />
                 </div>
-                <div className="h-px bg-gradient-to-r from-transparent via-[#FF6600] to-transparent transform scale-x-0 group-hover:scale-x-100 transition-transform duration-500 origin-left" />
-              </div>
-            ))}
+              );
+            })}
           </div>
         ) : (
           <div className="rounded-2xl border border-dashed border-[#1E1E1E] text-center py-16" style={{ background: '#111' }}>

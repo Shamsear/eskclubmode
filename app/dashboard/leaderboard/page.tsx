@@ -3,41 +3,13 @@ import { prisma } from "@/lib/prisma";
 import Link from "next/link";
 import { Breadcrumb } from "@/components/Breadcrumb";
 import { ClubLeaderboardClient } from "@/components/ClubLeaderboardClient";
+import { calculateClubStats } from "@/lib/stats-utils";
 
 async function getClubLeaderboard() {
   try {
-    // Get all clubs with their players' stats and team match results
+    // Get all clubs
     const clubs = await prisma.club.findMany({
       include: {
-        players: {
-          include: {
-            tournamentStats: {
-              include: {
-                tournament: {
-                  select: {
-                    id: true,
-                    name: true,
-                  },
-                },
-              },
-            },
-          },
-        },
-        teamMatches: {
-          include: {
-            match: {
-              select: {
-                tournamentId: true,
-                tournament: {
-                  select: {
-                    id: true,
-                    name: true,
-                  },
-                },
-              },
-            },
-          },
-        },
         _count: {
           select: {
             players: true,
@@ -48,18 +20,36 @@ async function getClubLeaderboard() {
     });
 
     // Calculate club statistics with tournament breakdown
-    const clubStats = clubs.map((club) => {
-      const allStats = club.players.flatMap((player) => player.tournamentStats);
-      const teamMatchResults = club.teamMatches;
+    const clubStats = await Promise.all(clubs.map(async (club) => {
+      // Calculate singles match stats based on transfer dates
+      const singlesStats = await calculateClubStats(club.id);
       
-      // Overall stats from singles matches (player stats)
-      let totalPoints = allStats.reduce((sum, stat) => sum + stat.totalPoints, 0);
-      let totalMatches = allStats.reduce((sum, stat) => sum + stat.matchesPlayed, 0);
-      let totalWins = allStats.reduce((sum, stat) => sum + stat.wins, 0);
-      let totalDraws = allStats.reduce((sum, stat) => sum + stat.draws, 0);
-      let totalLosses = allStats.reduce((sum, stat) => sum + stat.losses, 0);
-      let totalGoalsScored = allStats.reduce((sum, stat) => sum + stat.goalsScored, 0);
-      let totalGoalsConceded = allStats.reduce((sum, stat) => sum + stat.goalsConceded, 0);
+      // Get team match results (doubles) - these already have clubId
+      const teamMatchResults = await prisma.teamMatchResult.findMany({
+        where: { clubId: club.id },
+        include: {
+          match: {
+            select: {
+              tournamentId: true,
+              tournament: {
+                select: {
+                  id: true,
+                  name: true,
+                },
+              },
+            },
+          },
+        },
+      });
+
+      // Combine singles and doubles stats
+      let totalPoints = singlesStats.totalPoints;
+      let totalMatches = singlesStats.matchesPlayed;
+      let totalWins = singlesStats.wins;
+      let totalDraws = singlesStats.draws;
+      let totalLosses = singlesStats.losses;
+      let totalGoalsScored = singlesStats.goalsScored;
+      let totalGoalsConceded = singlesStats.goalsConceded;
 
       // Add team match results (doubles matches)
       totalPoints += teamMatchResults.reduce((sum, result) => sum + result.pointsEarned, 0);
@@ -76,9 +66,52 @@ async function getClubLeaderboard() {
       // Tournament-specific stats
       const tournamentStats: Record<number, any> = {};
       
-      // Add singles match stats
-      allStats.forEach((stat) => {
-        const tournamentId = stat.tournament.id;
+      // Get singles matches grouped by tournament
+      const singlesMatchResults = await prisma.matchResult.findMany({
+        where: {
+          player: {
+            clubStats: {
+              some: {
+                clubId: club.id
+              }
+            }
+          }
+        },
+        include: {
+          match: {
+            select: {
+              matchDate: true,
+              tournamentId: true
+            }
+          },
+          player: {
+            select: {
+              id: true,
+              clubStats: {
+                where: { clubId: club.id },
+                select: {
+                  joinedAt: true,
+                  leftAt: true
+                }
+              }
+            }
+          }
+        }
+      });
+
+      // Filter singles matches that happened while player was in this club
+      const clubSinglesMatches = singlesMatchResults.filter(matchResult => {
+        const matchDate = matchResult.match.matchDate;
+        const playerPeriod = matchResult.player.clubStats.find(period =>
+          matchDate >= period.joinedAt &&
+          (!period.leftAt || matchDate < period.leftAt)
+        );
+        return !!playerPeriod;
+      });
+
+      // Add singles to tournament stats
+      clubSinglesMatches.forEach((result) => {
+        const tournamentId = result.match.tournamentId;
         if (!tournamentStats[tournamentId]) {
           tournamentStats[tournamentId] = {
             totalPoints: 0,
@@ -90,13 +123,13 @@ async function getClubLeaderboard() {
             totalGoalsConceded: 0,
           };
         }
-        tournamentStats[tournamentId].totalPoints += stat.totalPoints;
-        tournamentStats[tournamentId].totalMatches += stat.matchesPlayed;
-        tournamentStats[tournamentId].totalWins += stat.wins;
-        tournamentStats[tournamentId].totalDraws += stat.draws;
-        tournamentStats[tournamentId].totalLosses += stat.losses;
-        tournamentStats[tournamentId].totalGoalsScored += stat.goalsScored;
-        tournamentStats[tournamentId].totalGoalsConceded += stat.goalsConceded;
+        tournamentStats[tournamentId].totalPoints += result.pointsEarned;
+        tournamentStats[tournamentId].totalMatches += 1;
+        tournamentStats[tournamentId].totalWins += result.outcome === 'WIN' ? 1 : 0;
+        tournamentStats[tournamentId].totalDraws += result.outcome === 'DRAW' ? 1 : 0;
+        tournamentStats[tournamentId].totalLosses += result.outcome === 'LOSS' ? 1 : 0;
+        tournamentStats[tournamentId].totalGoalsScored += result.goalsScored;
+        tournamentStats[tournamentId].totalGoalsConceded += result.goalsConceded;
       });
 
       // Add team match stats
@@ -139,7 +172,7 @@ async function getClubLeaderboard() {
         tournamentCount: club._count.tournaments,
         tournamentStats,
       };
-    });
+    }));
 
     // Sort by total points, then goal difference, then goals scored
     clubStats.sort((a, b) => {

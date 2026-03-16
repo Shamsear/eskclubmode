@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation';
 import PlayerProfileClient from '@/components/public/PlayerProfileClient';
 import { prisma } from '@/lib/prisma';
+import { calculatePlayerStatsByClub } from '@/lib/stats-utils';
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -170,14 +171,19 @@ async function getPlayerData(id: number) {
       return null;
     }
 
-    // Calculate overall stats from tournament stats (more efficient)
-    const totalMatches = tournamentStats.reduce((sum, stat) => sum + stat.matchesPlayed, 0);
-    const totalWins = tournamentStats.reduce((sum, stat) => sum + stat.wins, 0);
-    const totalDraws = tournamentStats.reduce((sum, stat) => sum + stat.draws, 0);
-    const totalLosses = tournamentStats.reduce((sum, stat) => sum + stat.losses, 0);
-    const totalGoalsScored = tournamentStats.reduce((sum, stat) => sum + stat.goalsScored, 0);
-    const totalGoalsConceded = tournamentStats.reduce((sum, stat) => sum + stat.goalsConceded, 0);
-    const totalPoints = tournamentStats.reduce((sum, stat) => sum + stat.totalPoints, 0);
+    // Calculate stats by club based on transfer dates
+    const clubStats = await calculatePlayerStatsByClub(id);
+
+    // Calculate overall stats from club stats
+    const totalMatches = clubStats.reduce((sum, stat) => sum + stat.matchesPlayed, 0);
+    const totalWins = clubStats.reduce((sum, stat) => sum + stat.wins, 0);
+    const totalDraws = clubStats.reduce((sum, stat) => sum + stat.draws, 0);
+    const totalLosses = clubStats.reduce((sum, stat) => sum + stat.losses, 0);
+    const totalGoalsScored = clubStats.reduce((sum, stat) => sum + stat.goalsScored, 0);
+    const totalGoalsConceded = clubStats.reduce((sum, stat) => sum + stat.goalsConceded, 0);
+    const totalPoints = clubStats.reduce((sum, stat) => sum + stat.totalPoints, 0);
+    const totalCleanSheets = singlesMatches.filter(result => result.goalsConceded === 0).length +
+                             teamMatches.filter(result => result.goalsConceded === 0).length;
 
     // Process singles matches
     const processedSinglesMatches = singlesMatches.map(result => {
@@ -266,6 +272,7 @@ async function getPlayerData(id: number) {
         totalGoalsScored,
         totalGoalsConceded,
         totalPoints,
+        totalCleanSheets,
         winRate: totalMatches > 0 ? (totalWins / totalMatches) * 100 : 0,
       },
       recentMatches: allMatches,
@@ -274,6 +281,12 @@ async function getPlayerData(id: number) {
         name: stat.tournament.name,
         startDate: stat.tournament.startDate?.toISOString() || new Date().toISOString(),
         rank: null, // Rank would need to be calculated separately
+        matchesPlayed: stat.matchesPlayed,
+        wins: stat.wins,
+        draws: stat.draws,
+        losses: stat.losses,
+        goalsScored: stat.goalsScored,
+        goalsConceded: stat.goalsConceded,
         totalPoints: stat.totalPoints,
       })),
     };

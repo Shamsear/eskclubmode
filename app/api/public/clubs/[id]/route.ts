@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { createErrorResponse, NotFoundError, ValidationError } from "@/lib/errors";
+import { calculatePlayerStatsByClub, calculateClubStats } from "@/lib/stats-utils";
 
 // GET /api/public/clubs/[id] - Get club profile with members and tournaments
 export async function GET(
@@ -50,22 +51,16 @@ export async function GET(
       throw new NotFoundError("Club");
     }
 
-    // Get stats for each player
+    // Get stats for each player based on transfer dates
     const playersWithStats = await Promise.all(
       club.players.map(async (player) => {
-        const stats = await prisma.tournamentPlayerStats.aggregate({
-          where: {
-            playerId: player.id,
-          },
-          _sum: {
-            matchesPlayed: true,
-            wins: true,
-            totalPoints: true,
-          },
-        });
-
-        const totalMatches = stats._sum.matchesPlayed || 0;
-        const totalWins = stats._sum.wins || 0;
+        // Get stats for this player across all clubs
+        const allClubStats = await calculatePlayerStatsByClub(player.id);
+        
+        // Sum up all stats (regardless of club)
+        const totalMatches = allClubStats.reduce((sum, stat) => sum + stat.matchesPlayed, 0);
+        const totalWins = allClubStats.reduce((sum, stat) => sum + stat.wins, 0);
+        const totalPoints = allClubStats.reduce((sum, stat) => sum + stat.totalPoints, 0);
         const winRate = totalMatches > 0 ? (totalWins / totalMatches) * 100 : 0;
 
         return {
@@ -75,7 +70,7 @@ export async function GET(
           roles: player.roles.map((r) => r.role),
           stats: {
             totalMatches,
-            totalPoints: stats._sum.totalPoints || 0,
+            totalPoints,
             winRate: Math.round(winRate * 100) / 100,
           },
         };
@@ -105,20 +100,8 @@ export async function GET(
       };
     });
 
-    // Calculate aggregate club stats
-    const clubStats = await prisma.matchResult.aggregate({
-      where: {
-        player: {
-          clubId: clubId,
-        },
-      },
-      _sum: {
-        goalsScored: true,
-      },
-      _count: {
-        id: true,
-      },
-    });
+    // Calculate aggregate club stats based on transfer dates
+    const clubStatsData = await calculateClubStats(clubId);
 
     const totalMatches = await prisma.match.count({
       where: {
@@ -142,7 +125,7 @@ export async function GET(
         totalPlayers: club.players.length,
         totalTournaments: club.tournaments.length,
         totalMatches,
-        totalGoals: clubStats._sum.goalsScored || 0,
+        totalGoals: clubStatsData.goalsScored,
       },
     };
 

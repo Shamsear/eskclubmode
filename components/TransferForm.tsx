@@ -28,16 +28,51 @@ export default function TransferForm({ players, clubs }: TransferFormProps) {
   const [selectedPlayerId, setSelectedPlayerId] = useState("");
   const [toClubId, setToClubId] = useState("");
   const [notes, setNotes] = useState("");
+  const [transferDate, setTransferDate] = useState(
+    new Date().toISOString().split('T')[0]
+  );
+  const [playerSearchQuery, setPlayerSearchQuery] = useState("");
+  const [showPlayerDropdown, setShowPlayerDropdown] = useState(false);
 
   // Pre-select player from query parameter
   useEffect(() => {
     const playerId = searchParams.get("playerId");
     if (playerId) {
-      setSelectedPlayerId(playerId);
+      const player = players.find(p => p.id === parseInt(playerId));
+      if (player) {
+        setSelectedPlayerId(playerId);
+        setPlayerSearchQuery(player.name);
+      }
     }
-  }, [searchParams]);
+  }, [searchParams, players]);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      if (!target.closest('.player-search-container')) {
+        setShowPlayerDropdown(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const selectedPlayer = players.find(p => p.id === parseInt(selectedPlayerId));
+
+  // Filter players based on search query
+  const filteredPlayers = players.filter(player => 
+    player.name.toLowerCase().includes(playerSearchQuery.toLowerCase()) ||
+    player.email.toLowerCase().includes(playerSearchQuery.toLowerCase()) ||
+    (player.club?.name || "Free Agent").toLowerCase().includes(playerSearchQuery.toLowerCase())
+  );
+
+  const handlePlayerSelect = (player: Player) => {
+    setSelectedPlayerId(player.id.toString());
+    setPlayerSearchQuery(player.name);
+    setShowPlayerDropdown(false);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -51,6 +86,7 @@ export default function TransferForm({ players, clubs }: TransferFormProps) {
           playerId: selectedPlayerId,
           toClubId: toClubId || null,
           notes,
+          transferDate,
         }),
       });
 
@@ -72,23 +108,65 @@ export default function TransferForm({ players, clubs }: TransferFormProps) {
     <form onSubmit={handleSubmit} className="space-y-6">
       <div className="space-y-6">
         {/* Player Selection */}
-        <div>
+        <div className="player-search-container">
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Select Player *
           </label>
-          <select
-            required
-            value={selectedPlayerId}
-            onChange={(e) => setSelectedPlayerId(e.target.value)}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-          >
-            <option value="">Choose a player...</option>
-            {players.map((player) => (
-              <option key={player.id} value={player.id}>
-                {player.name} - {player.club ? player.club.name : "Free Agent"}
-              </option>
-            ))}
-          </select>
+          <div className="relative">
+            <input
+              type="text"
+              required
+              value={playerSearchQuery}
+              onChange={(e) => {
+                setPlayerSearchQuery(e.target.value);
+                setShowPlayerDropdown(true);
+                if (!e.target.value) {
+                  setSelectedPlayerId("");
+                }
+              }}
+              onFocus={() => setShowPlayerDropdown(true)}
+              placeholder="Type to search players..."
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+              autoComplete="off"
+            />
+            
+            {showPlayerDropdown && playerSearchQuery && (
+              <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                {filteredPlayers.length > 0 ? (
+                  filteredPlayers.map((player) => (
+                    <div
+                      key={player.id}
+                      onClick={() => handlePlayerSelect(player)}
+                      className="px-4 py-3 hover:bg-purple-50 cursor-pointer border-b border-gray-100 last:border-b-0"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-purple-500 rounded-full flex items-center justify-center text-white font-semibold flex-shrink-0">
+                          {player.name.charAt(0).toUpperCase()}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-gray-900 truncate">{player.name}</p>
+                          <p className="text-sm text-gray-600 truncate">
+                            {player.club ? (
+                              <span className="text-blue-600">{player.club.name}</span>
+                            ) : (
+                              <span className="text-orange-600">Free Agent</span>
+                            )}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="px-4 py-3 text-sm text-gray-500 text-center">
+                    No players found matching "{playerSearchQuery}"
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+          <p className="mt-1 text-sm text-gray-500">
+            Search by player name, email, or club
+          </p>
         </div>
 
         {/* Current Club Display */}
@@ -133,6 +211,24 @@ export default function TransferForm({ players, clubs }: TransferFormProps) {
           </select>
           <p className="mt-1 text-sm text-gray-500">
             Leave empty to transfer player to free agent status
+          </p>
+        </div>
+
+        {/* Transfer Date */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Transfer Date *
+          </label>
+          <input
+            type="date"
+            required
+            value={transferDate}
+            onChange={(e) => setTransferDate(e.target.value)}
+            max={new Date().toISOString().split('T')[0]}
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+          />
+          <p className="mt-1 text-sm text-gray-500">
+            Date when the transfer takes effect
           </p>
         </div>
 

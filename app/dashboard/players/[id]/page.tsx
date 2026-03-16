@@ -2,6 +2,7 @@ import { requireAuth } from "@/lib/auth-utils";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
+import { calculatePlayerStatsByClub } from "@/lib/stats-utils";
 
 export default async function PlayerDetailPage({
   params,
@@ -40,8 +41,11 @@ export default async function PlayerDetailPage({
     notFound();
   }
 
+  // Calculate stats by club based on actual match dates and transfer dates
+  const clubStats = await calculatePlayerStatsByClub(player.id);
+
   // Calculate total career stats
-  const careerStats = player.clubStats.reduce(
+  const careerStats = clubStats.reduce(
     (acc, stat) => ({
       matchesPlayed: acc.matchesPlayed + stat.matchesPlayed,
       wins: acc.wins + stat.wins,
@@ -141,14 +145,14 @@ export default async function PlayerDetailPage({
           </p>
         </div>
         
-        {player.clubStats.length === 0 ? (
+        {clubStats.length === 0 ? (
           <div className="p-8 text-center text-gray-500">
             No stats recorded yet
           </div>
         ) : (
           <div className="divide-y divide-gray-200">
-            {player.clubStats.map((stat) => (
-              <div key={stat.id} className="p-6 hover:bg-gray-50 transition-colors">
+            {clubStats.map((stat, index) => (
+              <div key={`${stat.clubId}-${index}`} className="p-6 hover:bg-gray-50 transition-colors">
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-3">
                     <div className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-xl flex items-center justify-center text-white font-bold">

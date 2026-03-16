@@ -39,7 +39,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { playerId, toClubId, notes } = body;
+    const { playerId, toClubId, notes, transferDate: transferDateStr } = body;
 
     if (!playerId) {
       return NextResponse.json(
@@ -47,6 +47,9 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
+
+    // Parse transfer date or use current date
+    const transferDate = transferDateStr ? new Date(transferDateStr) : new Date();
 
     // Get current player data
     const player = await prisma.player.findUnique({
@@ -66,7 +69,6 @@ export async function POST(request: NextRequest) {
     }
 
     const fromClubId = player.clubId;
-    const transferDate = new Date();
 
     // Use transaction to ensure data consistency
     const result = await prisma.$transaction(async (tx) => {
