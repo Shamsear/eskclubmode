@@ -35,7 +35,7 @@ async function getLeaderboardData(id: number): Promise<any> {
         return { clubId: team.clubId, club, playerA, playerB, matchesPlayed: team._count.id, wins, draws, losses, goalsScored, goalsConceded, goalDifference: goalsScored - goalsConceded, totalPoints: team._sum.pointsEarned || 0 };
       }));
       enriched.sort((a, b) => b.totalPoints - a.totalPoints || b.goalDifference - a.goalDifference || b.goalsScored - a.goalsScored);
-      return { tournament: { id: tournament.id, name: tournament.name }, rankings: enriched.map((e, i) => ({ rank: i + 1, isTeam: true, team: { clubId: e.clubId, clubName: e.club?.name || 'Team', clubLogo: e.club?.logo, playerA: e.playerA, playerB: e.playerB }, player: null, stats: { matchesPlayed: e.matchesPlayed, wins: e.wins, draws: e.draws, losses: e.losses, goalsScored: e.goalsScored, goalsConceded: e.goalsConceded, goalDifference: e.goalDifference, totalPoints: e.totalPoints } })) };
+      return { tournament: { id: tournament.id, name: tournament.name }, rankings: enriched.map((e, i) => ({ rank: i + 1, isTeam: true, team: { clubId: e.clubId, clubName: e.club?.name || 'Team', clubLogo: e.club?.logo, playerA: e.playerA, playerB: e.playerB }, player: null, stats: { matchesPlayed: e.matchesPlayed, wins: e.wins, draws: e.draws, losses: e.losses, goalsScored: e.goalsScored, goalsConceded: e.goalsConceded, goalDifference: e.goalDifference, totalPoints: e.totalPoints, cleanSheets: 0 } })) };
     }
 
     const stats = await prisma.tournamentPlayerStats.findMany({ 
@@ -63,7 +63,23 @@ async function getLeaderboardData(id: number): Promise<any> {
       ] 
     });
     
-    const withDiff = stats.map(e => ({ ...e, goalDifference: e.goalsScored - e.goalsConceded }));
+    // Get clean sheets for each player (only from singles matches)
+    const cleanSheetsData = await prisma.matchResult.groupBy({
+      by: ['playerId'],
+      _count: {
+        _all: true
+      },
+      where: {
+        goalsConceded: 0,
+        match: { tournamentId: id }
+      }
+    });
+
+    const cleanSheetsMap = new Map(
+      cleanSheetsData.map(cs => [cs.playerId, cs._count._all])
+    );
+    
+    const withDiff = stats.map(e => ({ ...e, goalDifference: e.goalsScored - e.goalsConceded, cleanSheets: cleanSheetsMap.get(e.playerId) || 0 }));
     withDiff.sort((a, b) => b.totalPoints - a.totalPoints || b.goalDifference - a.goalDifference || b.goalsScored - a.goalsScored);
     
     const rankings = withDiff.map((e, i) => ({ 
@@ -84,7 +100,8 @@ async function getLeaderboardData(id: number): Promise<any> {
         goalsScored: e.goalsScored, 
         goalsConceded: e.goalsConceded, 
         goalDifference: e.goalDifference, 
-        totalPoints: e.totalPoints 
+        totalPoints: e.totalPoints,
+        cleanSheets: e.cleanSheets
       } 
     }));
     

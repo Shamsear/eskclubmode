@@ -5,6 +5,7 @@ import TournamentFilter from '@/components/leaderboard/TournamentFilter';
 import { prisma } from '@/lib/prisma';
 import type { Metadata } from 'next';
 import { getPlayerStatsWithClub } from '@/lib/stats-utils';
+import PlayersTable from '@/components/leaderboard/PlayersTable';
 
 export const metadata: Metadata = {
   title: 'Players Leaderboard — Eskimos Club',
@@ -12,24 +13,61 @@ export const metadata: Metadata = {
 };
 
 interface PageProps {
-  searchParams: Promise<{ tournament?: string }>;
+  searchParams: Promise<{ tournament?: string; filter?: string }>;
 }
 
 interface PlayerStats {
   player: { id: number; name: string; photo: string | null; club: { id: number; name: string; logo: string | null } | null };
-  stats: { matchesPlayed: number; wins: number; draws: number; losses: number; goalsScored: number; goalsConceded: number; totalPoints: number; winRate: number };
+  stats: { matchesPlayed: number; wins: number; draws: number; losses: number; goalsScored: number; goalsConceded: number; totalPoints: number; winRate: number; cleanSheets?: number };
 }
 
-async function getPlayersLeaderboard(tournamentId?: string) {
+async function getPlayersLeaderboard(tournamentId?: string, filter?: string) {
   try {
     const playerStats = await getPlayerStatsWithClub(
       tournamentId ? parseInt(tournamentId) : undefined
     );
     
-    // Sort by total points
-    playerStats.sort((a, b) => b.stats.totalPoints - a.stats.totalPoints);
+    // Get clean sheets for each player
+    const cleanSheetsData = await prisma.matchResult.groupBy({
+      by: ['playerId'],
+      _count: {
+        _all: true
+      },
+      where: {
+        goalsConceded: 0,
+        ...(tournamentId ? { match: { tournamentId: parseInt(tournamentId) } } : {})
+      }
+    });
+
+    const cleanSheetsMap = new Map(
+      cleanSheetsData.map(cs => [cs.playerId, cs._count._all])
+    );
+
+    // Add clean sheets to player stats
+    const enrichedStats = playerStats.map(ps => ({
+      ...ps,
+      stats: {
+        ...ps.stats,
+        cleanSheets: cleanSheetsMap.get(ps.player.id) || 0
+      }
+    }));
     
-    return { players: playerStats };
+    // Sort based on filter
+    switch (filter) {
+      case 'golden-boot':
+        enrichedStats.sort((a, b) => b.stats.goalsScored - a.stats.goalsScored);
+        break;
+      case 'golden-glove':
+        enrichedStats.sort((a, b) => b.stats.cleanSheets! - a.stats.cleanSheets!);
+        break;
+      case 'golden-ball':
+      case 'overall':
+      default:
+        enrichedStats.sort((a, b) => b.stats.totalPoints - a.stats.totalPoints);
+        break;
+    }
+    
+    return { players: enrichedStats };
   } catch { 
     return null; 
   }
@@ -46,10 +84,12 @@ const rankStyles = [
   'bg-gradient-to-br from-orange-400 to-orange-600 text-white',
 ];
 
-async function PlayersLeaderboardContent({ tournamentId }: { tournamentId?: string }) {
-  const [data, tournaments] = await Promise.all([getPlayersLeaderboard(tournamentId), getTournaments()]);
+async function PlayersLeaderboardContent({ tournamentId, filter }: { tournamentId?: string; filter?: string }) {
+  const [data, tournaments] = await Promise.all([getPlayersLeaderboard(tournamentId, filter), getTournaments()]);
   if (!data) notFound();
   const selectedTournament = tournamentId ? tournaments.find((t: any) => t.id === parseInt(tournamentId)) : null;
+
+  const filterTitle = filter === 'golden-boot' ? 'Golden Boot' : filter === 'golden-glove' ? 'Golden Glove' : filter === 'golden-ball' ? 'Golden Ball' : 'Overall Stats';
 
   return (
     <div className="min-h-screen bg-[#0D0D0D]">
@@ -73,10 +113,10 @@ async function PlayersLeaderboardContent({ tournamentId }: { tournamentId?: stri
 
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full mb-5 border border-[#FFB700]/25 text-xs font-bold tracking-widest uppercase text-[#FFB700]" style={{ background: "rgba(255,183,0,0.08)" }}>
-            👥 Player Rankings
+            {filter === 'golden-boot' ? '⚽ Golden Boot' : filter === 'golden-glove' ? '🧤 Golden Glove' : filter === 'golden-ball' ? '🏆 Golden Ball' : '👥 Player Rankings'}
           </div>
           <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black text-white mb-3 font-['Outfit',sans-serif]">
-            Players{" "}
+            {filterTitle}{" "}
             <span style={{ background: "linear-gradient(135deg,#FFB700,#FF6600)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>
               Leaderboard
             </span>
@@ -87,103 +127,75 @@ async function PlayersLeaderboardContent({ tournamentId }: { tournamentId?: stri
         </div>
       </div>
 
-      {/* Filter */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-6 relative z-10 mb-10">
+      {/* Filters */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-6 relative z-10 mb-6">
         <TournamentFilter currentTournamentId={tournamentId} tournaments={tournaments} leaderboardType="players" />
       </div>
 
-      {/* Desktop Table */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-16 hidden md:block">
-        <div className="rounded-2xl overflow-hidden border border-[#1E1E1E]" style={{ background: "#111" }}>
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr style={{ background: "linear-gradient(90deg,#FF6600,#CC2900)" }}>
-                  {['Rank', 'Player', 'Matches', 'W / D / L', 'Goals', 'Win Rate', 'Points'].map(h => (
-                    <th key={h} className={`px-5 py-4 text-xs font-bold text-white uppercase tracking-widest ${h === 'Rank' || h === 'Player' ? 'text-left' : 'text-center'}`}>{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {data.players.map((item: PlayerStats, index: number) => (
-                  <tr key={item.player.id} className="border-t border-[#1A1A1A] hover:bg-[#FF6600]/5 transition-colors">
-                    <td className="px-5 py-4">
-                      <div className={`w-9 h-9 rounded-full flex items-center justify-center font-black text-sm ${index < 3 ? rankStyles[index] : 'bg-[#1A1A1A] text-[#707070]'}`}>{index + 1}</div>
-                    </td>
-                    <td className="px-5 py-4">
-                      <Link href={`/players/${item.player.id}`} className="flex items-center gap-3 group">
-                        {item.player.photo ? (
-                          <img src={item.player.photo} alt={item.player.name} className="w-11 h-11 rounded-full object-cover border-2 border-[#FF6600]/40 group-hover:border-[#FF6600] transition-colors" />
-                        ) : (
-                          <div className="w-11 h-11 rounded-full flex items-center justify-center text-white font-black text-base" style={{ background: "linear-gradient(135deg,#FF6600,#CC2900)" }}>
-                            {item.player.name.charAt(0)}
-                          </div>
-                        )}
-                        <div>
-                          <div className="font-bold text-white group-hover:text-[#FFB700] transition-colors text-sm">{item.player.name}</div>
-                          <div className="text-[#555] text-xs mt-0.5">{item.player.club?.name || 'Free Agent'}</div>
-                        </div>
-                      </Link>
-                    </td>
-                    <td className="px-5 py-4 text-center text-white font-semibold text-sm">{item.stats.matchesPlayed}</td>
-                    <td className="px-5 py-4 text-center text-sm">
-                      <span className="text-green-400 font-semibold">{item.stats.wins}</span>
-                      <span className="text-[#333] mx-1">/</span>
-                      <span className="text-yellow-400 font-semibold">{item.stats.draws}</span>
-                      <span className="text-[#333] mx-1">/</span>
-                      <span className="text-red-400 font-semibold">{item.stats.losses}</span>
-                    </td>
-                    <td className="px-5 py-4 text-center text-white font-semibold text-sm">{item.stats.goalsScored}–{item.stats.goalsConceded}</td>
-                    <td className="px-5 py-4 text-center">
-                      <span className="text-[#FFB700] font-bold text-sm">{item.stats.winRate.toFixed(1)}%</span>
-                    </td>
-                    <td className="px-5 py-4 text-center">
-                      <span className="text-2xl font-black" style={{ background: "linear-gradient(135deg,#FFB700,#FF6600)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>
-                        {item.stats.totalPoints}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+      {/* Category Filter */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-6">
+        <div className="rounded-2xl border border-[#1E1E1E] p-2" style={{ background: "#111" }}>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            <Link href={`/leaderboard/players${tournamentId ? `?tournament=${tournamentId}` : ''}`} 
+              className={`group relative overflow-hidden rounded-xl p-4 transition-all duration-300 ${!filter || filter === 'overall' ? 'bg-gradient-to-br from-[#FF6600] to-[#CC2900]' : 'bg-[#1A1A1A] hover:bg-[#222]'}`}>
+              <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300" style={{ background: "radial-gradient(circle at center, rgba(255,183,0,0.15), transparent)" }} />
+              <div className="relative z-10 text-center">
+                <div className="text-3xl mb-2">🏆</div>
+                <div className={`text-sm font-bold mb-1 ${!filter || filter === 'overall' ? 'text-white' : 'text-[#707070] group-hover:text-white'}`}>
+                  Overall Stats
+                </div>
+                <div className={`text-xs ${!filter || filter === 'overall' ? 'text-white/70' : 'text-[#555] group-hover:text-[#707070]'}`}>
+                  All metrics
+                </div>
+              </div>
+            </Link>
+
+            <Link href={`/leaderboard/players?filter=golden-ball${tournamentId ? `&tournament=${tournamentId}` : ''}`}
+              className={`group relative overflow-hidden rounded-xl p-4 transition-all duration-300 ${filter === 'golden-ball' ? 'bg-gradient-to-br from-[#FFB700] to-[#FF8C00]' : 'bg-[#1A1A1A] hover:bg-[#222]'}`}>
+              <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300" style={{ background: "radial-gradient(circle at center, rgba(255,183,0,0.15), transparent)" }} />
+              <div className="relative z-10 text-center">
+                <div className="text-3xl mb-2">⚡</div>
+                <div className={`text-sm font-bold mb-1 ${filter === 'golden-ball' ? 'text-white' : 'text-[#707070] group-hover:text-white'}`}>
+                  Golden Ball
+                </div>
+                <div className={`text-xs ${filter === 'golden-ball' ? 'text-white/70' : 'text-[#555] group-hover:text-[#707070]'}`}>
+                  Most points
+                </div>
+              </div>
+            </Link>
+
+            <Link href={`/leaderboard/players?filter=golden-boot${tournamentId ? `&tournament=${tournamentId}` : ''}`}
+              className={`group relative overflow-hidden rounded-xl p-4 transition-all duration-300 ${filter === 'golden-boot' ? 'bg-gradient-to-br from-[#10B981] to-[#059669]' : 'bg-[#1A1A1A] hover:bg-[#222]'}`}>
+              <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300" style={{ background: "radial-gradient(circle at center, rgba(16,185,129,0.15), transparent)" }} />
+              <div className="relative z-10 text-center">
+                <div className="text-3xl mb-2">⚽</div>
+                <div className={`text-sm font-bold mb-1 ${filter === 'golden-boot' ? 'text-white' : 'text-[#707070] group-hover:text-white'}`}>
+                  Golden Boot
+                </div>
+                <div className={`text-xs ${filter === 'golden-boot' ? 'text-white/70' : 'text-[#555] group-hover:text-[#707070]'}`}>
+                  Most goals
+                </div>
+              </div>
+            </Link>
+
+            <Link href={`/leaderboard/players?filter=golden-glove${tournamentId ? `&tournament=${tournamentId}` : ''}`}
+              className={`group relative overflow-hidden rounded-xl p-4 transition-all duration-300 ${filter === 'golden-glove' ? 'bg-gradient-to-br from-[#3B82F6] to-[#1D4ED8]' : 'bg-[#1A1A1A] hover:bg-[#222]'}`}>
+              <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300" style={{ background: "radial-gradient(circle at center, rgba(59,130,246,0.15), transparent)" }} />
+              <div className="relative z-10 text-center">
+                <div className="text-3xl mb-2">🧤</div>
+                <div className={`text-sm font-bold mb-1 ${filter === 'golden-glove' ? 'text-white' : 'text-[#707070] group-hover:text-white'}`}>
+                  Golden Glove
+                </div>
+                <div className={`text-xs ${filter === 'golden-glove' ? 'text-white/70' : 'text-[#555] group-hover:text-[#707070]'}`}>
+                  Clean sheets
+                </div>
+              </div>
+            </Link>
           </div>
         </div>
       </div>
 
-      {/* Mobile Cards */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-16 md:hidden">
-        <div className="space-y-3">
-          {data.players.map((item: PlayerStats, index: number) => (
-            <Link key={item.player.id} href={`/players/${item.player.id}`} className="block rounded-2xl border border-[#1E1E1E] bg-[#111] hover:border-[#FF6600]/40 transition-all duration-200 overflow-hidden">
-              <div className="p-4">
-                <div className="flex items-center justify-between mb-3">
-                  <div className={`w-9 h-9 rounded-full flex items-center justify-center font-black text-sm flex-shrink-0 ${index < 3 ? rankStyles[index] : 'bg-[#1A1A1A] text-[#707070]'}`}>{index + 1}</div>
-                  <div className="text-right">
-                    <div className="text-2xl font-black" style={{ background: "linear-gradient(135deg,#FFB700,#FF6600)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>{item.stats.totalPoints}</div>
-                    <div className="text-[#555] text-xs">pts</div>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3 mb-3">
-                  {item.player.photo ? (
-                    <img src={item.player.photo} alt={item.player.name} className="w-11 h-11 rounded-full object-cover border-2 border-[#FF6600]/40 flex-shrink-0" />
-                  ) : (
-                    <div className="w-11 h-11 rounded-full flex items-center justify-center text-white font-black flex-shrink-0" style={{ background: "linear-gradient(135deg,#FF6600,#CC2900)" }}>{item.player.name.charAt(0)}</div>
-                  )}
-                  <div className="min-w-0">
-                    <div className="font-bold text-white truncate text-sm">{item.player.name}</div>
-                    <div className="text-[#555] text-xs truncate">{item.player.club?.name || 'Free Agent'}</div>
-                  </div>
-                </div>
-                <div className="grid grid-cols-3 gap-2 pt-3 border-t border-[#1A1A1A] text-center">
-                  <div><div className="text-[#555] text-xs mb-0.5">Matches</div><div className="text-white font-bold text-sm">{item.stats.matchesPlayed}</div></div>
-                  <div><div className="text-[#555] text-xs mb-0.5">W/D/L</div><div className="text-xs font-semibold"><span className="text-green-400">{item.stats.wins}</span>/<span className="text-yellow-400">{item.stats.draws}</span>/<span className="text-red-400">{item.stats.losses}</span></div></div>
-                  <div><div className="text-[#555] text-xs mb-0.5">Win Rate</div><div className="text-[#FFB700] font-bold text-sm">{item.stats.winRate.toFixed(1)}%</div></div>
-                </div>
-              </div>
-            </Link>
-          ))}
-        </div>
-      </div>
+      <PlayersTable players={data.players} />
     </div>
   );
 }
@@ -201,7 +213,7 @@ export default async function PlayersLeaderboardPage({ searchParams }: PageProps
         </div>
       </div>
     }>
-      <PlayersLeaderboardContent tournamentId={params.tournament} />
+      <PlayersLeaderboardContent tournamentId={params.tournament} filter={params.filter} />
     </Suspense>
   );
 }

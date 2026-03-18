@@ -29,6 +29,7 @@ interface PlayerStats {
   goalsConceded: number;
   goalDifference: number;
   totalPoints: number;
+  cleanSheets?: number;
 }
 
 interface LeaderboardEntry {
@@ -277,6 +278,8 @@ function LeaderboardRow({ entry, isExpanded, onToggle }: {
 
 export default function LeaderboardStream({ tournament, rankings }: LeaderboardStreamProps) {
   const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set());
+  const [filter, setFilter] = useState<'overall' | 'golden-ball' | 'golden-boot' | 'golden-glove'>('overall');
+  const [searchQuery, setSearchQuery] = useState('');
 
   const toggleRow = (rank: number) => {
     setExpandedRows((prev) => {
@@ -285,6 +288,53 @@ export default function LeaderboardStream({ tournament, rankings }: LeaderboardS
       return next;
     });
   };
+
+  // Filter and sort based on selected filter
+  let filteredRankings = [...rankings];
+  
+  // Apply search filter
+  if (searchQuery) {
+    const query = searchQuery.toLowerCase();
+    filteredRankings = filteredRankings.filter(entry => {
+      if (entry.isTeam && entry.team) {
+        const clubName = entry.team.clubName.toLowerCase();
+        const playerAName = entry.team.playerA?.name.toLowerCase() || '';
+        const playerBName = entry.team.playerB?.name.toLowerCase() || '';
+        return clubName.includes(query) || playerAName.includes(query) || playerBName.includes(query);
+      } else if (entry.player) {
+        const playerName = entry.player.name.toLowerCase();
+        const clubName = entry.player.club?.name.toLowerCase() || '';
+        return playerName.includes(query) || clubName.includes(query);
+      }
+      return false;
+    });
+  }
+
+  // Apply sorting based on filter
+  switch (filter) {
+    case 'golden-boot':
+      filteredRankings.sort((a, b) => b.stats.goalsScored - a.stats.goalsScored);
+      break;
+    case 'golden-glove':
+      // Sort by clean sheets (actual data from database)
+      filteredRankings.sort((a, b) => (b.stats.cleanSheets || 0) - (a.stats.cleanSheets || 0));
+      break;
+    case 'golden-ball':
+    case 'overall':
+    default:
+      filteredRankings.sort((a, b) => 
+        b.stats.totalPoints - a.stats.totalPoints || 
+        b.stats.goalDifference - a.stats.goalDifference || 
+        b.stats.goalsScored - a.stats.goalsScored
+      );
+      break;
+  }
+
+  // Re-assign ranks after filtering
+  filteredRankings = filteredRankings.map((entry, index) => ({
+    ...entry,
+    rank: index + 1
+  }));
 
   if (rankings.length === 0) {
     return (
@@ -297,21 +347,132 @@ export default function LeaderboardStream({ tournament, rankings }: LeaderboardS
   }
 
   return (
-    <div className="space-y-2">
-      {rankings.map((entry, index) => (
-        <motion.div 
-          key={entry.isTeam ? `team-${entry.team?.clubId}-${entry.team?.playerA?.id}-${entry.team?.playerB?.id}` : `player-${entry.player?.id}`}
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3, delay: Math.min(index * 0.02, 0.5) }}
-        >
-          <LeaderboardRow
-            entry={entry}
-            isExpanded={expandedRows.has(entry.rank)}
-            onToggle={() => toggleRow(entry.rank)}
+    <>
+      {/* Category Filter */}
+      <div className="mb-6">
+        <div className="rounded-2xl border border-[#1E1E1E] p-2" style={{ background: "#111" }}>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            <button
+              onClick={() => setFilter('overall')}
+              className={`group relative overflow-hidden rounded-xl p-4 transition-all duration-300 ${filter === 'overall' ? 'bg-gradient-to-br from-[#FF6600] to-[#CC2900]' : 'bg-[#1A1A1A] hover:bg-[#222]'}`}>
+              <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300" style={{ background: "radial-gradient(circle at center, rgba(255,183,0,0.15), transparent)" }} />
+              <div className="relative z-10 text-center">
+                <div className="text-3xl mb-2">🏆</div>
+                <div className={`text-sm font-bold mb-1 ${filter === 'overall' ? 'text-white' : 'text-[#707070] group-hover:text-white'}`}>
+                  Overall Stats
+                </div>
+                <div className={`text-xs ${filter === 'overall' ? 'text-white/70' : 'text-[#555] group-hover:text-[#707070]'}`}>
+                  All metrics
+                </div>
+              </div>
+            </button>
+
+            <button
+              onClick={() => setFilter('golden-ball')}
+              className={`group relative overflow-hidden rounded-xl p-4 transition-all duration-300 ${filter === 'golden-ball' ? 'bg-gradient-to-br from-[#FFB700] to-[#FF8C00]' : 'bg-[#1A1A1A] hover:bg-[#222]'}`}>
+              <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300" style={{ background: "radial-gradient(circle at center, rgba(255,183,0,0.15), transparent)" }} />
+              <div className="relative z-10 text-center">
+                <div className="text-3xl mb-2">⚡</div>
+                <div className={`text-sm font-bold mb-1 ${filter === 'golden-ball' ? 'text-white' : 'text-[#707070] group-hover:text-white'}`}>
+                  Golden Ball
+                </div>
+                <div className={`text-xs ${filter === 'golden-ball' ? 'text-white/70' : 'text-[#555] group-hover:text-[#707070]'}`}>
+                  Most points
+                </div>
+              </div>
+            </button>
+
+            <button
+              onClick={() => setFilter('golden-boot')}
+              className={`group relative overflow-hidden rounded-xl p-4 transition-all duration-300 ${filter === 'golden-boot' ? 'bg-gradient-to-br from-[#10B981] to-[#059669]' : 'bg-[#1A1A1A] hover:bg-[#222]'}`}>
+              <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300" style={{ background: "radial-gradient(circle at center, rgba(16,185,129,0.15), transparent)" }} />
+              <div className="relative z-10 text-center">
+                <div className="text-3xl mb-2">⚽</div>
+                <div className={`text-sm font-bold mb-1 ${filter === 'golden-boot' ? 'text-white' : 'text-[#707070] group-hover:text-white'}`}>
+                  Golden Boot
+                </div>
+                <div className={`text-xs ${filter === 'golden-boot' ? 'text-white/70' : 'text-[#555] group-hover:text-[#707070]'}`}>
+                  Most goals
+                </div>
+              </div>
+            </button>
+
+            <button
+              onClick={() => setFilter('golden-glove')}
+              className={`group relative overflow-hidden rounded-xl p-4 transition-all duration-300 ${filter === 'golden-glove' ? 'bg-gradient-to-br from-[#3B82F6] to-[#1D4ED8]' : 'bg-[#1A1A1A] hover:bg-[#222]'}`}>
+              <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300" style={{ background: "radial-gradient(circle at center, rgba(59,130,246,0.15), transparent)" }} />
+              <div className="relative z-10 text-center">
+                <div className="text-3xl mb-2">🧤</div>
+                <div className={`text-sm font-bold mb-1 ${filter === 'golden-glove' ? 'text-white' : 'text-[#707070] group-hover:text-white'}`}>
+                  Golden Glove
+                </div>
+                <div className={`text-xs ${filter === 'golden-glove' ? 'text-white/70' : 'text-[#555] group-hover:text-[#707070]'}`}>
+                  Best defense
+                </div>
+              </div>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Search Bar */}
+      <div className="mb-6">
+        <div className="relative">
+          <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+            <svg className="w-5 h-5 text-[#707070]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+          </div>
+          <input
+            type="text"
+            placeholder={rankings[0]?.isTeam ? "Search by team or player name..." : "Search by player name or club..."}
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full pl-12 pr-4 py-3 rounded-xl border border-[#1E1E1E] bg-[#111] text-white placeholder-[#555] focus:outline-none focus:border-[#FF6600] transition-colors text-sm"
           />
-        </motion.div>
-      ))}
-    </div>
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery('')}
+              className="absolute inset-y-0 right-0 pr-4 flex items-center text-[#707070] hover:text-white transition-colors"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          )}
+        </div>
+        {searchQuery && (
+          <p className="mt-2 text-sm text-[#707070]">
+            Found {filteredRankings.length} {filteredRankings.length !== 1 ? 'results' : 'result'}
+          </p>
+        )}
+      </div>
+
+      {/* Leaderboard */}
+      {filteredRankings.length === 0 ? (
+        <div className="rounded-2xl border border-[#1E1E1E] text-center py-16" style={{ background: '#111' }}>
+          <div className="text-6xl mb-4">🔍</div>
+          <h3 className="text-xl font-bold text-white mb-2">No results found</h3>
+          <p className="text-[#707070]">Try adjusting your search query</p>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {filteredRankings.map((entry, index) => (
+            <motion.div 
+              key={entry.isTeam ? `team-${entry.team?.clubId}-${entry.team?.playerA?.id}-${entry.team?.playerB?.id}` : `player-${entry.player?.id}`}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3, delay: Math.min(index * 0.02, 0.5) }}
+            >
+              <LeaderboardRow
+                entry={entry}
+                isExpanded={expandedRows.has(entry.rank)}
+                onToggle={() => toggleRow(entry.rank)}
+              />
+            </motion.div>
+          ))}
+        </div>
+      )}
+    </>
   );
 }
