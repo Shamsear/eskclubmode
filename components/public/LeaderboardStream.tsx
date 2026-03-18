@@ -149,7 +149,7 @@ function LeaderboardRow({ entry, isExpanded, onToggle }: {
             className="overflow-hidden"
           >
             <div className="px-4 pb-4 pt-3 border-t border-[#1A1A1A]">
-              <div className="grid grid-cols-2 sm:grid-cols-4 xl:grid-cols-8 gap-2 mb-4">
+              <div className="grid grid-cols-3 sm:grid-cols-4 xl:grid-cols-9 gap-2 mb-4">
                 <MiniStat label="Matches" value={stats.matchesPlayed} color="text-white" />
                 <MiniStat label="Wins" value={stats.wins} color="text-green-400" />
                 <MiniStat label="Draws" value={stats.draws} color="text-[#555]" />
@@ -157,6 +157,7 @@ function LeaderboardRow({ entry, isExpanded, onToggle }: {
                 <MiniStat label="Goals Scored" value={stats.goalsScored} color="text-[#FF6600]" />
                 <MiniStat label="Goals Conceded" value={stats.goalsConceded} color="text-[#CC2900]" />
                 <MiniStat label="Goal Diff" value={stats.goalDifference > 0 ? `+${stats.goalDifference}` : stats.goalDifference} color={stats.goalDifference >= 0 ? 'text-green-400' : 'text-red-400'} />
+                <MiniStat label="Clean Sheets" value={stats.cleanSheets || 0} color="text-blue-400" />
                 <MiniStat label="Points" value={stats.totalPoints} color="text-[#FFB700]" />
               </div>
               <div>
@@ -245,7 +246,7 @@ function LeaderboardRow({ entry, isExpanded, onToggle }: {
           className="overflow-hidden"
         >
           <div className="px-4 pb-4 pt-3 border-t border-[#1A1A1A]" role="region" aria-label="Detailed statistics">
-            <div className="grid grid-cols-2 sm:grid-cols-4 xl:grid-cols-8 gap-2 mb-4">
+            <div className="grid grid-cols-3 sm:grid-cols-4 xl:grid-cols-9 gap-2 mb-4">
               <MiniStat label="Matches" value={stats.matchesPlayed} color="text-white" />
               <MiniStat label="Wins" value={stats.wins} color="text-green-400" />
               <MiniStat label="Draws" value={stats.draws} color="text-[#555]" />
@@ -253,6 +254,7 @@ function LeaderboardRow({ entry, isExpanded, onToggle }: {
               <MiniStat label="Goals Scored" value={stats.goalsScored} color="text-[#FF6600]" />
               <MiniStat label="Goals Conceded" value={stats.goalsConceded} color="text-[#CC2900]" />
               <MiniStat label="Goal Diff" value={stats.goalDifference > 0 ? `+${stats.goalDifference}` : stats.goalDifference} color={stats.goalDifference >= 0 ? 'text-green-400' : 'text-red-400'} />
+              <MiniStat label="Clean Sheets" value={stats.cleanSheets || 0} color="text-blue-400" />
               <MiniStat label="Points" value={stats.totalPoints} color="text-[#FFB700]" />
             </div>
             <div>
